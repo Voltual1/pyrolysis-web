@@ -112,51 +112,58 @@ class PostDetailViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun loadComments(postId: Long, page: Int = 1) {
-        if (_isLoadingComments.value) return
-        if (page > _totalCommentPages.value && page > 1) return
+    if (_isLoadingComments.value) return
+    if (page > _totalCommentPages.value && page > 1) return
 
-        _isLoadingComments.value = true
+    _isLoadingComments.value = true
 
-        viewModelScope.launch {
-            try {
-                val response = RetrofitClient.instance.getPostComments(
-                    postId = postId,
-                    limit = 20,
-                    page = page
-                )
+    viewModelScope.launch {
+        try {
+            val response = RetrofitClient.instance.getPostComments(
+                postId = postId,
+                limit = 20,
+                page = page
+            )
 
-                if (response.isSuccessful && response.body()?.code == 1) {
-                    val newComments = response.body()?.data?.list ?: emptyList()
-                    val totalPages = response.body()?.data?.pagecount ?: 1
+            if (response.isSuccessful && response.body()?.code == 1) {
+                val newComments = response.body()?.data?.list ?: emptyList()
+                val totalPages = response.body()?.data?.pagecount ?: 1
 
-                    _totalCommentPages.value = totalPages
-                    _hasMoreComments.value = page < totalPages
+                _totalCommentPages.value = totalPages
+                _hasMoreComments.value = page < totalPages
 
-                    _comments.value = if (page == 1) {
-                        newComments
-                    } else {
-                        _comments.value + newComments
-                    }
+                _comments.value = if (page == 1) {
+                    newComments
+                } else {
+                    _comments.value + newComments
                 }
-            } catch (e: Exception) {
-                _errorMessage.value = "加载评论失败: ${e.message}"
-            } finally {
-                _isLoadingComments.value = false
+                
+                // 确保当前页码正确设置
+                if (page != _currentCommentPage.value) {
+                    _currentCommentPage.value = page
+                }
             }
+        } catch (e: Exception) {
+            _errorMessage.value = "加载评论失败: ${e.message}"
+        } finally {
+            _isLoadingComments.value = false
         }
     }
+}
 
     fun loadNextPageComments(postId: Long) {
-        val nextPage = _currentCommentPage.value + 1
-        if (nextPage <= _totalCommentPages.value) {
-            loadComments(postId, nextPage)
-        }
+    val nextPage = _currentCommentPage.value + 1
+    if (nextPage <= _totalCommentPages.value) {
+        _currentCommentPage.value = nextPage // 添加这行：更新当前页码
+        loadComments(postId, nextPage)
     }
+}
 
     fun refreshComments(postId: Long) {
-        _currentCommentPage.value = 1
-        loadComments(postId, 1)
-    }
+    _currentCommentPage.value = 1 // 重置为第一页
+    _comments.value = emptyList() // 清空现有评论
+    loadComments(postId, 1)
+}
 
     fun clearErrorMessage() {
         _errorMessage.value = ""
