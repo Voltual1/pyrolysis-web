@@ -14,8 +14,8 @@ android {
         applicationId = "cc.bbq.xq.bot" // 修正包名以匹配项目
         minSdk = 21
         targetSdk = 34
-        versionCode = 303
-        versionName = "10.1-QUBOT" // 更新版本名以作区分
+        versionCode = 304
+        versionName = "10.2-QUBOT" // 更新版本名以作区分
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         resourceConfigurations.add("zh-rCN")

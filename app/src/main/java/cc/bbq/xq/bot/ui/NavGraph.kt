@@ -418,9 +418,6 @@ composable(route = AppDetail(0, 0).route, arguments = AppDetail.arguments) { bac
 
         // --- 消息、账单、支付 ---
         composable(route = MessageCenter.route) {
-            LaunchedEffect(Unit) {
-                messageViewModel.loadPage()
-            }
             MessageCenterScreen(
                 viewModel = messageViewModel,
                 onMessageClick = { postId -> navController.navigate(PostDetail(postId).createRoute()) },

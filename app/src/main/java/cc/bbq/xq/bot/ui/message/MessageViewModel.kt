@@ -23,7 +23,8 @@ data class MessageState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val currentPage: Int = 1,
-    val totalPages: Int = 1
+    val totalPages: Int = 1,
+    val isInitialized: Boolean = false
 )
 
 class MessageViewModel(application: Application) : AndroidViewModel(application) {
@@ -32,12 +33,27 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
     
     private val token by lazy { AuthManager.getCredentials(application.applicationContext)?.third }
     
-    private var isInitialized = false
+    // 修复：使用 ViewModel 的生命周期来管理初始化，而不是 Compose 的重组
+    private var _isInitialized = false
 
-    // 加载指定页的消息（替换当前内容）
+    // 修复：公开的初始化方法，但只在真正需要时加载
+    fun initializeIfNeeded(forceRefresh: Boolean = false) {
+        if (forceRefresh) {
+            _isInitialized = false
+        }
+        
+        if (!_isInitialized && !_state.value.isLoading) {
+            _isInitialized = true
+            loadPage(1)
+        }
+    }
+
+    // 修复：改进的加载逻辑，保持当前页面状态
     fun loadPage(page: Int = 1) {
-        // 如果已经初始化并且请求的是同一页，则避免重复加载
-        if (isInitialized && page == _state.value.currentPage) return
+        // 如果已经在加载，则避免重复加载
+        if (_state.value.isLoading) {
+            return
+        }
 
         _state.value = _state.value.copy(
             isLoading = true,
@@ -57,9 +73,15 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
                         _state.value = MessageState(
                             messages = data.list,
                             currentPage = page,
-                            totalPages = data.pagecount
+                            totalPages = data.pagecount,
+                            isInitialized = true,
+                            isLoading = false // 修复：加载完成
                         )
-                        isInitialized = true
+                    } ?: run {
+                        _state.value = _state.value.copy(
+                            error = "加载失败: 数据为空",
+                            isLoading = false
+                        )
                     }
                 } else {
                     _state.value = _state.value.copy(
@@ -95,5 +117,12 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
         if (page in 1.._state.value.totalPages) {
             loadPage(page)
         }
+    }
+
+    // 重置（用于下拉刷新等场景）
+    fun reset() {
+        _isInitialized = false
+        _state.value = MessageState()
+        initializeIfNeeded()
     }
 }

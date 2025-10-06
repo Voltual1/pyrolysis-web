@@ -283,88 +283,105 @@ class PlazaViewModel(
     }
 
     fun searchResources(query: String, isMyResource: Boolean = false) {
-        if (_isLoading.value == true) return
-        _isLoading.postValue(true)
-        searchPage = 1
-        currentQuery = query
-        currentPage.postValue(1)
+    if (_isLoading.value == true) return
+    _isLoading.postValue(true)
+    searchPage = 1
+    currentQuery = query
+    currentPage.postValue(1)
 
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val finalUserId = if (isMyResource) {
-                    currentUserId ?: AuthManager.getUserId(getApplication())
-                } else {
-                    null
-                }
-                val results = repository.searchApps(query, page = searchPage, userId = finalUserId)
-                searchTotalPages = repository.lastTotalPages ?: 1
-                totalPages.postValue(searchTotalPages)
-
-                if (results.isEmpty()) {
-                    _errorMessage.postValue("未找到相关资源")
-                    _searchResults.postValue(emptyList())
-                } else {
-                    _searchResults.postValue(results.map { convertToUiModel(it) })
-                }
-            } catch (e: Exception) {
-                _errorMessage.postValue("搜索失败: ${e.localizedMessage}")
-            } finally {
-                _isLoading.postValue(false)
+    viewModelScope.launch(Dispatchers.IO) {
+        try {
+            // 修复：在"我的资源"或"TA的资源"模式下，需要传递 userId
+            val finalUserId = when {
+                // 如果是"我的资源"模式，使用当前登录用户的ID
+                isMyResource && currentUserId == null -> AuthManager.getUserId(getApplication())
+                // 如果是"TA的资源"模式，使用指定的 userId
+                currentUserId != null -> currentUserId
+                // 普通资源广场模式，不传递 userId
+                else -> null
             }
+            
+            val results = repository.searchApps(query, page = searchPage, userId = finalUserId)
+            searchTotalPages = repository.lastTotalPages ?: 1
+            totalPages.postValue(searchTotalPages)
+
+            if (results.isEmpty()) {
+                _errorMessage.postValue("未找到相关资源")
+                _searchResults.postValue(emptyList())
+            } else {
+                _searchResults.postValue(results.map { convertToUiModel(it) })
+            }
+        } catch (e: Exception) {
+            _errorMessage.postValue("搜索失败: ${e.localizedMessage}")
+        } finally {
+            _isLoading.postValue(false)
         }
     }
+}
 
     fun searchNextPage(onComplete: (() -> Unit)? = null) {
-        if (_isLoading.value == true || searchPage >= searchTotalPages) return
-        _isLoading.postValue(true)
-        searchPage++
-        currentPage.postValue(searchPage)
+    if (_isLoading.value == true || searchPage >= searchTotalPages) return
+    _isLoading.postValue(true)
+    searchPage++
+    currentPage.postValue(searchPage)
 
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                 val finalUserId = if (currentMode) currentUserId ?: AuthManager.getUserId(getApplication()) else null
-                val newResults = repository.searchApps(currentQuery, page = searchPage, userId = finalUserId)
-                searchTotalPages = repository.lastTotalPages ?: searchTotalPages
-                totalPages.postValue(searchTotalPages)
-
-                if (newResults.isNotEmpty()) {
-                    val currentResults = _searchResults.value ?: emptyList()
-                    val updatedResults = currentResults + newResults.map { convertToUiModel(it) }
-                    _searchResults.postValue(updatedResults)
-                }
-            } catch (e: Exception) {
-                searchPage--
-                currentPage.postValue(searchPage)
-                _errorMessage.postValue("加载更多失败: ${e.localizedMessage}")
-            } finally {
-                _isLoading.postValue(false)
-                onComplete?.invoke()
+    viewModelScope.launch(Dispatchers.IO) {
+        try {
+            // 修复：在分页搜索时也传递正确的 userId
+            val finalUserId = when {
+                currentMode && currentUserId == null -> AuthManager.getUserId(getApplication())
+                currentUserId != null -> currentUserId
+                else -> null
             }
+            
+            val newResults = repository.searchApps(currentQuery, page = searchPage, userId = finalUserId)
+            searchTotalPages = repository.lastTotalPages ?: searchTotalPages
+            totalPages.postValue(searchTotalPages)
+
+            if (newResults.isNotEmpty()) {
+                val currentResults = _searchResults.value ?: emptyList()
+                val updatedResults = currentResults + newResults.map { convertToUiModel(it) }
+                _searchResults.postValue(updatedResults)
+            }
+        } catch (e: Exception) {
+            searchPage--
+            currentPage.postValue(searchPage)
+            _errorMessage.postValue("加载更多失败: ${e.localizedMessage}")
+        } finally {
+            _isLoading.postValue(false)
+            onComplete?.invoke()
         }
     }
+}
 
     fun searchPrevPage() {
-        if (_isLoading.value == true || searchPage <= 1) return
-        _isLoading.value = true
-        searchPage--
-        currentPage.postValue(searchPage)
+    if (_isLoading.value == true || searchPage <= 1) return
+    _isLoading.value = true
+    searchPage--
+    currentPage.postValue(searchPage)
 
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val finalUserId = if (currentMode) currentUserId ?: AuthManager.getUserId(getApplication()) else null
-                val newResults = repository.searchApps(currentQuery, page = searchPage, userId = finalUserId)
-                searchTotalPages = repository.lastTotalPages ?: searchTotalPages
-                totalPages.postValue(searchTotalPages)
-                _searchResults.postValue(newResults.map { convertToUiModel(it) })
-            } catch (e: Exception) {
-                searchPage++
-                currentPage.postValue(searchPage)
-                _errorMessage.postValue("加载上一页失败: ${e.localizedMessage}")
-            } finally {
-                _isLoading.postValue(false)
+    viewModelScope.launch(Dispatchers.IO) {
+        try {
+            // 修复：在上一页搜索时也传递正确的 userId
+            val finalUserId = when {
+                currentMode && currentUserId == null -> AuthManager.getUserId(getApplication())
+                currentUserId != null -> currentUserId
+                else -> null
             }
+            
+            val newResults = repository.searchApps(currentQuery, page = searchPage, userId = finalUserId)
+            searchTotalPages = repository.lastTotalPages ?: searchTotalPages
+            totalPages.postValue(searchTotalPages)
+            _searchResults.postValue(newResults.map { convertToUiModel(it) })
+        } catch (e: Exception) {
+            searchPage++
+            currentPage.postValue(searchPage)
+            _errorMessage.postValue("加载上一页失败: ${e.localizedMessage}")
+        } finally {
+            _isLoading.postValue(false)
         }
     }
+}
 
     fun cancelSearch() {
         _searchResults.postValue(emptyList())
@@ -410,30 +427,36 @@ class PlazaViewModel(
     }
 
     fun searchGoToPage(page: Int) {
-        if (page < 1 || page > searchTotalPages) {
-            _errorMessage.postValue("页码超出范围")
-            return
-        }
-        if (page == searchPage && _searchResults.value?.isNotEmpty() == true) return
+    if (page < 1 || page > searchTotalPages) {
+        _errorMessage.postValue("页码超出范围")
+        return
+    }
+    if (page == searchPage && _searchResults.value?.isNotEmpty() == true) return
 
-        _isLoading.value = true
-        searchPage = page
-        currentPage.postValue(page)
+    _isLoading.value = true
+    searchPage = page
+    currentPage.postValue(page)
 
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val finalUserId = if (currentMode) currentUserId ?: AuthManager.getUserId(getApplication()) else null
-                val newResults = repository.searchApps(currentQuery, page = page, userId = finalUserId)
-                searchTotalPages = repository.lastTotalPages ?: searchTotalPages
-                totalPages.postValue(searchTotalPages)
-                _searchResults.postValue(newResults.map { convertToUiModel(it) })
-            } catch (e: Exception) {
-                _errorMessage.postValue("加载失败: ${e.message}")
-            } finally {
-                _isLoading.postValue(false)
+    viewModelScope.launch(Dispatchers.IO) {
+        try {
+            // 修复：在跳页搜索时也传递正确的 userId
+            val finalUserId = when {
+                currentMode && currentUserId == null -> AuthManager.getUserId(getApplication())
+                currentUserId != null -> currentUserId
+                else -> null
             }
+            
+            val newResults = repository.searchApps(currentQuery, page = page, userId = finalUserId)
+            searchTotalPages = repository.lastTotalPages ?: searchTotalPages
+            totalPages.postValue(searchTotalPages)
+            _searchResults.postValue(newResults.map { convertToUiModel(it) })
+        } catch (e: Exception) {
+            _errorMessage.postValue("加载失败: ${e.message}")
+        } finally {
+            _isLoading.postValue(false)
         }
     }
+}
 
     fun loadMore(isSearchMode: Boolean) {
         if (autoScrollMode.value == true && _isLoading.value != true) {

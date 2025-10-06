@@ -22,10 +22,11 @@ import cc.bbq.xq.bot.ui.compose.MessageItem
 import cc.bbq.xq.bot.ui.compose.PageJumpDialog
 import cc.bbq.xq.bot.ui.compose.PaginationControls
 
+// 在 MessageCenterScreen.kt 中修复 UI 显示问题
+
 @Composable
 fun MessageCenterScreen(
     viewModel: MessageViewModel,
-  //  navController: NavController,
     onMessageClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -33,45 +34,103 @@ fun MessageCenterScreen(
     var showPageDialog by remember { mutableStateOf(false) }
     val dialogShape = remember { RoundedCornerShape(4.dp) }
 
+    // 修复：只在真正需要时初始化，不强制重置
+    LaunchedEffect(Unit) {
+        viewModel.initializeIfNeeded()
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
     ) {
         // 消息列表
         Box(modifier = Modifier.weight(1f)) {
-            if (state.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (state.messages.isEmpty()) {
-                Text(
-                    text = "暂无消息",
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(state.messages) { message ->
-                        MessageItem(
-                            message = message,
-                            onClick = {
-                                if (message.postid != null) {
-                                    onMessageClick(message.postid)
+            when {
+                // 修复：显示加载指示条
+                state.isLoading && state.messages.isEmpty() -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("加载中...")
+                    }
+                }
+                state.messages.isEmpty() && state.isInitialized -> {
+                    Text(
+                        text = "暂无消息",
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                state.messages.isEmpty() -> {
+                    Text(
+                        text = "加载中...",
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                else -> {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(state.messages) { message ->
+                            MessageItem(
+                                message = message,
+                                onClick = {
+                                    if (message.postid != null) {
+                                        onMessageClick(message.postid)
+                                    }
+                                }
+                            )
+                        }
+                        
+                        // 修复：分页加载时显示底部加载指示
+                        if (state.isLoading && state.messages.isNotEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
                                 }
                             }
+                        }
+                    }
+                }
+            }
+
+            // 显示错误信息
+            state.error?.let { error ->
+                if (state.messages.isEmpty()) {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(onClick = { viewModel.reset() }) {
+                            Text("重试")
+                        }
                     }
                 }
             }
         }
 
-        // 分页控制栏
-        PaginationControls(
-            currentPage = state.currentPage,
-            totalPages = state.totalPages,
-            onPrevClick = { viewModel.prevPage() },
-            onNextClick = { viewModel.nextPage() },
-            onPageClick = { showPageDialog = true },
-            isPrevEnabled = state.currentPage > 1 && !state.isLoading,
-            isNextEnabled = state.currentPage < state.totalPages && !state.isLoading
-        )
+        // 分页控制栏 - 只在有数据且不是加载中时显示
+        if (state.messages.isNotEmpty() && !state.isLoading) {
+            PaginationControls(
+                currentPage = state.currentPage,
+                totalPages = state.totalPages,
+                onPrevClick = { viewModel.prevPage() },
+                onNextClick = { viewModel.nextPage() },
+                onPageClick = { showPageDialog = true },
+                isPrevEnabled = state.currentPage > 1,
+                isNextEnabled = state.currentPage < state.totalPages
+            )
+        }
     }
 
     // 分页跳转对话框

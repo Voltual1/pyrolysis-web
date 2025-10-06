@@ -12,7 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Comment // 修改1: 使用自动镜像版本
+import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
@@ -24,9 +24,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cc.bbq.xq.bot.RetrofitClient
-import cc.bbq.xq.bot.ui.theme.BBQTheme
 import cc.bbq.xq.bot.ui.theme.messageCommentBg
 import cc.bbq.xq.bot.ui.theme.messageLikeBg
+import cc.bbq.xq.bot.ui.theme.messageDefaultBg // 新增导入
 import cc.bbq.xq.bot.ui.theme.billingIncome
 import cc.bbq.xq.bot.ui.theme.billingExpense
 
@@ -70,8 +70,9 @@ fun ListItem(
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                ) // 修复括号位置
+                    modifier = Modifier.weight(1f),
+                    color = contentColor
+                )
                 
                 Text(
                     text = time,
@@ -83,7 +84,8 @@ fun ListItem(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = content,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = contentColor
             )
         }
     }
@@ -96,8 +98,8 @@ fun MessageItem(
 ) {
     val (icon, bgColor) = when (message.type) {
         3 -> Icons.Default.Favorite to MaterialTheme.messageLikeBg
-        5 -> Icons.AutoMirrored.Filled.Comment to MaterialTheme.messageCommentBg // 修改2: 替换为自动镜像版本
-        else -> Icons.Default.Notifications to MaterialTheme.colorScheme.surfaceVariant
+        5 -> Icons.AutoMirrored.Filled.Comment to MaterialTheme.messageCommentBg
+        else -> Icons.Default.Notifications to MaterialTheme.messageDefaultBg
     }
     
     ListItem(

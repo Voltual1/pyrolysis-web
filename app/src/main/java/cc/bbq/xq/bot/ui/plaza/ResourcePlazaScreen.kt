@@ -68,10 +68,8 @@ fun ResourcePlazaContent(
     userId: Long? = null,
     navigateToAppDetail: (String, Long) -> Unit
 ) {
-    // 简化的初始化 - 只调用 ViewModel 的初始化方法
-    LaunchedEffect(isMyResourceMode, userId) {
-        viewModel.initializeData(isMyResourceMode, userId)
-    }
+    // 修复：使用简单的 rememberSaveable 而不需要自定义 Saver
+    var selectedCategoryIndex by rememberSaveable { mutableStateOf(0) }
 
     val plazaState by viewModel.plazaData.observeAsState(PlazaData(emptyList()))
     val searchState by viewModel.searchResults.observeAsState(emptyList())
@@ -103,16 +101,41 @@ fun ResourcePlazaContent(
             AppCategory(45, 62, "跑酷竞技")
         )
     }
-    var selectedCategoryIndex by remember { mutableStateOf(0) }
     val selectedCategory = categories[selectedCategoryIndex]
 
-    // 分类选择时调用 ViewModel 的方法
-    LaunchedEffect(selectedCategory) {
-        viewModel.loadDataByCategory(
-            categoryId = selectedCategory.categoryId, 
-            subCategoryId = selectedCategory.subCategoryId, 
-            userId = userId
-        )
+    // 修复：使用 derivedStateOf 跟踪分类变化，避免不必要的重组
+    val currentCategory by remember(selectedCategory) {
+        derivedStateOf { selectedCategory }
+    }
+
+    // 修复：简化的初始化，只在模式或用户ID变化时重新初始化
+    LaunchedEffect(isMyResourceMode, userId) {
+        viewModel.initializeData(isMyResourceMode, userId)
+    }
+
+    // 修复：分类变化时正确调用 ViewModel 方法
+    LaunchedEffect(currentCategory) {
+        if (!isSearchMode) { // 只有在非搜索模式下才响应分类变化
+            viewModel.loadDataByCategory(
+                categoryId = currentCategory.categoryId, 
+                subCategoryId = currentCategory.subCategoryId, 
+                userId = userId
+            )
+        }
+    }
+
+    // 修复：搜索模式变化时重置分类选择
+    LaunchedEffect(isSearchMode) {
+        if (isSearchMode) {
+            // 搜索模式下保持当前分类选择，但不加载分类数据
+        } else {
+            // 退出搜索模式时重新加载当前分类数据
+            viewModel.loadDataByCategory(
+                categoryId = currentCategory.categoryId,
+                subCategoryId = currentCategory.subCategoryId,
+                userId = userId
+            )
+        }
     }
 
     Column(
@@ -152,7 +175,15 @@ fun ResourcePlazaContent(
                 categories.forEachIndexed { index, category ->
                     Tab(
                         selected = selectedCategoryIndex == index,
-                        onClick = { selectedCategoryIndex = index },
+                        onClick = { 
+                            selectedCategoryIndex = index
+                            // 立即更新分类，不等待 LaunchedEffect
+                            viewModel.loadDataByCategory(
+                                categoryId = category.categoryId,
+                                subCategoryId = category.subCategoryId,
+                                userId = userId
+                            )
+                        },
                         text = { Text(category.categoryName) }
                     )
                 }

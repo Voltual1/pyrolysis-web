@@ -64,11 +64,11 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = md_onBackground_dark // 新增
 )
 
-// 添加特殊颜色扩展 (直接映射到Color.kt中定义的值)
+// 修改：使用应用主题设置而不是系统主题
 val MaterialTheme.messageLikeBg: Color
     @Composable get() {
         val customColors = ThemeManager.customColorSet
-        return if (isSystemInDarkTheme()) {
+        return if (ThemeManager.isAppDarkTheme) {
             customColors?.darkSet?.messageLikeBg ?: message_like_bg_dark
         } else {
             customColors?.lightSet?.messageLikeBg ?: message_like_bg
@@ -79,7 +79,7 @@ val MaterialTheme.messageLikeBg: Color
 val MaterialTheme.messageCommentBg: Color
     @Composable get() {
         val customColors = ThemeManager.customColorSet
-        return if (isSystemInDarkTheme()) {
+        return if (ThemeManager.isAppDarkTheme) {
             customColors?.darkSet?.messageCommentBg ?: message_comment_bg_dark
         } else {
             customColors?.lightSet?.messageCommentBg ?: message_comment_bg
@@ -89,7 +89,7 @@ val MaterialTheme.messageCommentBg: Color
 val MaterialTheme.messageDefaultBg: Color
     @Composable get() {
         val customColors = ThemeManager.customColorSet
-        return if (isSystemInDarkTheme()) {
+        return if (ThemeManager.isAppDarkTheme) {
             customColors?.darkSet?.messageDefaultBg ?: message_default_bg_dark
         } else {
             customColors?.lightSet?.messageDefaultBg ?: message_default_bg
@@ -99,7 +99,7 @@ val MaterialTheme.messageDefaultBg: Color
 val MaterialTheme.billingIncome: Color
     @Composable get() {
         val customColors = ThemeManager.customColorSet
-        return if (isSystemInDarkTheme()) {
+        return if (ThemeManager.isAppDarkTheme) {
             customColors?.darkSet?.billingIncome ?: billing_income_dark
         } else {
             customColors?.lightSet?.billingIncome ?: billing_income
@@ -109,7 +109,7 @@ val MaterialTheme.billingIncome: Color
 val MaterialTheme.billingExpense: Color
     @Composable get() {
         val customColors = ThemeManager.customColorSet
-        return if (isSystemInDarkTheme()) {
+        return if (ThemeManager.isAppDarkTheme) {
             customColors?.darkSet?.billingExpense ?: billing_expense_dark
         } else {
             customColors?.lightSet?.billingExpense ?: billing_expense
