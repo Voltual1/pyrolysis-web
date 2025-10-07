@@ -10,7 +10,7 @@ package cc.bbq.xq.bot.ui.user.compose
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -24,13 +24,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import cc.bbq.xq.bot.R
 import cc.bbq.xq.bot.RetrofitClient
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 
 @Composable
 fun UserListScreen(
@@ -41,56 +38,95 @@ fun UserListScreen(
     onLoadMore: () -> Unit,
     onRefresh: () -> Unit,
     onUserClick: (Long) -> Unit,
-//    navController: NavController, // 添加类型注解
     modifier: Modifier = Modifier
 ) {
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo }
-            .collect { visibleItems ->
-                if (visibleItems.isNotEmpty()) {
-                    val lastVisible = visibleItems.last()
-                    if (lastVisible.index >= listState.layoutInfo.totalItemsCount - 3) {
-                        onLoadMore()
-                    }
-                }
-            }
-    }
-
-    Box(
+    // 修复：使用更简单的状态管理
+    val safeUsers by remember(users) { mutableStateOf(users) }
+    val safeIsLoading by remember(isLoading) { mutableStateOf(isLoading) }
+    val safeErrorMessage by remember(errorMessage) { mutableStateOf(errorMessage) }
+    
+    Column(
         modifier = modifier.fillMaxSize()
     ) {
-        errorMessage?.takeIf { it.isNotEmpty() }?.let { message ->
+        // 错误状态显示
+        safeErrorMessage?.takeIf { it.isNotEmpty() }?.let { message ->
             ErrorState(message = message, onRetry = onRefresh)
-            return@Box
+            return
         }
 
-        if (isEmpty && !isLoading) {
+        // 空状态显示
+        if (safeUsers.isEmpty() && !safeIsLoading && safeErrorMessage.isNullOrEmpty()) {
             EmptyState()
-            return@Box
+            return
         }
 
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(8.dp)
-        ) {
-            items(users) { user ->
-                UserListItem(user = user, onClick = { onUserClick(user.id) })
+        // 使用更安全的 LazyColumn 实现
+        SafeLazyColumn(
+            users = safeUsers,
+            isLoading = safeIsLoading,
+            onLoadMore = onLoadMore,
+            onUserClick = onUserClick,
+            onRefresh = onRefresh
+        )
+    }
+}
+
+@Composable
+private fun SafeLazyColumn(
+    users: List<RetrofitClient.models.UserItem>,
+    isLoading: Boolean,
+    onLoadMore: () -> Unit,
+    onUserClick: (Long) -> Unit,
+    onRefresh: () -> Unit
+) {
+    val listState = rememberLazyListState()
+    
+    // 修复：使用更保守的加载更多检测
+    var lastLoadMoreIndex by remember { mutableIntStateOf(-1) }
+    
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (!listState.isScrollInProgress) {
+            val layoutInfo = listState.layoutInfo
+            val totalItems = layoutInfo.totalItemsCount
+            val visibleItems = layoutInfo.visibleItemsInfo
+            
+            if (visibleItems.isNotEmpty() && totalItems > 0) {
+                val lastVisibleIndex = visibleItems.last().index
+                // 只有当滚动到接近底部且不是正在加载时才触发
+                if (lastVisibleIndex >= totalItems - 2 && 
+                    lastVisibleIndex != lastLoadMoreIndex && 
+                    !isLoading) {
+                    lastLoadMoreIndex = lastVisibleIndex
+                    onLoadMore()
+                }
+            }
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(8.dp)
+    ) {
+        itemsIndexed(
+            items = users,
+            key = { index, user -> user.id ?: index } // 确保有唯一的 key
+        ) { index, user ->
+            StableUserListItem(user = user, onClick = { onUserClick(user.id) })
+            if (index < users.size - 1) {
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             }
+        }
 
-            if (isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
+        if (isLoading) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
             }
         }
@@ -98,10 +134,16 @@ fun UserListScreen(
 }
 
 @Composable
-fun UserListItem(
+private fun StableUserListItem(
     user: RetrofitClient.models.UserItem,
     onClick: () -> Unit
 ) {
+    // 修复：完全稳定的状态管理
+    val stableUser = remember(user) { user }
+    val avatarUrl = remember(stableUser.usertx) { stableUser.usertx }
+    val nickname = remember(stableUser.nickname) { stableUser.nickname }
+    val hierarchy = remember(stableUser.hierarchy) { stableUser.hierarchy }
+
     Surface(
         onClick = onClick,
         modifier = Modifier
@@ -112,8 +154,6 @@ fun UserListItem(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val avatarUrl = user.usertx
-
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(avatarUrl)
@@ -131,7 +171,7 @@ fun UserListItem(
 
             Column {
                 Text(
-                    text = user.nickname,
+                    text = nickname,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -139,7 +179,7 @@ fun UserListItem(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = user.hierarchy,
+                    text = hierarchy,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -149,7 +189,7 @@ fun UserListItem(
 }
 
 @Composable
-fun EmptyState() {
+private fun EmptyState() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -164,7 +204,7 @@ fun EmptyState() {
 }
 
 @Composable
-fun ErrorState(message: String, onRetry: () -> Unit) {
+private fun ErrorState(message: String, onRetry: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()

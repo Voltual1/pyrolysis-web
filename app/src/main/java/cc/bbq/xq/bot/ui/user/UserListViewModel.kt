@@ -18,26 +18,44 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+enum class UserListType {
+    FOLLOWERS,  // 关注列表
+    FANS        // 粉丝列表
+}
+
 data class UserListState(
     val users: List<RetrofitClient.models.UserItem> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val currentPage: Int = 1,
-    val totalPages: Int = 1
+    val totalPages: Int = 1,
+    val listType: UserListType = UserListType.FOLLOWERS
 )
 
-class FollowListViewModel(application: Application) : AndroidViewModel(application) {
+class UserListViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val userManager = UserManager() // 修复：调用无参构造函数
+    private val userManager = UserManager()
+    private var currentListType: UserListType = UserListType.FOLLOWERS
 
     private val _uiState = MutableStateFlow(UserListState())
     val uiState = _uiState.asStateFlow()
 
-    init {
-        loadInitialData()
+    /**
+     * 设置列表类型并重置状态
+     * 注意：这不会自动加载数据，需要手动调用 loadInitialData()
+     */
+    fun setListType(type: UserListType) {
+        if (currentListType != type) {
+            currentListType = type
+            // 重置状态但保留类型
+            _uiState.value = UserListState(listType = type)
+        }
     }
 
-    private fun loadInitialData() {
+    /**
+     * 手动初始化数据（由 UI 调用，而不是在 init 中自动调用）
+     */
+    fun loadInitialData() {
         if (_uiState.value.users.isEmpty()) {
             loadData(1)
         }
@@ -60,14 +78,19 @@ class FollowListViewModel(application: Application) : AndroidViewModel(applicati
             val token = AuthManager.getCredentials(getApplication())?.third ?: ""
 
             try {
-                val response = userManager.getFollowList(token = token, page = page)
+                val response = when (currentListType) {
+                    UserListType.FOLLOWERS -> userManager.getFollowList(token = token, page = page)
+                    UserListType.FANS -> userManager.getFanList(token = token, page = page)
+                }
+                
                 if (response.isSuccessful && response.body()?.code == 1) {
                     val data = response.body()!!.data
                     _uiState.value = _uiState.value.copy(
                         users = if (page == 1) data.list else _uiState.value.users + data.list,
                         totalPages = data.pagecount,
                         currentPage = page,
-                        isLoading = false
+                        isLoading = false,
+                        listType = currentListType
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(

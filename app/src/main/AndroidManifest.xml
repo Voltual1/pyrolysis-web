@@ -22,7 +22,7 @@
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:windowSoftInputMode="adjustResize" 
+            android:windowSoftInputMode="adjustResize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -33,7 +33,12 @@
         <service android:name=".HeartbeatService" />
 
         <!-- 新增: 机器人后台服务 -->
-        <service android:name=".BotService" />               
+        <service android:name=".BotService" />
+
+        <!-- 新增: 崩溃日志 Activity -->
+        <activity
+            android:name=".ui.CrashLogActivity"
+            android:exported="false" />
 
     </application>
 </manifest>

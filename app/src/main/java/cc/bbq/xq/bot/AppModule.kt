@@ -17,8 +17,7 @@ import cc.bbq.xq.bot.ui.community.HotPostsViewModel
 import cc.bbq.xq.bot.ui.community.MyLikesViewModel
 import cc.bbq.xq.bot.ui.payment.PaymentViewModel
 import cc.bbq.xq.bot.ui.log.LogViewModel
-import cc.bbq.xq.bot.ui.user.FollowListViewModel
-import cc.bbq.xq.bot.ui.user.FanListViewModel
+import cc.bbq.xq.bot.ui.user.UserListViewModel
 import cc.bbq.xq.bot.ui.message.MessageViewModel
 import cc.bbq.xq.bot.ui.plaza.AppDetailComposeViewModel
 import cc.bbq.xq.bot.ui.community.PostCreateViewModel 
@@ -48,8 +47,7 @@ val appModule = module {
     viewModel { (initialMode: Boolean) -> PlazaViewModel(androidApplication(), initialMode) }
     viewModel { PlayerViewModel(androidApplication()) }
     viewModel { SearchViewModel() }
-    viewModel { FollowListViewModel(androidApplication()) }
-    viewModel { FanListViewModel(androidApplication()) }
+    viewModel { UserListViewModel(androidApplication()) }
     viewModel { PostCreateViewModel(androidApplication()) }
     viewModel { MyPostsViewModel() }
     viewModel { PaymentViewModel(androidApplication()) }

@@ -1,11 +1,3 @@
-//Copyright (C) 2025 Voltual
-// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
-//（或任意更新的版本）的条款重新分发和/或修改它。
-//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
-//
-// 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package cc.bbq.xq.bot
 
 import android.app.ActivityOptions
@@ -45,13 +37,15 @@ import cc.bbq.xq.bot.ui.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import cc.bbq.xq.bot.ui.CrashLogActivity
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import cc.bbq.xq.bot.data.db.LogEntry
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        super.onCreate(savedInstanceState)               
 
         applyDpiAndFontScale(this)
 
@@ -74,6 +68,45 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    
+    init {
+        // 设置崩溃处理
+        Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
+            val crashReport = getCrashReport(throwable)
+            // 保存崩溃日志到数据库
+            CoroutineScope(Dispatchers.IO).launch {
+                val logEntry = LogEntry(
+                    type = "CRASH",
+                    requestBody = "MainActivity 崩溃",
+                    responseBody = crashReport,
+                    status = "FAILURE"
+                )
+                BBQApplication.instance.database.logDao().insert(logEntry)
+            }.invokeOnCompletion {
+                CrashLogActivity.start(BBQApplication.instance, crashReport)
+                android.os.Process.killProcess(android.os.Process.myPid())
+            }
+        }
+    }
+    
+    private fun getCrashReport(throwable: Throwable): String {
+        val stackTrace = throwable.stackTraceToString()
+        val deviceInfo = """
+            设备型号: ${android.os.Build.MODEL}
+            Android 版本: ${android.os.Build.VERSION.RELEASE}
+            App 版本: ${BuildConfig.VERSION_NAME}
+        """.trimIndent()
+
+        return """
+            崩溃信息: ${throwable.message}
+            
+            设备信息:
+            $deviceInfo
+            
+            堆栈跟踪:
+            $stackTrace
+        """.trimIndent()
+    }
 
     @Suppress("DEPRECATION")
     private fun applyDpiAndFontScale(context: Context) {
@@ -82,6 +115,7 @@ class MainActivity : ComponentActivity() {
         val resources = context.resources
         val configuration = Configuration(resources.configuration)
         val metrics = DisplayMetrics()
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
         windowManager.defaultDisplay.getMetrics(metrics)
         val newDensityDpi = (dpi * DisplayMetrics.DENSITY_DEFAULT).toInt()
         configuration.densityDpi = newDensityDpi

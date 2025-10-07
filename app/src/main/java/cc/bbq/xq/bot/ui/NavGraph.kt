@@ -101,8 +101,6 @@ fun AppNavHost(
     // 将 ViewModel 的创建移动到 AppNavHost 函数中
     val searchViewModel: SearchViewModel = org.koin.androidx.compose.koinViewModel()
     val postCreateViewModel: PostCreateViewModel = org.koin.androidx.compose.koinViewModel()
-    val followListViewModel: FollowListViewModel = org.koin.androidx.compose.koinViewModel()    
-    val fanListViewModel: FanListViewModel = org.koin.androidx.compose.koinViewModel()
     val plazaViewModel: PlazaViewModel = org.koin.androidx.compose.koinViewModel { parametersOf(false) }
     val appReleaseViewModel: AppReleaseViewModel = org.koin.androidx.compose.koinViewModel()
     val messageViewModel: MessageViewModel = org.koin.androidx.compose.koinViewModel()
@@ -290,36 +288,50 @@ composable(route = UserDetail(0).route, arguments = UserDetail.arguments) { back
         // 在 NavGraph.kt 中更新 UserListScreen 的调用
 
         // 关注列表
-        composable(route = FollowList.route) {
-            val state by followListViewModel.uiState.collectAsStateWithLifecycle()
-            UserListScreen(
-                users = state.users,
-                isLoading = state.isLoading,
-                errorMessage = state.errorMessage,
-                isEmpty = state.users.isEmpty() && !state.isLoading && state.errorMessage.isNullOrEmpty(),
-                onLoadMore = { followListViewModel.loadNextPage() },
-                onRefresh = { followListViewModel.refresh() },
-                onUserClick = { userId -> navController.navigate(UserDetail(userId).createRoute()) },
-                modifier = Modifier.fillMaxSize()//,
-             //   navController = navController // 传递 navController
-            )
-        }
+composable(route = FollowList.route) {
+    val viewModel: UserListViewModel = koinViewModel()
+    
+    // 设置列表类型并手动初始化
+    LaunchedEffect(Unit) {
+        viewModel.setListType(UserListType.FOLLOWERS)
+        viewModel.loadInitialData()
+    }
+    
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    UserListScreen(
+        users = state.users,
+        isLoading = state.isLoading,
+        errorMessage = state.errorMessage,
+        isEmpty = state.users.isEmpty() && !state.isLoading && state.errorMessage.isNullOrEmpty(),
+        onLoadMore = { viewModel.loadNextPage() },
+        onRefresh = { viewModel.refresh() },
+        onUserClick = { userId -> navController.navigate(UserDetail(userId).createRoute()) },
+        modifier = Modifier.fillMaxSize()
+    )
+}
 
-        // 粉丝列表
-        composable(route = FanList.route) {
-            val state by fanListViewModel.uiState.collectAsStateWithLifecycle()
-            UserListScreen(
-                users = state.users,
-                isLoading = state.isLoading,
-                errorMessage = state.errorMessage,
-                isEmpty = state.users.isEmpty() && !state.isLoading && state.errorMessage.isNullOrEmpty(),
-                onLoadMore = { fanListViewModel.loadNextPage() },
-                onRefresh = { fanListViewModel.refresh() },
-                onUserClick = { userId -> navController.navigate(UserDetail(userId).createRoute()) },
-                modifier = Modifier.fillMaxSize()//,
-//                navController = navController // 传递 navController
-            )
-        }
+// 粉丝列表  
+composable(route = FanList.route) {
+    val viewModel: UserListViewModel = koinViewModel()
+    
+    // 设置列表类型并手动初始化
+    LaunchedEffect(Unit) {
+        viewModel.setListType(UserListType.FANS)
+        viewModel.loadInitialData()
+    }
+    
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    UserListScreen(
+        users = state.users,
+        isLoading = state.isLoading,
+        errorMessage = state.errorMessage,
+        isEmpty = state.users.isEmpty() && !state.isLoading && state.errorMessage.isNullOrEmpty(),
+        onLoadMore = { viewModel.loadNextPage() },
+        onRefresh = { viewModel.refresh() },
+        onUserClick = { userId -> navController.navigate(UserDetail(userId).createRoute()) },
+        modifier = Modifier.fillMaxSize()
+    )
+}
 
         composable(route = AccountProfile.route) {
             AccountProfileScreen(
