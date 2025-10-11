@@ -14,8 +14,8 @@ android {
         applicationId = "cc.bbq.xq.bot" // 修正包名以匹配项目
         minSdk = 21
         targetSdk = 34
-        versionCode = 307
-        versionName = "10.5-QUBOT" // 更新版本名以作区分
+        versionCode = 310
+        versionName = "10.6-QUBOT" // 更新版本名以作区分
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         resourceConfigurations.add("zh-rCN")
@@ -106,6 +106,9 @@ dependencies {
     // ===== 播放器依赖 =====
     implementation("com.sdtv.haikan:ijkplayer:0.0.2")
     implementation(project(":DanmakuFlameMaster"))
+    
+     // 用于颜色提取
+    implementation("androidx.palette:palette-ktx:1.0.0")
     
     // ===== 新增：ROOM 数据库依赖 =====
     val room_version = "2.6.1"

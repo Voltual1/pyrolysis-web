@@ -1,3 +1,4 @@
+// Components.kt
 //Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
@@ -14,6 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.background
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -26,6 +30,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext // 导入 LocalContext
+import androidx.compose.runtime.collectAsState // 导入 collectAsState
+import androidx.compose.foundation.layout.Box // 导入 Box
+import androidx.compose.foundation.layout.fillMaxSize // 导入 fillMaxSize
+import androidx.compose.foundation.Image // 导入 Image
+import androidx.compose.ui.layout.ContentScale // 导入 ContentScale
+import coil.compose.rememberAsyncImagePainter // 导入 rememberAsyncImagePainter
 
 // 基础按钮组件
 @Composable
@@ -95,10 +106,61 @@ fun BBQCard(
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), // 减少阴影高度
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         border = border
     ) {
         content()
+    }
+}
+
+// 新增：支持全局背景的卡片
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BBQBackgroundCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    border: BorderStroke? = null,
+    shape: Shape = AppShapes.medium,
+    backgroundAlpha: Float = 0.1f,
+    content: @Composable () -> Unit
+) {
+    val context = LocalContext.current
+    val globalBackgroundUriState = ThemeColorStore.getGlobalBackgroundUriFlow(context).collectAsState(initial = null)
+    val globalBackgroundUri by globalBackgroundUriState
+
+    Card(
+        modifier = modifier,
+        onClick = onClick ?: {},
+        shape = shape,
+        colors = CardDefaults.cardColors(
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = border
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // 全局背景图片
+            if (globalBackgroundUri != null) {
+                Image(
+                    painter = rememberAsyncImagePainter(model = globalBackgroundUri),
+                    contentDescription = "Global Background",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .matchParentSize()
+                )
+            }
+            
+            // 内容区域（不透明，确保文字可读）
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
+            ) {
+                content()
+            }
+        }
     }
 }
 

@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cc.bbq.xq.bot.R
 import cc.bbq.xq.bot.ui.theme.AppShapes
+import cc.bbq.xq.bot.ui.theme.BBQBackgroundCard
 import coil.compose.AsyncImage
 
 @Composable
@@ -174,14 +175,9 @@ private fun PersonalCenterSection(
     onPostsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    BBQBackgroundCard(
         shape = AppShapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        ),
         border = CardDefaults.outlinedCardBorder(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         modifier = modifier
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -398,14 +394,9 @@ private fun FunctionCardSection(
     onRecalculateDays: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    BBQBackgroundCard(
         shape = AppShapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        ),
         border = CardDefaults.outlinedCardBorder(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         modifier = modifier
     ) {
         Column(

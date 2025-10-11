@@ -11,6 +11,7 @@ package cc.bbq.xq.bot.ui.theme
 import android.content.Context
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
@@ -137,6 +138,19 @@ object ThemeColorStore {
     private val FONT_SIZE_KEY = floatPreferencesKey("font_size")
     private val DRAWER_HEADER_LIGHT_BG_URI_KEY = stringPreferencesKey("drawer_header_light_bg_uri")
     private val DRAWER_HEADER_DARK_BG_URI_KEY = stringPreferencesKey("drawer_header_dark_bg_uri")
+    
+    private val GLOBAL_BACKGROUND_URI_KEY = stringPreferencesKey("global_background_uri")
+    
+    suspend fun saveGlobalBackgroundUri(context: Context, uri: String?) {
+        context.themeSettingsDataStore.edit { preferences ->
+            if (uri != null) preferences[GLOBAL_BACKGROUND_URI_KEY] = uri
+            else preferences.remove(GLOBAL_BACKGROUND_URI_KEY)
+        }
+    }
+
+    fun getGlobalBackgroundUriFlow(context: Context): Flow<String?> {
+        return context.themeSettingsDataStore.data.map { it[GLOBAL_BACKGROUND_URI_KEY] }
+    }
 
     suspend fun saveColors(context: Context, colors: CustomColorSet) {
         context.themeSettingsDataStore.edit { preferences ->
@@ -150,14 +164,37 @@ object ThemeColorStore {
     }
 
     // 注意：load 方法保持 runBlocking，因为它们需要在 Activity 初始化（非 suspend 上下文）时同步加载
-    fun loadColors(context: Context): CustomColorSet {
-        return runBlocking {
-            val preferences = context.themeSettingsDataStore.data.first()
-            val lightSet = loadColorSet(preferences, LIGHT_COLOR_KEYS, DEFAULT_COLORS.lightSet)
-            val darkSet = loadColorSet(preferences, DARK_COLOR_KEYS, DEFAULT_COLORS.darkSet)
-            CustomColorSet(lightSet, darkSet)
+    // ThemeColorStore.kt
+
+fun loadColors(context: Context): CustomColorSet {
+    return runBlocking {
+        val preferences = context.themeSettingsDataStore.data.first()
+        
+        val lightSet: ColorSet = try {
+            // 优先尝试从图片主题加载
+            preferences[IMAGE_THEME_LIGHT_URI_KEY]?.let { uriString ->
+                val uri = Uri.parse(uriString)
+                val bitmap = ColorUtils.getBitmapFromUri(context, uri)
+                ColorUtils.extractColorsFromBitmap(bitmap)
+            } ?: loadColorSet(preferences, LIGHT_COLOR_KEYS, DEFAULT_COLORS.lightSet)
+        } catch (e: Exception) {
+            // 如果图片主题加载失败，回退到手动设置的颜色
+            loadColorSet(preferences, LIGHT_COLOR_KEYS, DEFAULT_COLORS.lightSet)
         }
+
+        val darkSet: ColorSet = try {
+            preferences[IMAGE_THEME_DARK_URI_KEY]?.let { uriString ->
+                val uri = Uri.parse(uriString)
+                val bitmap = ColorUtils.getBitmapFromUri(context, uri)
+                ColorUtils.extractColorsFromBitmap(bitmap)
+            } ?: loadColorSet(preferences, DARK_COLOR_KEYS, DEFAULT_COLORS.darkSet)
+        } catch (e: Exception) {
+            loadColorSet(preferences, DARK_COLOR_KEYS, DEFAULT_COLORS.darkSet)
+        }
+        
+        CustomColorSet(lightSet, darkSet)
     }
+}
 
     private fun loadColorSet(preferences: Preferences, keys: List<String>, defaultSet: ColorSet): ColorSet {
         return try {
@@ -216,5 +253,30 @@ object ThemeColorStore {
 
     fun getDrawerHeaderDarkBackgroundUriFlow(context: Context): Flow<String?> {
         return context.themeSettingsDataStore.data.map { it[DRAWER_HEADER_DARK_BG_URI_KEY] }
+    }
+    
+    private val IMAGE_THEME_LIGHT_URI_KEY = stringPreferencesKey("image_theme_light_uri")
+    private val IMAGE_THEME_DARK_URI_KEY = stringPreferencesKey("image_theme_dark_uri")
+
+    suspend fun saveImageThemeLightUri(context: Context, uri: String?) {
+        context.themeSettingsDataStore.edit { preferences ->
+            if (uri != null) preferences[IMAGE_THEME_LIGHT_URI_KEY] = uri
+            else preferences.remove(IMAGE_THEME_LIGHT_URI_KEY)
+        }
+    }
+
+    fun getImageThemeLightUriFlow(context: Context): Flow<String?> {
+        return context.themeSettingsDataStore.data.map { it[IMAGE_THEME_LIGHT_URI_KEY] }
+    }
+
+    suspend fun saveImageThemeDarkUri(context: Context, uri: String?) {
+        context.themeSettingsDataStore.edit { preferences ->
+            if (uri != null) preferences[IMAGE_THEME_DARK_URI_KEY] = uri
+            else preferences.remove(IMAGE_THEME_DARK_URI_KEY)
+        }
+    }
+
+    fun getImageThemeDarkUriFlow(context: Context): Flow<String?> {
+        return context.themeSettingsDataStore.data.map { it[IMAGE_THEME_DARK_URI_KEY] }
     }
 }

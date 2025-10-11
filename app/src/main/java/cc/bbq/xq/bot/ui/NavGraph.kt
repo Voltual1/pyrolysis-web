@@ -161,7 +161,6 @@ fun AppNavHost(
         // 在 NavGraph.kt 中更新主题定制屏幕的调用
         composable(route = ThemeCustomize.route) {
             ThemeCustomizeScreen(
-                onSave = saveThemeAndRestart,
                 modifier = Modifier.fillMaxSize() // 添加 modifier
             )
         }
