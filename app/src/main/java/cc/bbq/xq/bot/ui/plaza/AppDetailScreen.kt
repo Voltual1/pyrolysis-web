@@ -205,7 +205,10 @@ fun AppDetailScreen(
                 ) {
                     Text("取消")
                 }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant, // 设置对话框背景色
+            titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant, // 设置标题文字颜色
+            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant // 设置文本内容颜色
         )
     }
 
@@ -250,7 +253,13 @@ fun AppDetailContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant, // 使用 surfaceVariant 背景色
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -377,7 +386,13 @@ fun AppDetailContent(
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant, // 使用 surfaceVariant 背景色
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "应用介绍",
@@ -394,7 +409,13 @@ fun AppDetailContent(
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant, // 使用 surfaceVariant 背景色
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "应用信息",
@@ -427,7 +448,13 @@ fun AppDetailContent(
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant, // 使用 surfaceVariant 背景色
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

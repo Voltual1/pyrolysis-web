@@ -165,7 +165,8 @@ fun PostDetailScreen(
     ) {
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background), // 设置整体背景色
             verticalArrangement = Arrangement.spacedBy(16.dp),
             state = listState
         ) {
@@ -173,7 +174,11 @@ fun PostDetailScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant, // 使用 surfaceVariant 作为卡片背景
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp)
@@ -509,7 +514,11 @@ fun CommentDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            shape = MaterialTheme.shapes.large
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant, // 对话框也使用 surfaceVariant
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         ) {
             Column(
                 modifier = Modifier
@@ -690,7 +699,11 @@ fun CommentItem(
                         showDeleteDialog = true
                     }
                 )
-            }
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant, // 评论卡片使用 surfaceVariant
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

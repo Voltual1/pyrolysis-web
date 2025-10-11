@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -80,13 +81,15 @@ fun PaginationControls(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "上一页"
+                    contentDescription = "上一页",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Text(
                 text = "第 $currentPage 页 / 共 $totalPages 页",
                 style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .padding(horizontal = 8.dp)
                     .clickable(onClick = onPageClick)
@@ -98,7 +101,8 @@ fun PaginationControls(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "下一页"
+                    contentDescription = "下一页",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -133,7 +137,7 @@ fun PageJumpDialog(
         title = { Text("跳转页面") },
         text = {
             Column {
-                Text("请输入页码 (1-$totalPages)")
+                Text("请输入页码 (1-$totalPages)", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(
                     value = pageInput,
                     onValueChange = { pageInput = it },
@@ -141,7 +145,15 @@ fun PageJumpDialog(
                     keyboardOptions = KeyboardOptions.Default.copy(
                         keyboardType = KeyboardType.Number
                     ),
-                    singleLine = true
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 )
             }
         },
@@ -161,6 +173,9 @@ fun PageJumpDialog(
             TextButton(onClick = onDismiss) {
                 Text("取消")
             }
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }

@@ -82,7 +82,15 @@ fun BaseComposeListScreen(
                         value = inputPage,
                         onValueChange = { inputPage = it },
                         label = { Text("输入页码 (1-$totalPages)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
                 }
             },
@@ -103,7 +111,10 @@ fun BaseComposeListScreen(
                 TextButton(onClick = { showJumpDialog = false }) {
                     Text("取消")
                 }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant, // 设置对话框背景色
+            titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant, // 设置标题文字颜色
+            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant // 设置文本内容颜色
         )
     }
 

@@ -317,13 +317,17 @@ fun AppGridItem(
         modifier = Modifier
             .fillMaxWidth()
             .height(120.dp),
-        shape = AppShapes.medium
+        shape = AppShapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant, // 使用 surfaceVariant 背景色
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier.padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
-    ) {
+        ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(app.iconUrl)
