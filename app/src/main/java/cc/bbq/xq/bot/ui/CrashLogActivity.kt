@@ -30,21 +30,25 @@ import android.widget.Toast
 class CrashLogActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    super.onCreate(savedInstanceState)
 
-        setContent {
-            val crashReportState = remember { mutableStateOf("Loading...") }
-            val context = LocalContext.current
+    // 先从 Intent 获取，如果没有再从数据库加载
+    val initialCrashReport = intent.getStringExtra("CRASH_REPORT")
+    
+    setContent {
+        val crashReportState = remember { mutableStateOf(initialCrashReport ?: "Loading...") }
+        val context = LocalContext.current
 
-            LaunchedEffect(Unit) {
+        LaunchedEffect(Unit) {
+            if (initialCrashReport == null) { // 如果没有传递参数，才从数据库加载
                 CoroutineScope(Dispatchers.IO).launch {
-                    // 从数据库中获取最新的崩溃日志
                     val logEntry = BBQApplication.instance.database.logDao().getAllLogs().first()
                         .firstOrNull { it.type == "CRASH" }
                     val crashReport = logEntry?.responseBody ?: "No crash report available."
                     crashReportState.value = crashReport
                 }
             }
+        }
 
             BBQTheme(appDarkTheme = ThemeManager.isAppDarkTheme) {
                 Surface(
@@ -74,15 +78,15 @@ class CrashLogActivity : ComponentActivity() {
     }
 
     companion object {
-        fun start(context: Context, crashReport: String) {
-            val intent = Intent(context, CrashLogActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            context.startActivity(intent)
+    fun start(context: Context, crashReport: String) {
+        val intent = Intent(context, CrashLogActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("CRASH_REPORT", crashReport) // 将崩溃报告传递给 Activity
         }
+        context.startActivity(intent)
     }
 }
-
+}
 @Composable
 fun CrashLogScreen(crashReport: String) {
     Column(

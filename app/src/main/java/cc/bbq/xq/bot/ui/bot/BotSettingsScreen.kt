@@ -38,7 +38,7 @@ import cc.bbq.xq.bot.ui.theme.BBQOutlinedButton
 @Composable
 fun BotSettingsScreen(
     viewModel: BotSettingsViewModel,
-    onBackClick: () -> Unit,
+  //  onBackClick: () -> Unit,
     onNavigateToBotLogin: () -> Unit,
     modifier: Modifier = Modifier // 新增：接收外部 modifier
 ) {
@@ -137,7 +137,7 @@ private fun AdvancedFeaturesCard(
                 Switch(checked = isSuperCacheEnabled, onCheckedChange = onSuperCacheEnabledChange)
             }
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             BBQOutlinedButton(
                 onClick = onClearCacheClick,

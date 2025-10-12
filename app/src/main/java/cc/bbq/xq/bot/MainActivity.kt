@@ -297,7 +297,7 @@ fun MainComposeApp() {
         restartAppCallback = { restartMainActivity(context) }
     }
 
-    val useDarkTheme = ThemeManager.isAppDarkTheme ?: isSystemInDarkTheme()
+    val useDarkTheme = ThemeManager.isAppDarkTheme
 
     val lightBgUri by ThemeColorStore.getDrawerHeaderLightBackgroundUriFlow(context).collectAsState(initial = null)
     val darkBgUri by ThemeColorStore.getDrawerHeaderDarkBackgroundUriFlow(context).collectAsState(initial = null)

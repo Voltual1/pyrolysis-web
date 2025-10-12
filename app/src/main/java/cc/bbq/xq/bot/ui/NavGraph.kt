@@ -75,28 +75,9 @@ fun AppNavHost(
     modifier: Modifier = Modifier,
     restartAppCallback: (() -> Unit)? = null
 ) {
-    val context = LocalContext.current
+   // val context = LocalContext.current
 //    val density = LocalDensity.current
     val slideDistance = rememberSlideDistance()
-
-    // 创建主题保存函数
-    val saveThemeAndRestart: (cc.bbq.xq.bot.ui.theme.CustomColorSet, Float, Float, String?, String?) -> Unit = { colors, dpi, fontSize, lightUri, darkUri ->
-        // 直接在这里实现保存逻辑，避免依赖 ThemeCustomizeManager
-        val scope = (context as? androidx.lifecycle.LifecycleOwner)?.lifecycleScope ?: kotlinx.coroutines.MainScope()
-        scope.launch {
-            cc.bbq.xq.bot.ui.theme.ThemeColorStore.saveColors(context, colors)
-            cc.bbq.xq.bot.ui.theme.ThemeColorStore.saveDpi(context, dpi)
-            cc.bbq.xq.bot.ui.theme.ThemeColorStore.saveFontSize(context, fontSize)
-            cc.bbq.xq.bot.ui.theme.ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, lightUri)
-            cc.bbq.xq.bot.ui.theme.ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, darkUri)
-
-            // 应用自定义颜色
-            cc.bbq.xq.bot.ui.theme.ThemeManager.applyCustomColors(context)
-
-            // 触发重启回调
-            restartAppCallback?.invoke()
-        }
-    }
 
     // 将 ViewModel 的创建移动到 AppNavHost 函数中
     val searchViewModel: SearchViewModel = org.koin.androidx.compose.koinViewModel()
@@ -539,7 +520,7 @@ private fun BotSettingsNavHost(navController: NavHostController) {
         composable("settings") {
             BotSettingsScreen(
                 viewModel = activityViewModel,
-                onBackClick = { (navController.context as? Activity)?.finish() },
+//                onBackClick = { (navController.context as? Activity)?.finish() },
                 onNavigateToBotLogin = { innerNavController.navigate("bot_login") }, // 使用内部导航
                 modifier = Modifier.fillMaxSize()
             )
