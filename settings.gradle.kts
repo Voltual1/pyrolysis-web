@@ -30,6 +30,7 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "QUBOT"
+rootProject.name = "BBQ"
 include(":app")
 include(":DanmakuFlameMaster")
+// REMOVED: ijkplayer-java 模块已不再需要

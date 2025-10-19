@@ -32,10 +32,6 @@
 
         <service android:name=".HeartbeatService" />
 
-        <!-- 新增: 机器人后台服务 -->
-        <service android:name=".BotService" />
-
-        <!-- 新增: 崩溃日志 Activity -->
         <activity
             android:name=".ui.CrashLogActivity"
             android:exported="false" />
