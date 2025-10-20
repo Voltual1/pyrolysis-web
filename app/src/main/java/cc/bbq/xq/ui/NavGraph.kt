@@ -74,8 +74,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun AppNavHost(
     navController: NavHostController,
-    modifier: Modifier = Modifier,
-    restartAppCallback: (() -> Unit)? = null
+    modifier: Modifier = Modifier//,
+//    restartAppCallback: (() -> Unit)? = null
 ) {
    // val context = LocalContext.current
 //    val density = LocalDensity.current
@@ -159,51 +159,39 @@ fun AppNavHost(
             PostDetailScreen(
                 postId = postId,
                 navController = navController,
-                onBack = { navController.popBackStack() },
+//                onBack = { navController.popBackStack() },
                 onPostDeleted = { navController.popBackStack() },
                 modifier = Modifier.fillMaxSize() // 添加 modifier
             )
         }
 
-        composable(route = CreatePost.route) {
-            val coroutineScope = rememberCoroutineScope()
-            PostCreateScreen(
-                viewModel = postCreateViewModel,
-                onBackClick = { navController.popBackStack() },
-                onSubmitClick = { _, _, _, _ ->
-                    coroutineScope.launch {
-                        // TODO: 将此逻辑移至 ViewModel
-                        navController.popBackStack()
-                    }
-                },
-                mode = "create",
-                refundAppName = "",
-                refundAppId = 0L,
-                refundVersionId = 0L,
-                refundPayMoney = 0
-            )
-        }
+composable(route = CreatePost.route) {
+    PostCreateScreen(
+        viewModel = postCreateViewModel,
+        onBackClick = { navController.popBackStack() },
+        // 移除 onSubmitClick 参数
+        mode = "create",
+        refundAppName = "",
+        refundAppId = 0L,
+        refundVersionId = 0L,
+        refundPayMoney = 0
+    )
+}
 
-        composable(route = CreateRefundPost(0, 0, "", 0).route, arguments = CreateRefundPost.arguments) { backStackEntry ->
-            val args = backStackEntry.arguments!!
-            val coroutineScope = rememberCoroutineScope()
-            PostCreateScreen(
-                viewModel = postCreateViewModel,
-                onBackClick = { navController.popBackStack() },
-                onSubmitClick = { _, _, _, _ ->
-                    coroutineScope.launch {
-                        // 提交逻辑
-                        navController.popBackStack()
-                    }
-                },
-                mode = "refund",
-                refundAppName = URLDecoder.decode(args.getString(AppDestination.ARG_APP_NAME, ""), StandardCharsets.UTF_8.toString()),
-                refundAppId = args.getLong(AppDestination.ARG_APP_ID),
-                refundVersionId = args.getLong(AppDestination.ARG_VERSION_ID),
-                refundPayMoney = args.getInt(AppDestination.ARG_PAY_MONEY),
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+composable(route = CreateRefundPost(0, 0, "", 0).route, arguments = CreateRefundPost.arguments) { backStackEntry ->
+    val args = backStackEntry.arguments!!
+    PostCreateScreen(
+        viewModel = postCreateViewModel,
+        onBackClick = { navController.popBackStack() },
+        // 移除 onSubmitClick 参数
+        mode = "refund",
+        refundAppName = URLDecoder.decode(args.getString(AppDestination.ARG_APP_NAME, ""), StandardCharsets.UTF_8.toString()),
+        refundAppId = args.getLong(AppDestination.ARG_APP_ID),
+        refundVersionId = args.getLong(AppDestination.ARG_VERSION_ID),
+        refundPayMoney = args.getInt(AppDestination.ARG_PAY_MONEY),
+        modifier = Modifier.fillMaxSize()
+    )
+}
 
         // 在 NavGraph.kt 中更新 BrowseHistoryScreen 的调用
         composable(route = BrowseHistory.route) {

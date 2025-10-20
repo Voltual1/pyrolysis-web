@@ -14,13 +14,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +32,7 @@ import cc.bbq.xq.KtorClient
 fun RankingListItem(
     ranking: Int,
     user: KtorClient.RankingUser,
+    sortType: SortType,
     onClick: () -> Unit
 ) {
     // 使用 MaterialTheme 颜色
@@ -92,14 +93,17 @@ fun RankingListItem(
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.MonetizationOn,
-                        contentDescription = "金币",
+                        imageVector = if (sortType == SortType.MONEY) Icons.Filled.MonetizationOn else Icons.AutoMirrored.Filled.TrendingUp,
+                        contentDescription = if (sortType == SortType.MONEY) "硬币" else "经验",
                         tint = MaterialTheme.colorScheme.secondary, // 使用主题中的强调色
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = user.money.toString(),
+                        text = when (sortType) {
+                            SortType.MONEY -> (user.money ?: 0).toString()
+                            SortType.EXP -> (user.exp ?: 0).toString()
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Medium

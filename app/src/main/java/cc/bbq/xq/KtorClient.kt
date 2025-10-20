@@ -6,6 +6,7 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+@file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 
 package cc.bbq.xq
 
@@ -552,7 +553,8 @@ val httpClient = HttpClient(OkHttp) {
         val username: String,
         val nickname: String,
         val usertx: String,
-        val money: Int,
+    val money: Int? = null,  // 改为可选
+    val exp: Int? = null,    // 改为可选
         val title: List<String>?,
         val badge: List<JsonObject>?
     )

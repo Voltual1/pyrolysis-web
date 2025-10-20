@@ -72,6 +72,7 @@ fun SharedPostItem(
             Spacer(modifier = Modifier.height(8.dp))
             Text(post.content, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
             
+            // 修复语法错误：使用正确的 lambda 表达式语法
             post.img_url?.takeIf { it.isNotEmpty() }?.firstOrNull()?.let { imageUrl ->
                 Spacer(modifier = Modifier.height(12.dp))
                 Image(
@@ -101,7 +102,7 @@ fun SharedPostItem(
 
 @Composable
 fun SharedLogListItem(log: cc.bbq.xq.data.db.LogEntry, modifier: Modifier = Modifier) {
-    val isDarkTheme = ThemeManager.isAppDarkTheme ?: isSystemInDarkTheme()
+    val isDarkTheme = ThemeManager.isAppDarkTheme
     val statusColor = if (log.status == "SUCCESS") {
         if (isDarkTheme) billing_income_dark else billing_income
     } else {
