@@ -1,4 +1,4 @@
-name: Android Release Build
+name: Android CI
 
 on:
   push:
@@ -50,9 +50,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Build Release with Gradle
+      - name: Build  with Gradle
         run: |
-          ./gradlew assembleRelease
+                   ./gradlew assembleRelease
 
       - name: Get version info
         id: version
@@ -84,6 +84,7 @@ jobs:
           prerelease: false
           files: |
             app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/debug/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

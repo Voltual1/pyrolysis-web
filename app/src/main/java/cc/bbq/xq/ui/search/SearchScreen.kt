@@ -65,7 +65,6 @@ fun SearchScreen(
 
     // 为帖子模式创建列表状态用于自动翻页
     val listState = rememberLazyListState()
-//    val coroutineScope = rememberCoroutineScope()
 
     // 自动翻页逻辑（仅限帖子模式）
     if (searchMode == SearchMode.POSTS) {
@@ -193,32 +192,37 @@ fun SearchScreen(
                 )
             }
             else -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    when {
-                        isLoading -> CircularProgressIndicator()
-                        errorMessage != null -> Text(
-                            errorMessage!!, 
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        query.isNotBlank() -> Text("没有找到关于 \"$query\" 的结果")
-                        else -> Text("输入关键字开始搜索")
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when {
+                            isLoading && searchMode == SearchMode.POSTS -> CircularProgressIndicator()
+                            errorMessage != null -> Text(
+                                errorMessage!!, 
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            query.isNotBlank() && searchMode != SearchMode.POSTS && !isLoading -> 
+                                Text("没有找到关于 \"$query\" 的结果")
+                            query.isBlank() -> Text("输入关键字开始搜索")
+                        }
+                    }
+
+                    // 底部加载指示器（仅帖子模式）
+                    if (isLoading && searchMode == SearchMode.POSTS && searchResults.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
                 }
-            }
-        }
-
-        // 底部加载指示器（仅帖子模式）
-        if (isLoading && searchMode == SearchMode.POSTS && searchResults.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
             }
         }
     }
@@ -286,7 +290,7 @@ private fun SearchHeader(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("机器人日志") }, 
+                        text = { Text("日志") }, 
                         onClick = { 
                             onModeChange(SearchMode.LOGS)
                             showMenu = false 
