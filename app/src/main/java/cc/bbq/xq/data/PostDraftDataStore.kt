@@ -26,23 +26,25 @@ class PostDraftDataStore(private val context: Context) {
         private val DRAFT_SUBSECTION_ID = intPreferencesKey("draft_subsection_id")
         private val HAS_DRAFT = booleanPreferencesKey("has_draft")
         private val DRAFT_IMAGE_URIS = stringPreferencesKey("draft_image_uris")
-        // 新增图片URL存储键
         private val DRAFT_IMAGE_URLS = stringPreferencesKey("draft_image_urls")
+        
+        // 新增偏好设置键
+        private val AUTO_RESTORE_DRAFT = booleanPreferencesKey("auto_restore_draft")
+        private val NO_STORE_DRAFT = booleanPreferencesKey("no_store_draft")
     }
 
     suspend fun saveDraft(
         title: String,
         content: String,
         imageUris: List<Uri>,
-        imageUrls: String, // 新增图片URL参数
+        imageUrls: String,
         subsectionId: Int
     ) {
-        val uriStrings = imageUris.joinToString(",") { it.toString() }
         context.draftDataStore.edit { preferences ->
             preferences[DRAFT_TITLE] = title
             preferences[DRAFT_CONTENT] = content
-            preferences[DRAFT_IMAGE_URIS] = uriStrings
-            preferences[DRAFT_IMAGE_URLS] = imageUrls // 保存图片URL
+            preferences[DRAFT_IMAGE_URIS] = imageUris.joinToString(",") { it.toString() }
+            preferences[DRAFT_IMAGE_URLS] = imageUrls
             preferences[DRAFT_SUBSECTION_ID] = subsectionId
             preferences[HAS_DRAFT] = true
         }
@@ -53,9 +55,22 @@ class PostDraftDataStore(private val context: Context) {
             preferences.remove(DRAFT_TITLE)
             preferences.remove(DRAFT_CONTENT)
             preferences.remove(DRAFT_IMAGE_URIS)
-            preferences.remove(DRAFT_IMAGE_URLS) // 清除图片URL
+            preferences.remove(DRAFT_IMAGE_URLS)
             preferences.remove(DRAFT_SUBSECTION_ID)
             preferences[HAS_DRAFT] = false
+        }
+    }
+
+    // 新增：保存偏好设置
+    suspend fun setAutoRestoreDraft(enabled: Boolean) {
+        context.draftDataStore.edit { preferences ->
+            preferences[AUTO_RESTORE_DRAFT] = enabled
+        }
+    }
+
+    suspend fun setNoStoreDraft(enabled: Boolean) {
+        context.draftDataStore.edit { preferences ->
+            preferences[NO_STORE_DRAFT] = enabled
         }
     }
 
@@ -70,9 +85,18 @@ class PostDraftDataStore(private val context: Context) {
                 title = preferences[DRAFT_TITLE] ?: "",
                 content = preferences[DRAFT_CONTENT] ?: "",
                 imageUris = imageUris,
-                imageUrls = preferences[DRAFT_IMAGE_URLS] ?: "", // 恢复图片URL
+                imageUrls = preferences[DRAFT_IMAGE_URLS] ?: "",
                 subsectionId = preferences[DRAFT_SUBSECTION_ID] ?: 11,
                 hasDraft = preferences[HAS_DRAFT] ?: false
+            )
+        }
+    
+    // 新增：偏好设置 Flow
+    val preferencesFlow: Flow<DraftPreferences> = context.draftDataStore.data
+        .map { preferences ->
+            DraftPreferences(
+                autoRestoreDraft = preferences[AUTO_RESTORE_DRAFT] ?: false,
+                noStoreDraft = preferences[NO_STORE_DRAFT] ?: false
             )
         }
     
@@ -80,8 +104,14 @@ class PostDraftDataStore(private val context: Context) {
         val title: String,
         val content: String,
         val imageUris: List<Uri>,
-        val imageUrls: String, // 新增图片URL字段
+        val imageUrls: String,
         val subsectionId: Int,
         val hasDraft: Boolean
+    )
+
+    // 新增：偏好设置数据类
+    data class DraftPreferences(
+        val autoRestoreDraft: Boolean,
+        val noStoreDraft: Boolean
     )
 }
