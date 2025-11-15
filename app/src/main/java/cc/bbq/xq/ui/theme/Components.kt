@@ -1,4 +1,3 @@
-// Components.kt
 //Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
@@ -35,14 +34,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext 
-import androidx.compose.runtime.collectAsState 
-import androidx.compose.foundation.layout.Box 
-import androidx.compose.foundation.layout.fillMaxSize 
-import androidx.compose.foundation.Image 
-import androidx.compose.ui.layout.ContentScale 
-import coil.compose.rememberAsyncImagePainter 
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.rememberAsyncImagePainter
 import androidx.compose.foundation.layout.width // 添加正确的导入路径
+// --- 新增导入 ---
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable // 确保导入 clickable
+import androidx.compose.material.icons.Icons // 导入 Icons
+import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape // 确保导入 CircleShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.Arrangement
+import coil.compose.SubcomposeAsyncImage // 确保导入 SubcomposeAsyncImage
+import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImagePainter
+import coil.compose.SubcomposeAsyncImageContent
+import coil.request.ImageRequest // 确保导入 ImageRequest
+// -----------------
 
 // 基础按钮组件
 @Composable
@@ -50,14 +65,14 @@ fun BBQButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     text: @Composable () -> Unit,
-    enabled: Boolean = true, 
+    enabled: Boolean = true,
     shape: Shape = AppShapes.medium,
     contentPadding: PaddingValues = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
 ) {
     Button(
         onClick = onClick,
         modifier = modifier,
-        enabled = enabled, 
+        enabled = enabled,
         shape = shape,
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
@@ -75,14 +90,14 @@ fun BBQOutlinedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     text: @Composable () -> Unit,
-    enabled: Boolean = true, 
+    enabled: Boolean = true,
     shape: Shape = AppShapes.small,
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
 ) {
     OutlinedButton(
         onClick = onClick,
         modifier = modifier,
-        enabled = enabled, 
+        enabled = enabled,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         shape = shape,
         colors = ButtonDefaults.outlinedButtonColors(
@@ -157,7 +172,7 @@ fun BBQBackgroundCard(
                         .matchParentSize()
                 )
             }
-            
+
             // 内容区域（不透明，确保文字可读）
             Box(
                 modifier = Modifier
@@ -209,5 +224,65 @@ fun SwitchWithText(
         )
         Spacer(Modifier.width(8.dp))
         Text(text = text, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+fun ImagePreviewItem(
+    imageUrl: String,
+    onRemoveClick: () -> Unit,
+    onImageClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(100.dp)
+            .clip(MaterialTheme.shapes.medium)
+    ) {
+        SubcomposeAsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(imageUrl)
+                .crossfade(true)
+                .build(),
+            contentDescription = "预览图片",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(onClick = onImageClick)
+        ) {
+            val state = painter.state
+            if (state is AsyncImagePainter.State.Loading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(strokeWidth = 2.dp)
+                }
+            } else if (state is AsyncImagePainter.State.Error) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.BrokenImage, contentDescription = "加载失败")
+                }
+            } else {
+                SubcomposeAsyncImageContent()
+            }
+        }
+
+        IconButton(
+            onClick = onRemoveClick,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(4.dp)
+                .size(20.dp)
+                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape) // 使用 Material You 颜色
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "移除图片",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer, // 使用 Material You 颜色
+                modifier = Modifier.size(14.dp)
+            )
+        }
     }
 }

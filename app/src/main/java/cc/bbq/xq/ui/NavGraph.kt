@@ -169,6 +169,7 @@ fun AppNavHost(
 composable(route = CreatePost.route) {
     PostCreateScreen(
         viewModel = postCreateViewModel,
+        navController = navController, // 传递 navController
         onBackClick = { navController.popBackStack() },
         // 移除 onSubmitClick 参数
         mode = "create",
@@ -183,6 +184,7 @@ composable(route = CreateRefundPost(0, 0, "", 0).route, arguments = CreateRefund
     val args = backStackEntry.arguments!!
     PostCreateScreen(
         viewModel = postCreateViewModel,
+        navController = navController, // 传递 navController
         onBackClick = { navController.popBackStack() },
         // 移除 onSubmitClick 参数
         mode = "refund",

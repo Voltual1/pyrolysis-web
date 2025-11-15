@@ -15,8 +15,8 @@ android {
         applicationId = "cc.bbq.xq" // 修正包名以匹配项目
         minSdk = 21
         targetSdk = 34
-        versionCode = 348
-        versionName = "12.7" // 更新版本名以作区分
+        versionCode = 349
+        versionName = "13.0" // 更新版本名以作区分
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         resourceConfigurations.add("zh-rCN")
@@ -69,8 +69,12 @@ android {
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions.jvmTarget = "17"
+    kotlinOptions {
+        jvmTarget = "17"
+        freeCompilerArgs += "-XXLanguage:+UnitConversionsOnArbitraryExpressions"
+    }
 }
+
 
 dependencies {
     // ===== 基础依赖 =====

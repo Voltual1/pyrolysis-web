@@ -25,11 +25,16 @@ import cc.bbq.xq.ui.player.PlayerViewModel
 import cc.bbq.xq.ui.search.SearchViewModel
 import cc.bbq.xq.ui.user.MyPostsViewModel
 import cc.bbq.xq.ui.user.UserDetailViewModel
-import cc.bbq.xq.ui.settings.storage.StoreManagerViewModel // 导入 StoreManagerViewModel
-import cc.bbq.xq.data.StorageSettingsDataStore // 导入 StorageSettingsDataStore
+import cc.bbq.xq.ui.settings.storage.StoreManagerViewModel 
+import cc.bbq.xq.data.StorageSettingsDataStore 
 import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
+import cc.bbq.xq.ui.community.BrowseHistoryViewModel//导入缺失的viewmodel
+import cc.bbq.xq.ui.community.PostDetailViewModel//导入缺失的viewmodel
+import cc.bbq.xq.ui.rank.RankingListViewModel//导入缺失的viewmodel
+import cc.bbq.xq.ui.settings.update.UpdateSettingsViewModel//导入缺失的viewmodel
+import cc.bbq.xq.ui.home.HomeViewModel//导入缺失的viewmodel
 
 val appModule = module {
     // ViewModel definitions
@@ -51,13 +56,19 @@ val appModule = module {
     viewModel { MyPostsViewModel() }
     viewModel { PaymentViewModel(androidApplication()) }
     viewModel { UserDetailViewModel(androidApplication()) }
-    viewModel { StoreManagerViewModel(androidApplication()) } // 添加 StoreManagerViewModel
+    viewModel { StoreManagerViewModel(androidApplication()) }
+    
+    //补齐了以下viewmodel的Koin注册
+    viewModel { BrowseHistoryViewModel(androidApplication()) }
+    viewModel { PostDetailViewModel(androidApplication()) }
+    viewModel { RankingListViewModel() }
+    viewModel { UpdateSettingsViewModel() }
+    viewModel { HomeViewModel() } 
 
     // Singletons (if needed)
     single { AuthManager }
-//    single { RetrofitClient.instance }
     single { BBQApplication.instance.database }
     single { BBQApplication.instance.processedPostsDataStore }
     single { BBQApplication.instance.searchHistoryDataStore }
-    single { StorageSettingsDataStore(androidApplication()) } // 添加 StorageSettingsDataStore
+    single { StorageSettingsDataStore(androidApplication()) }
 }
