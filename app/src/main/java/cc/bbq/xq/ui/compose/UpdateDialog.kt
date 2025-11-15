@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.layout.ColumnScope
 
 @Composable
 fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
@@ -36,8 +37,10 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
         ) {
             Column(
                 modifier = Modifier
-                    .padding(16.dp)
                     .fillMaxWidth()
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()), // 使整个对话框内容可滚动
+                horizontalAlignment = Alignment.CenterHorizontally // 内容水平居中对齐
             ) {
                 Text(
                     text = "发现新版本：${updateInfo.tag_name}",
@@ -49,14 +52,12 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
                 Text(
                     text = updateInfo.body,
                     textAlign = TextAlign.Start,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
+                    modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "请选择合适的APK版本下载",
+                    text = "32位设备请下载v7a，64位下载v8a",
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.bodySmall
@@ -78,13 +79,10 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("稍后更新")
-                    }
+                
+                // "稍后更新" 按钮
+                TextButton(onClick = onDismiss) {
+                    Text("下次一定")
                 }
             }
         }
