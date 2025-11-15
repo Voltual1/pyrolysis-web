@@ -22,6 +22,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import cc.bbq.xq.data.UpdateInfo
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import java.io.ByteArrayInputStream
@@ -957,6 +958,8 @@ private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResp
              file: ByteArray,
              filename: String
         ): Result<BaseResponse>
+        
+        suspend fun getLatestRelease(): Result<UpdateInfo>
 
         //suspend fun getImageVerificationCode(
         //    appid: Int = 1,
@@ -1003,6 +1006,7 @@ private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResp
         private const val FOLLOW_USERS_URL = "api/follow_users"
         private const val UPLOAD_AVATAR_URL = "api/upload_avatar"
         //private const val GET_IMAGE_VERIFICATION_CODE_URL = "api/get_image_verification_code"
+        private const val GET_LATEST_RELEASE_URL = "https://gitee.com/api/v5/repos/Voltula/bbq/releases/latest"
 
         override suspend fun login(
             appid: Int,
@@ -1603,6 +1607,12 @@ private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResp
             }
             return request(RANKING_LIST_URL, parameters = parameters)
         }
+        
+        override suspend fun getLatestRelease(): Result<UpdateInfo> {
+    return safeApiCall {
+        httpClient.get(GET_LATEST_RELEASE_URL).body()
+    }
+}
 
         override suspend fun followUser(
             appid: Int,

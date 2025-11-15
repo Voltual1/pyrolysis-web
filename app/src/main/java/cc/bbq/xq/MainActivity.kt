@@ -50,6 +50,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import cc.bbq.xq.data.db.LogEntry
 import java.io.IOException // 导入 IOException
+import cc.bbq.xq.data.UpdateInfo
+import kotlinx.serialization.json.Json
+import io.ktor.client.call.body
+import cc.bbq.xq.ui.compose.UpdateDialog
+import kotlinx.serialization.decodeFromString
+import cc.bbq.xq.data.UpdateSettingsDataStore
+import kotlinx.coroutines.flow.first
+import cc.bbq.xq.util.UpdateChecker//导入公共的更新函数
 
 class MainActivity : ComponentActivity() {
 
@@ -65,6 +73,8 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     MainComposeApp()
+                    // 检查更新
+                    CheckForUpdates()
                 }
             }
         }
@@ -131,6 +141,32 @@ class MainActivity : ComponentActivity() {
         configuration.fontScale = fontScale
         metrics.densityDpi = newDensityDpi
         resources.updateConfiguration(configuration, metrics)
+    }
+}
+
+@Composable
+fun CheckForUpdates() {
+    val context = LocalContext.current
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+    var showDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val autoCheckUpdates = UpdateSettingsDataStore.autoCheckUpdates.first()
+        if (autoCheckUpdates) {
+            UpdateChecker.checkForUpdates(context) { update ->
+                if (update != null) {
+                    updateInfo = update
+                    showDialog = true
+                }
+            }
+        }
+    }
+
+    // 显示更新对话框
+    if (showDialog && updateInfo != null) {
+        UpdateDialog(updateInfo = updateInfo!!) {
+            showDialog = false
+        }
     }
 }
 
@@ -271,6 +307,7 @@ fun getTitleForDestination(backStackEntry: NavBackStackEntry?): String {
         "image_preview" -> "图片预览"
         StoreManager.route -> "存储管理"
         "app_detail" -> "应用详情"
+        UpdateSettings.route -> "更新设置"
         else -> "BBQ"
     }
 }

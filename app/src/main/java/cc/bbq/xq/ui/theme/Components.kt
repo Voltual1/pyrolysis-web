@@ -13,6 +13,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.runtime.collectAsState
@@ -26,17 +31,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext // 导入 LocalContext
-import androidx.compose.runtime.collectAsState // 导入 collectAsState
-import androidx.compose.foundation.layout.Box // 导入 Box
-import androidx.compose.foundation.layout.fillMaxSize // 导入 fillMaxSize
-import androidx.compose.foundation.Image // 导入 Image
-import androidx.compose.ui.layout.ContentScale // 导入 ContentScale
-import coil.compose.rememberAsyncImagePainter // 导入 rememberAsyncImagePainter
+import androidx.compose.ui.platform.LocalContext 
+import androidx.compose.runtime.collectAsState 
+import androidx.compose.foundation.layout.Box 
+import androidx.compose.foundation.layout.fillMaxSize 
+import androidx.compose.foundation.Image 
+import androidx.compose.ui.layout.ContentScale 
+import coil.compose.rememberAsyncImagePainter 
+import androidx.compose.foundation.layout.width // 添加正确的导入路径
 
 // 基础按钮组件
 @Composable
@@ -44,14 +50,14 @@ fun BBQButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     text: @Composable () -> Unit,
-    enabled: Boolean = true, // 添加 enabled 参数
+    enabled: Boolean = true, 
     shape: Shape = AppShapes.medium,
     contentPadding: PaddingValues = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
 ) {
     Button(
         onClick = onClick,
         modifier = modifier,
-        enabled = enabled, // 传递 enabled 状态
+        enabled = enabled, 
         shape = shape,
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
@@ -69,14 +75,14 @@ fun BBQOutlinedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     text: @Composable () -> Unit,
-    enabled: Boolean = true, // 添加 enabled 参数
+    enabled: Boolean = true, 
     shape: Shape = AppShapes.small,
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
 ) {
     OutlinedButton(
         onClick = onClick,
         modifier = modifier,
-        enabled = enabled, // 传递 enabled 状态
+        enabled = enabled, 
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         shape = shape,
         colors = ButtonDefaults.outlinedButtonColors(
@@ -182,5 +188,26 @@ fun BBQIconButton(
             contentDescription = contentDescription,
             tint = tint
         )
+    }
+}
+
+//移动帖子详情页“带文本的开关”到theme下的公共位置以便复用
+@Composable
+fun SwitchWithText(
+    text: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+    ) {
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(text = text, style = MaterialTheme.typography.bodyMedium)
     }
 }
