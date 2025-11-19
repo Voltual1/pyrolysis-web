@@ -30,9 +30,9 @@ object UpdateSettingsDataStore {
             preferences[AUTO_CHECK_UPDATES] ?: true
         }
 
-    suspend fun setAutoCheckUpdates(context: Context, value: Boolean) {
-        context.updateSettingsDataStore.edit { preferences ->
-            preferences[AUTO_CHECK_UPDATES] = value
-        }
+suspend fun setAutoCheckUpdates(value: Boolean) {
+    BBQApplication.instance.applicationContext.updateSettingsDataStore.edit { 
+        it[AUTO_CHECK_UPDATES] = value
     }
+}
 }

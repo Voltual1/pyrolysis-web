@@ -14,15 +14,14 @@ package cc.bbq.xq.ui.community
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.navigation.NavController
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -33,27 +32,37 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import cc.bbq.xq.R
+
+// 移除错误的导入，因为 BrowseHistory 已经在同一个包中
+// import cc.bbq.xq.data.db.BrowseHistory // 这行是错误的，应该删除
 
 @Composable
 fun BrowseHistoryScreen(
     viewModel: BrowseHistoryViewModel = viewModel(),
     onPostClick: (Long) -> Unit,
-//    navController: NavController,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
     val history by viewModel.historyList.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val selectedCount = viewModel.selectedItems.collectAsState().value.size
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // 监听复制事件
     LaunchedEffect(Unit) {
-        // 核心修正 #3: 解构 Pair，获取正确的 count
         viewModel.copyEvent.collect { (textToCopy, count) ->
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("BBQ History Links", textToCopy)
             clipboard.setPrimaryClip(clip)
-            Toast.makeText(context, "已复制 $count 条链接", Toast.LENGTH_SHORT).show()
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = context.getString(R.string.copied_links_count, count),
+                    duration = SnackbarDuration.Short
+                )
+            }
         }
     }
 
@@ -75,10 +84,11 @@ fun BrowseHistoryScreen(
                     HistoryListItem(
                         history = item,
                         isSelected = isSelected,
+                        snackbarHostState = snackbarHostState,
                         isSelectionMode = isSelectionMode,
                         onToggleSelection = { viewModel.toggleSelection(item.postId) },
                         onStartSelection = { viewModel.startSelectionMode(item.postId) },
-                        onPostClick = onPostClick
+                        onPostClick = onPostClick,
                     )
                 }
             }
@@ -89,6 +99,7 @@ fun BrowseHistoryScreen(
             SelectionActionFABs(
                 onDelete = { viewModel.deleteSelected() },
                 onCopy = { viewModel.copyShareLinks() },
+                snackbarHostState = snackbarHostState,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp)
@@ -97,11 +108,8 @@ fun BrowseHistoryScreen(
     }
 
     // 选择模式下的顶部应用栏状态管理
-    // 注意：实际的 TopAppBar 现在由 MainActivity 统一管理
-    // 这里我们通过状态来影响 MainActivity 的标题显示
     LaunchedEffect(isSelectionMode, selectedCount) {
         // 这里可以添加逻辑来更新 MainActivity 的标题状态
-        // 例如通过共享的 ViewModel 或回调
     }
 }
 
@@ -109,21 +117,24 @@ fun BrowseHistoryScreen(
 private fun SelectionActionFABs(
     onDelete: () -> Unit,
     onCopy: () -> Unit,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current 
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         SmallFloatingActionButton(
-            onClick = onCopy,
+            onClick = { onCopy() },
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         ) {
             Icon(Icons.Default.ContentCopy, "复制")
         }
         FloatingActionButton(
-            onClick = onDelete,
+            onClick = { onDelete() },
             containerColor = MaterialTheme.colorScheme.errorContainer
         ) {
             Icon(Icons.Default.Delete, "删除")
@@ -134,12 +145,13 @@ private fun SelectionActionFABs(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun HistoryListItem(
-    history: BrowseHistory,
+    history: BrowseHistory, // 现在使用同一包中的 BrowseHistory
     isSelected: Boolean,
     isSelectionMode: Boolean,
     onToggleSelection: () -> Unit,
     onStartSelection: () -> Unit,
-    onPostClick: (Long) -> Unit
+    onPostClick: (Long) -> Unit,
+    snackbarHostState: SnackbarHostState,
 ) {
     val backgroundColor = if (isSelected) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
@@ -147,12 +159,11 @@ private fun HistoryListItem(
         MaterialTheme.colorScheme.surface
     }
 
-    // 使用 PostItem 几乎可以完美复用，但为了点击逻辑分离，我们自定义一个
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(MaterialTheme.shapes.medium)
+            .clip(MaterialTheme.shapes.medium) // 这里使用了 clip
             .combinedClickable(
                 onClick = {
                     if (isSelectionMode) {
@@ -184,8 +195,6 @@ private fun HistoryListItem(
 }
 
 // 选择模式状态管理
-// 由于我们移除了内部的 TopAppBar，选择模式的状态需要由外部管理
-// 这里我们提供一个状态类来帮助管理选择模式
 class BrowseHistorySelectionState {
     var isSelectionMode by mutableStateOf(false)
     var selectedCount by mutableStateOf(0)

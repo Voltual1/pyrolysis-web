@@ -5,7 +5,7 @@
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package cc.bbq.xq.ui.community.compose
 
 import android.app.Activity
@@ -14,7 +14,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import cc.bbq.xq.KtorClient
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -45,6 +44,7 @@ import androidx.compose.animation.AnimatedVisibility
 import cc.bbq.xq.ui.animation.materialSharedAxisYIn
 import cc.bbq.xq.ui.animation.materialSharedAxisYOut
 import cc.bbq.xq.ui.animation.rememberSlideDistance
+import cc.bbq.xq.ui.theme.BBQSnackbarHost // 导入 BBQSnackbarHost
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -77,12 +77,15 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import cc.bbq.xq.ui.theme.SwitchWithText // 导入移动到公共位置的 SwitchWithText
+import androidx.compose.ui.res.stringResource
+import cc.bbq.xq.R
 
 @Composable
 fun PostDetailScreen(
     postId: Long,
     navController: NavController,
     onPostDeleted: () -> Unit,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
     val viewModel: PostDetailViewModel = viewModel()
@@ -103,6 +106,9 @@ fun PostDetailScreen(
     val clipboardManager = remember {
         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     }
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     var showShareDialog by remember { mutableStateOf(false) }
     var showMoreOptions by remember { mutableStateOf(false) }
@@ -131,8 +137,7 @@ fun PostDetailScreen(
         }
     }
 
-    val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
+   
 
     LaunchedEffect(errorMessage) {
         if (errorMessage.isNotEmpty()) {
@@ -279,23 +284,28 @@ fun PostDetailScreen(
                                 )
 
                         // 使用安全调用符 ?. 和 let 函数来处理 img_url 可能为空的情况
-                        postDetail?.img_url?.let { imgUrls ->
-                            imgUrls.forEach { imageUrl ->
-                                Spacer(Modifier.height(16.dp))
-                                AsyncImage(
-                                    model = imageUrl,
-                                    contentDescription = "帖子图片",
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(200.dp)
-                                        .clip(MaterialTheme.shapes.medium)
-                                        .clickable {
-                                            navController.navigate(ImagePreview(imageUrl).createRoute())
-                                        },
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                        }
+postDetail?.img_url?.let { imgUrls ->
+    imgUrls.forEach { imageUrl ->
+        Spacer(Modifier.height(16.dp))
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = "帖子图片",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .clickable {
+                    // 导航到图片预览
+                    navController.navigate(
+                        ImagePreview(
+                            imageUrl = imageUrl
+                        ).createRoute()
+                    )
+                },
+            contentScale = ContentScale.Crop
+        )
+    }
+}
                                 Row(
                                     modifier = Modifier
                                         .padding(top = 16.dp)
@@ -350,7 +360,8 @@ fun PostDetailScreen(
                     onReply = { viewModel.openReplyDialog(comment) },
                     onDelete = { viewModel.deleteComment(comment.id) },
                     clipboardManager = clipboardManager,
-                    context = context
+                    context = context,
+                    snackbarHostState = snackbarHostState
                 )
             }
 
@@ -401,8 +412,13 @@ fun PostDetailScreen(
                     onClick = {
                         val clipData = ClipData.newPlainText("分享链接", shareText)
                         clipboardManager.setPrimaryClip(clipData)
+                         coroutineScope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = context.getString(R.string.copied_link),
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
                         showShareDialog = false
-                        Toast.makeText(context, "链接已复制", Toast.LENGTH_SHORT).show()
                     }
                 ) {
                     Text("复制链接")
@@ -437,7 +453,7 @@ fun PostDetailScreen(
 
     // Snackbar 宿主
     Box(modifier = Modifier.fillMaxSize()) {
-        SnackbarHost(
+        BBQSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
@@ -493,19 +509,19 @@ fun CommentDialog(
                     // 修复：移除不必要的 null 检查，因为 response.body() 返回非空类型
                     if ((responseBody.code == 1 || responseBody.code == 0) && !responseBody.downurl.isNullOrBlank()) {
                         onSuccess(responseBody.downurl)
-                        Toast.makeText(context, "图片上传成功", Toast.LENGTH_SHORT).show()
+                       // Toast.makeText(context, "图片上传成功", Toast.LENGTH_SHORT).show()
                     } else {
                         // 修复：直接访问 msg，因为它是非空类型
-                        Toast.makeText(context, "上传失败: ${responseBody.msg}", Toast.LENGTH_SHORT).show()
+                       // Toast.makeText(context, "上传失败: ${responseBody.msg}", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Toast.makeText(context, "上传失败: 网络错误 ${response.status}", Toast.LENGTH_SHORT).show()
+                   // Toast.makeText(context, "上传失败: 网络错误 ${response.status}", Toast.LENGTH_SHORT).show()
                 }
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
                 showProgressDialog = false
-                Toast.makeText(context, "上传错误: ${e.message}", Toast.LENGTH_SHORT).show()
+                //Toast.makeText(context, "上传错误: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -688,8 +704,10 @@ fun CommentItem(
     onReply: () -> Unit,
     onDelete: () -> Unit,
     clipboardManager: ClipboardManager,
-    context: Context
+    context: Context,
+    snackbarHostState: SnackbarHostState // 添加 snackbarHostState 参数
 ) {
+    val scope = rememberCoroutineScope()
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
@@ -722,7 +740,12 @@ fun CommentItem(
                     onDoubleTap = {
                         val clipData = ClipData.newPlainText("评论内容", comment.content)
                         clipboardManager.setPrimaryClip(clipData)
-                        Toast.makeText(context, "评论已复制", Toast.LENGTH_SHORT).show()
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = context.getString(R.string.comment_copied),
+                                duration = SnackbarDuration.Short
+                            )
+                        }
                     },
                     onLongPress = {
                         showDeleteDialog = true
@@ -774,7 +797,13 @@ fun CommentItem(
                         .fillMaxWidth()
                         .height(150.dp)
                         .clip(MaterialTheme.shapes.medium)
-                        .clickable { navController.navigate(ImagePreview(imageUrl).createRoute()) },
+                        .clickable { 
+                            navController.navigate(
+                                ImagePreview(
+                                    imageUrl = imageUrl
+                                ).createRoute()
+                            )
+                        },
                     contentScale = ContentScale.Crop
                 )
             }

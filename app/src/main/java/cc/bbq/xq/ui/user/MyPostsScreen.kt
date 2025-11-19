@@ -25,6 +25,7 @@ import cc.bbq.xq.ui.Community
 import cc.bbq.xq.ui.HotPosts
 import cc.bbq.xq.ui.FollowingPosts
 import cc.bbq.xq.ui.MyLikes
+import androidx.compose.material3.SnackbarHostState
 import cc.bbq.xq.ui.MyPosts
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +33,7 @@ import cc.bbq.xq.ui.MyPosts
 fun MyPostsScreen(
     viewModel: MyPostsViewModel,
     userId: Long,
+    snackbarHostState: SnackbarHostState,
     navController: NavController
 ) {
     val posts by viewModel.posts.collectAsState()
@@ -60,6 +62,7 @@ fun MyPostsScreen(
         onLoadMore = { viewModel.loadNextPage() },
         onRefresh = { viewModel.refresh() },
         onSearchClick = { navController.navigate(Search.route) },
+        snackbarHostState = snackbarHostState, // 传递 SnackbarHostState
         onCreateClick = { navController.navigate(CreatePost.route) },
         historyClick = { navController.navigate(BrowseHistory.route) },
         totalPages = totalPages,

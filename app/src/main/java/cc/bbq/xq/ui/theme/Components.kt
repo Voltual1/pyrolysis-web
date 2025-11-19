@@ -57,7 +57,10 @@ import coil.compose.rememberAsyncImagePainter
 import coil.compose.AsyncImagePainter
 import coil.compose.SubcomposeAsyncImageContent
 import coil.request.ImageRequest // 确保导入 ImageRequest
-// -----------------
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarData
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 
 // 基础按钮组件
 @Composable
@@ -285,4 +288,116 @@ fun ImagePreviewItem(
             )
         }
     }
+}
+
+// 自定义 Snackbar 组件
+@Composable
+fun BBQSnackbar(
+    snackbarData: SnackbarData,
+    modifier: Modifier = Modifier,
+    actionOnNewLine: Boolean = false,
+    shape: Shape = MaterialTheme.shapes.medium,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    actionColor: Color = MaterialTheme.colorScheme.primary,
+    dismissActionContentColor: Color = contentColor
+) {
+    Snackbar(
+        snackbarData = snackbarData,
+        modifier = modifier,
+        actionOnNewLine = actionOnNewLine,
+        shape = shape,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        actionColor = actionColor,
+        dismissActionContentColor = dismissActionContentColor
+    )
+}
+
+// 成功状态的 Snackbar
+@Composable
+fun BBQSuccessSnackbar(
+    snackbarData: SnackbarData,
+    modifier: Modifier = Modifier,
+    actionOnNewLine: Boolean = false,
+    shape: Shape = MaterialTheme.shapes.medium
+) {
+    BBQSnackbar(
+        snackbarData = snackbarData,
+        modifier = modifier,
+        actionOnNewLine = actionOnNewLine,
+        shape = shape,
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    )
+}
+
+// 错误状态的 Snackbar
+@Composable
+fun BBQErrorSnackbar(
+    snackbarData: SnackbarData,
+    modifier: Modifier = Modifier,
+    actionOnNewLine: Boolean = false,
+    shape: Shape = MaterialTheme.shapes.medium
+) {
+    BBQSnackbar(
+        snackbarData = snackbarData,
+        modifier = modifier,
+        actionOnNewLine = actionOnNewLine, // 修正参数名
+        shape = shape,
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer
+    )
+}
+
+// 警告状态的 Snackbar
+@Composable
+fun BBQWarningSnackbar(
+    snackbarData: SnackbarData,
+    modifier: Modifier = Modifier,
+    actionOnNewLine: Boolean = false,
+    shape: Shape = MaterialTheme.shapes.medium
+) {
+    BBQSnackbar(
+        snackbarData = snackbarData,
+        modifier = modifier,
+        actionOnNewLine = actionOnNewLine,
+        shape = shape,
+        containerColor = MaterialTheme.messageDefaultBg,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    )
+}
+
+// 信息状态的 Snackbar
+@Composable
+fun BBQInfoSnackbar(
+    snackbarData: SnackbarData,
+    modifier: Modifier = Modifier,
+    actionOnNewLine: Boolean = false,
+    shape: Shape = MaterialTheme.shapes.medium
+) {
+    BBQSnackbar(
+        snackbarData = snackbarData,
+        modifier = modifier,
+        actionOnNewLine = actionOnNewLine,
+        shape = shape,
+        containerColor = MaterialTheme.messageCommentBg,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    )
+}
+
+// 自定义 Snackbar Host
+@Composable
+fun BBQSnackbarHost(
+    hostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
+    snackbar: @Composable (SnackbarData) -> Unit = { snackbarData ->
+        BBQSnackbar(snackbarData)
+    }
+) {
+    SnackbarHost(
+        hostState = hostState,
+        modifier = modifier,
+        snackbar = snackbar
+    )
 }

@@ -11,14 +11,17 @@ package cc.bbq.xq.ui.community.compose
 import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -35,6 +38,8 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
 
 // 在 BaseComposeListScreen.kt 中修复导航逻辑
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -55,6 +60,7 @@ fun BaseComposeListScreen(
     onJumpToPage: (Int) -> Unit = {},
     onNavigate: (String) -> Unit,
     onBackClick: () -> Unit = {},
+    snackbarHostState: SnackbarHostState, // 添加 SnackbarHostState 参数
     // 新增下拉刷新相关参数
     isRefreshing: Boolean = false,
     modifier: Modifier = Modifier
@@ -63,6 +69,7 @@ fun BaseComposeListScreen(
     var inputPage by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope() // 创建 CoroutineScope
     
     // 添加下拉刷新状态
     val pullRefreshState = rememberPullRefreshState(
@@ -176,7 +183,13 @@ fun BaseComposeListScreen(
                                     if (currentUserId != null) {
                                         onNavigate("my_posts/$currentUserId")
                                     } else {
-                                        android.widget.Toast.makeText(context, "请先登录", android.widget.Toast.LENGTH_SHORT).show()
+                                         scope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                message = context.getString(R.string.login_first),
+                                                duration = SnackbarDuration.Short
+                                            )
+                                        }
+                                        //android.widget.Toast.makeText(context, "请先登录", android.widget.Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             )
@@ -186,7 +199,7 @@ fun BaseComposeListScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, // 确保使用正确的引用
                             contentDescription = "返回",
                             tint = MaterialTheme.colorScheme.primary
                         )

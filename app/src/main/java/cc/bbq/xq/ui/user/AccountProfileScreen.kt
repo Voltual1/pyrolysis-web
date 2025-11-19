@@ -12,9 +12,9 @@ package cc.bbq.xq.ui.user
 import android.app.Activity
 import android.content.Context
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import cc.bbq.xq.ui.theme.BBQSnackbarHost // 导入 BBQSnackbarHost
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import cc.bbq.xq.AuthManager
 import cc.bbq.xq.KtorClient
 import cc.bbq.xq.data.DeviceNameDataStore
-import cc.bbq.xq.util.FileUtil // 修复：使用正确的 import 路径
+import cc.bbq.xq.util.FileUtil
 import coil.compose.rememberAsyncImagePainter
 import com.github.dhaval2404.imagepicker.ImagePicker
 import kotlinx.coroutines.CoroutineScope
@@ -42,12 +42,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
 import java.io.File
+import androidx.compose.ui.res.stringResource
+import cc.bbq.xq.R
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountProfileScreen(modifier: Modifier = Modifier) {
+fun AccountProfileScreen(modifier: Modifier = Modifier, snackbarHostState: SnackbarHostState) {
     var nickname by rememberSaveable { mutableStateOf("") }
     var qqNumber by rememberSaveable { mutableStateOf("") }
     var avatarUri by rememberSaveable { mutableStateOf<Uri?>(null) }
@@ -63,46 +63,55 @@ fun AccountProfileScreen(modifier: Modifier = Modifier) {
         deviceName = deviceNameDataStore.deviceNameFlow.first()
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
-        OutlinedTextField(
-            value = nickname,
-            onValueChange = { nickname = it },
-            label = { Text("修改昵称") },
-            modifier = Modifier.fillMaxWidth()
-        )
+    Scaffold(
+        snackbarHost = { BBQSnackbarHost(snackbarHostState) },
+        modifier = modifier.fillMaxSize(),
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            OutlinedTextField(
+                value = nickname,
+                onValueChange = { nickname = it },
+                label = { Text("修改昵称") },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = qqNumber,
-            onValueChange = { qqNumber = it },
-            label = { Text("修改QQ号") },
-            modifier = Modifier.fillMaxWidth()
-        )
+            OutlinedTextField(
+                value = qqNumber,
+                onValueChange = { qqNumber = it },
+                label = { Text("修改QQ号") },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = deviceName,
-            onValueChange = { deviceName = it },
-            label = { Text("设备名称") },
-            modifier = Modifier.fillMaxWidth()
-        )
+            OutlinedTextField(
+                value = deviceName,
+                onValueChange = { deviceName = it },
+                label = { Text("设备名称") },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        AvatarUploadSection(
-            avatarUri = avatarUri,
-            avatarUrl = avatarUrl,
-            onAvatarSelected = { uri ->
-                avatarUri = uri
-                coroutineScope.launch {
-                    uploadAvatar(context, uri,
+            AvatarUploadSection(
+                avatarUri = avatarUri,
+                avatarUrl = avatarUrl,
+                onAvatarSelected = { uri ->
+                    avatarUri = uri
+                    // 直接调用非Composable函数
+                    uploadAvatar(
+                        context = context,
+                        uri = uri,
+                        coroutineScope = coroutineScope,
+                        snackbarHostState = snackbarHostState,
                         onProgress = { message ->
                             showProgressDialog = true
                             progressMessage = message
@@ -112,36 +121,49 @@ fun AccountProfileScreen(modifier: Modifier = Modifier) {
                         },
                         onError = { error ->
                             showProgressDialog = false
-                            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = error,
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
                         }
                     )
                 }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+                    // 直接调用非Composable函数
+                    saveChanges(
+                        context = context,
+                        nickname = nickname,
+                        qqNumber = qqNumber,
+                        coroutineScope = coroutineScope,
+                        snackbarHostState = snackbarHostState,
+                        onDeviceNameSaved = {
+                            coroutineScope.launch {
+                                deviceNameDataStore.saveDeviceName(deviceName)
+                            }
+                        }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("保存修改")
             }
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = {
-                saveChanges(context, nickname, qqNumber) {
-                    coroutineScope.launch {
-                        deviceNameDataStore.saveDeviceName(deviceName)
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("保存修改")
         }
-    }
 
-    if (showProgressDialog) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("上传中") },
-            text = { Text(progressMessage) },
-            confirmButton = {}
-        )
+        if (showProgressDialog) {
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text("上传中") },
+                text = { Text(progressMessage) },
+                confirmButton = {}
+            )
+        }
     }
 }
 
@@ -211,60 +233,82 @@ fun AvatarUploadSection(
     }
 }
 
-suspend fun uploadAvatar(
+// 移除了 @Composable 注解，这是一个普通的挂起函数操作
+fun uploadAvatar(
     context: Context,
     uri: Uri,
+    coroutineScope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
     onProgress: (String) -> Unit = {},
     onComplete: () -> Unit = {},
     onError: (String) -> Unit = {}
 ) {
     val credentials = AuthManager.getCredentials(context)
 
-    try {
-        onProgress("上传头像中...")
-
-        val realPath = FileUtil.getRealPathFromURI(context, uri)
-        if (realPath == null) {
-            onError("无法获取图片路径")
-            return
-        }
-
-        val file = File(realPath) // 修复：明确使用 String 构造函数
-        val bytes = file.readBytes()
-
-        val appid = 1
-        val token = credentials?.third ?: ""
-
-        val uploadResult = KtorClient.ApiServiceImpl.uploadAvatar(
-            appid = appid,
-            token = token,
-            file = bytes,
-            filename = file.name
-        )
-
-        if (uploadResult.isSuccess) {
-            val response = uploadResult.getOrNull()
-            if (response?.code == 1) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "头像上传成功", Toast.LENGTH_SHORT).show()
-                }
-                onComplete()
-            } else {
-                onError("头像上传失败: ${response?.msg ?: "未知错误"}")
+    coroutineScope.launch(Dispatchers.IO) {
+        try {
+            withContext(Dispatchers.Main) {
+                onProgress("上传头像中...")
             }
-        } else {
-            onError("头像上传失败: ${uploadResult.exceptionOrNull()?.message ?: "未知错误"}")
+
+            val realPath = FileUtil.getRealPathFromURI(context, uri)
+            if (realPath == null) {
+                withContext(Dispatchers.Main) {
+                    onError("无法获取图片路径")
+                }
+                return@launch
+            }
+
+            val file = File(realPath)
+            val bytes = file.readBytes()
+
+            val appid = 1
+            val token = credentials?.third ?: ""
+
+            val uploadResult = KtorClient.ApiServiceImpl.uploadAvatar(
+                appid = appid,
+                token = token,
+                file = bytes,
+                filename = file.name
+            )
+
+            if (uploadResult.isSuccess) {
+                val response = uploadResult.getOrNull()
+                if (response?.code == 1) {
+                    withContext(Dispatchers.Main) {
+                        onComplete()
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        onError("头像上传失败: ${response?.msg ?: "未知错误"}")
+                    }
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    onError("头像上传失败: ${uploadResult.exceptionOrNull()?.message ?: "未知错误"}")
+                }
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                onError("上传错误: ${e.message}")
+            }
         }
-    } catch (e: Exception) {
-        onError("上传错误: ${e.message}")
     }
 }
 
-fun saveChanges(context: Context, nickname: String, qqNumber: String, onDeviceNameSaved: () -> Unit) {
+// 移除了 @Composable 注解，这是一个普通的挂起函数操作
+fun saveChanges(
+    context: Context,
+    nickname: String,
+    qqNumber: String,
+    coroutineScope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    onDeviceNameSaved: () -> Unit
+) {
     val credentials = AuthManager.getCredentials(context)
     val token = credentials?.third ?: ""
 
-    CoroutineScope(Dispatchers.IO).launch {
+    coroutineScope.launch(Dispatchers.IO) {
         try {
             if (nickname.isNotEmpty()) {
                 val nicknameResponse = KtorClient.ApiServiceImpl.modifyUserInfo(
@@ -273,12 +317,25 @@ fun saveChanges(context: Context, nickname: String, qqNumber: String, onDeviceNa
                     nickname = nickname,
                     qq = null
                 )
-                if (nicknameResponse.isSuccess){
+                if (nicknameResponse.isSuccess) {
                     withContext(Dispatchers.Main) {
                         if (nicknameResponse.getOrNull()?.code == 1) {
-                            Toast.makeText(context, "昵称修改成功", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = context.getString(R.string.nickname_changed),
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
                         } else {
-                            Toast.makeText(context, "昵称修改失败: ${nicknameResponse.getOrNull()?.msg}", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = context.getString(
+                                        R.string.nickname_change_failed,
+                                        nicknameResponse.getOrNull()?.msg ?: ""
+                                    ),
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
                         }
                     }
                 }
@@ -291,12 +348,25 @@ fun saveChanges(context: Context, nickname: String, qqNumber: String, onDeviceNa
                     nickname = null,
                     qq = qqNumber
                 )
-                if (qqResponse.isSuccess){
+                if (qqResponse.isSuccess) {
                     withContext(Dispatchers.Main) {
                         if (qqResponse.getOrNull()?.code == 1) {
-                            Toast.makeText(context, "QQ号修改成功", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = context.getString(R.string.qq_changed),
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
                         } else {
-                            Toast.makeText(context, "QQ号修改失败: ${qqResponse.getOrNull()?.msg}", Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = context.getString(
+                                        R.string.qq_change_failed,
+                                        qqResponse.getOrNull()?.msg ?: ""
+                                    ),
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
                         }
                     }
                 }
@@ -308,7 +378,12 @@ fun saveChanges(context: Context, nickname: String, qqNumber: String, onDeviceNa
 
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(context, "保存修改失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = context.getString(R.string.save_change_failed, e.message ?: ""),
+                        duration = SnackbarDuration.Short
+                    )
+                }
             }
         }
     }

@@ -1,7 +1,7 @@
 //Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
-//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
@@ -11,7 +11,6 @@ package cc.bbq.xq.ui.plaza
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import cc.bbq.xq.ui.ImagePreview
@@ -20,6 +19,7 @@ import androidx.navigation.NavController
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import cc.bbq.xq.ui.theme.BBQSnackbarHost // 导入 BBQSnackbarHost
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
@@ -50,15 +51,19 @@ import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import coil.request.ImageRequest
 import cc.bbq.xq.ui.theme.ImagePreviewItem // 导入 ImagePreviewItem
+import cc.bbq.xq.R
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppReleaseScreen(
     viewModel: AppReleaseViewModel,
     navController: NavController, // 添加 NavController 参数
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope() // 创建 CoroutineScope
     val MAX_INTRO_IMAGES = 3
 
     val processFeedback by viewModel.processFeedback.collectAsStateWithLifecycle()
@@ -69,7 +74,9 @@ fun AppReleaseScreen(
                 onFailure = { it.message ?: "发生未知错误" }
             )
             val duration = if (result.isSuccess) SnackbarDuration.Short else SnackbarDuration.Long
-            snackbarHostState.showSnackbar(message, duration = duration)
+            scope.launch {
+                snackbarHostState.showSnackbar(message, duration = duration)
+            }
             viewModel.clearProcessFeedback()
         }
     }
@@ -79,7 +86,12 @@ fun AppReleaseScreen(
     ) { uri: Uri? ->
         uri?.let {
             viewModel.parseAndUploadApk(it)
-        } ?: Toast.makeText(context, "未选择任何文件", Toast.LENGTH_SHORT).show()
+        } ?: scope.launch {
+            snackbarHostState.showSnackbar(
+                message = context.getString(R.string.no_file_selected),
+                duration = SnackbarDuration.Short
+            )
+        }
     }
 
     val imageLauncher = rememberLauncherForActivityResult(
@@ -88,7 +100,12 @@ fun AppReleaseScreen(
         if (uris.isNotEmpty()) {
             viewModel.uploadIntroductionImages(uris)
         } else {
-            Toast.makeText(context, "未选择任何图片", Toast.LENGTH_SHORT).show()
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = context.getString(R.string.no_image_selected),
+                    duration = SnackbarDuration.Short
+                )
+            }
         }
     }
 
@@ -184,7 +201,13 @@ fun AppReleaseScreen(
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uploadUrl))
                                     context.startActivity(intent)
                                 } catch (e: Exception) {
-                                    Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
+                                    //Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            message = context.getString(R.string.unable_to_open_link),
+                                            duration = SnackbarDuration.Short
+                                        )
+                                    }
                                 }
                             },
                         style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
@@ -221,35 +244,38 @@ fun AppReleaseScreen(
             }
 
             item {
-                Column {
-                    Text("2. 上传应用介绍图 (至氪云)", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    BBQOutlinedButton(
-                        onClick = { imageLauncher.launch("image/*") },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = viewModel.introductionImageUrls.size < MAX_INTRO_IMAGES,
-                        text = { Text("选择图片 (${viewModel.introductionImageUrls.size}/$MAX_INTRO_IMAGES)") }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    if (viewModel.introductionImageUrls.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            viewModel.introductionImageUrls.forEach { url ->
-                                ImagePreviewItem(
-                                    imageUrl = url,
-                                    onRemoveClick = { viewModel.removeIntroductionImage(url) },
-                                    onImageClick = {
-                                        // 修复：使用 NavController 导航到 ImagePreview
-                                        navController.navigate(ImagePreview(url).createRoute())
-                                    }
-                                )
-                            }
+    Column {
+        Text("2. 上传应用介绍图 (至氪云)", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        BBQOutlinedButton(
+            onClick = { imageLauncher.launch("image/*") },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = viewModel.introductionImageUrls.size < MAX_INTRO_IMAGES,
+            text = { Text("选择图片 (${viewModel.introductionImageUrls.size}/$MAX_INTRO_IMAGES)") }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        if (viewModel.introductionImageUrls.isNotEmpty()) {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                viewModel.introductionImageUrls.forEach { url ->
+                    ImagePreviewItem(
+                        imageUrl = url,
+                        onRemoveClick = { viewModel.removeIntroductionImage(url) },
+                        onImageClick = {
+                            navController.navigate(
+                                ImagePreview(
+                                    imageUrl = url
+                                ).createRoute()
+                            )
                         }
-                    }
+                    )
                 }
             }
+        }
+    }
+}
 
             item { CategoryDropdown(viewModel) }
             item { PaymentSettings(viewModel) }
@@ -300,7 +326,7 @@ fun AppReleaseScreen(
 
     // Snackbar 宿主
     Box(modifier = Modifier.fillMaxSize()) {
-        SnackbarHost(
+        BBQSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
