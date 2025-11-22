@@ -2,10 +2,9 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package cc.bbq.xq.ui.plaza
 
 import android.app.Application
@@ -42,6 +41,7 @@ import io.ktor.utils.io.*
 import io.ktor.utils.io.core.buildPacket
 import io.ktor.utils.io.core.writeFully
 import io.ktor.client.call.*
+import kotlinx.coroutines.flow.first
 
 enum class ApkUploadService(val displayName: String) {
     KEYUN("氪云"),
@@ -173,6 +173,8 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
             val uploadJobs = urisToUpload.map { uri ->
                 launch {
                     val tempFileName = generateUniqueFileName("intro", "jpg")
+                    // 显式指定类型
+                    val context : Application = getApplication()
                     val tempFile = uriToTempFile(context, uri, tempFileName)
                     tempFile?.let {
                         uploadToKeyun(it, "image/*", "介绍图") { url ->
@@ -227,7 +229,11 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
 
     fun releaseApp(onSuccess: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            val token = AuthManager.getCredentials(context)?.third
+            // 显式指定类型
+            val context: Application = getApplication()
+            val userCredentialsFlow = AuthManager.getCredentials(context)
+            val userCredentials = userCredentialsFlow.first()
+            val token = userCredentials?.token
             if (token == null) {
                 _processFeedback.value = Result.failure(Throwable("错误: 未登录")); return@launch
             }
@@ -300,7 +306,11 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
 
     fun deleteApp(onSuccess: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            val token = AuthManager.getCredentials(context)?.third
+            // 显式指定类型
+             val context: Application = getApplication()
+            val userCredentialsFlow = AuthManager.getCredentials(context)
+            val userCredentials = userCredentialsFlow.first()
+            val token = userCredentials?.token
             if (token == null) {
                 _processFeedback.value = Result.failure(Throwable("错误: 未登录")); return@launch
             }
@@ -365,7 +375,7 @@ private suspend fun uploadToKeyun(file: File, mediaType: String = "application/o
         }
     } catch (e: Exception) {
         withContext(Dispatchers.Main){
-            _processFeedback.value = Result.failure(Throwable("$contextMessage (氪云): ${e.message}"))
+                            _processFeedback.value = Result.failure(Throwable("$contextMessage (氪云): ${e.message}"))
         }
     } finally {
         file.delete()

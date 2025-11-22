@@ -2,7 +2,6 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
@@ -106,29 +105,31 @@ fun AccountProfileScreen(modifier: Modifier = Modifier, snackbarHostState: Snack
                 avatarUrl = avatarUrl,
                 onAvatarSelected = { uri ->
                     avatarUri = uri
-                    // 直接调用非Composable函数
-                    uploadAvatar(
-                        context = context,
-                        uri = uri,
-                        coroutineScope = coroutineScope,
-                        snackbarHostState = snackbarHostState,
-                        onProgress = { message ->
-                            showProgressDialog = true
-                            progressMessage = message
-                        },
-                        onComplete = {
-                            showProgressDialog = false
-                        },
-                        onError = { error ->
-                            showProgressDialog = false
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = error,
-                                    duration = SnackbarDuration.Short
-                                )
+                    coroutineScope.launch {
+                        // 直接调用非Composable函数
+                        uploadAvatar(
+                            context = context,
+                            uri = uri,
+                            coroutineScope = coroutineScope,
+                            snackbarHostState = snackbarHostState,
+                            onProgress = { message ->
+                                showProgressDialog = true
+                                progressMessage = message
+                            },
+                            onComplete = {
+                                showProgressDialog = false
+                            },
+                            onError = { error ->
+                                showProgressDialog = false
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = error,
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             )
 
@@ -136,19 +137,21 @@ fun AccountProfileScreen(modifier: Modifier = Modifier, snackbarHostState: Snack
 
             Button(
                 onClick = {
-                    // 直接调用非Composable函数
-                    saveChanges(
-                        context = context,
-                        nickname = nickname,
-                        qqNumber = qqNumber,
-                        coroutineScope = coroutineScope,
-                        snackbarHostState = snackbarHostState,
-                        onDeviceNameSaved = {
-                            coroutineScope.launch {
-                                deviceNameDataStore.saveDeviceName(deviceName)
+                    coroutineScope.launch {
+                        // 直接调用非Composable函数
+                        saveChanges(
+                            context = context,
+                            nickname = nickname,
+                            qqNumber = qqNumber,
+                            coroutineScope = coroutineScope,
+                            snackbarHostState = snackbarHostState,
+                            onDeviceNameSaved = {
+                                coroutineScope.launch {
+                                    deviceNameDataStore.saveDeviceName(deviceName)
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -234,7 +237,7 @@ fun AvatarUploadSection(
 }
 
 // 移除了 @Composable 注解，这是一个普通的挂起函数操作
-fun uploadAvatar(
+suspend fun uploadAvatar(
     context: Context,
     uri: Uri,
     coroutineScope: CoroutineScope,
@@ -243,61 +246,61 @@ fun uploadAvatar(
     onComplete: () -> Unit = {},
     onError: (String) -> Unit = {}
 ) {
-    val credentials = AuthManager.getCredentials(context)
+    val userCredentialsFlow = AuthManager.getCredentials(context)
+    val userCredentials = userCredentialsFlow.first()
+    val token = userCredentials?.token
 
-    coroutineScope.launch(Dispatchers.IO) {
-        try {
+    try {
+        withContext(Dispatchers.Main) {
+            onProgress("上传头像中...")
+        }
+
+        val realPath = FileUtil.getRealPathFromURI(context, uri)
+        if (realPath == null) {
             withContext(Dispatchers.Main) {
-                onProgress("上传头像中...")
+                onError("无法获取图片路径")
             }
+            return
+        }
 
-            val realPath = FileUtil.getRealPathFromURI(context, uri)
-            if (realPath == null) {
+        val file = File(realPath)
+        val bytes = file.readBytes()
+
+        val appid = 1
+        //val token = credentials?.third ?: ""
+
+        val uploadResult = KtorClient.ApiServiceImpl.uploadAvatar(
+            appid = appid,
+            token = token!!,
+            file = bytes,
+            filename = file.name
+        )
+
+        if (uploadResult.isSuccess) {
+            val response = uploadResult.getOrNull()
+            if (response?.code == 1) {
                 withContext(Dispatchers.Main) {
-                    onError("无法获取图片路径")
-                }
-                return@launch
-            }
-
-            val file = File(realPath)
-            val bytes = file.readBytes()
-
-            val appid = 1
-            val token = credentials?.third ?: ""
-
-            val uploadResult = KtorClient.ApiServiceImpl.uploadAvatar(
-                appid = appid,
-                token = token,
-                file = bytes,
-                filename = file.name
-            )
-
-            if (uploadResult.isSuccess) {
-                val response = uploadResult.getOrNull()
-                if (response?.code == 1) {
-                    withContext(Dispatchers.Main) {
-                        onComplete()
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        onError("头像上传失败: ${response?.msg ?: "未知错误"}")
-                    }
+                    onComplete()
                 }
             } else {
                 withContext(Dispatchers.Main) {
-                    onError("头像上传失败: ${uploadResult.exceptionOrNull()?.message ?: "未知错误"}")
+                    onError("头像上传失败: ${response?.msg ?: "未知错误"}")
                 }
             }
-        } catch (e: Exception) {
+        } else {
             withContext(Dispatchers.Main) {
-                onError("上传错误: ${e.message}")
+                onError("头像上传失败: ${uploadResult.exceptionOrNull()?.message ?: "未知错误"}")
             }
+        }
+    } catch (e: Exception) {
+        withContext(Dispatchers.Main) {
+            onError("上传错误: ${e.message}")
         }
     }
 }
 
 // 移除了 @Composable 注解，这是一个普通的挂起函数操作
-fun saveChanges(
+suspend fun saveChanges(
     context: Context,
     nickname: String,
     qqNumber: String,
@@ -305,85 +308,84 @@ fun saveChanges(
     snackbarHostState: SnackbarHostState,
     onDeviceNameSaved: () -> Unit
 ) {
-    val credentials = AuthManager.getCredentials(context)
-    val token = credentials?.third ?: ""
+    val userCredentialsFlow = AuthManager.getCredentials(context)
+    val userCredentials = userCredentialsFlow.first()
+    val token = userCredentials?.token
 
-    coroutineScope.launch(Dispatchers.IO) {
-        try {
-            if (nickname.isNotEmpty()) {
-                val nicknameResponse = KtorClient.ApiServiceImpl.modifyUserInfo(
-                    appid = 1,
-                    token = token,
-                    nickname = nickname,
-                    qq = null
-                )
-                if (nicknameResponse.isSuccess) {
-                    withContext(Dispatchers.Main) {
-                        if (nicknameResponse.getOrNull()?.code == 1) {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = context.getString(R.string.nickname_changed),
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                        } else {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = context.getString(
-                                        R.string.nickname_change_failed,
-                                        nicknameResponse.getOrNull()?.msg ?: ""
-                                    ),
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
+    try {
+        if (nickname.isNotEmpty()) {
+            val nicknameResponse = KtorClient.ApiServiceImpl.modifyUserInfo(
+                appid = 1,
+                token = token!!,
+                nickname = nickname,
+                qq = null
+            )
+            if (nicknameResponse.isSuccess) {
+                withContext(Dispatchers.Main) {
+                    if (nicknameResponse.getOrNull()?.code == 1) {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = context.getString(R.string.nickname_changed),
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                    } else {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = context.getString(
+                                    R.string.nickname_change_failed,
+                                    nicknameResponse.getOrNull()?.msg ?: ""
+                                ),
+                                duration = SnackbarDuration.Short
+                            )
                         }
                     }
                 }
             }
+        }
 
-            if (qqNumber.isNotEmpty()) {
-                val qqResponse = KtorClient.ApiServiceImpl.modifyUserInfo(
-                    appid = 1,
-                    token = token,
-                    nickname = null,
-                    qq = qqNumber
-                )
-                if (qqResponse.isSuccess) {
-                    withContext(Dispatchers.Main) {
-                        if (qqResponse.getOrNull()?.code == 1) {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = context.getString(R.string.qq_changed),
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                        } else {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = context.getString(
-                                        R.string.qq_change_failed,
-                                        qqResponse.getOrNull()?.msg ?: ""
-                                    ),
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
+        if (qqNumber.isNotEmpty()) {
+            val qqResponse = KtorClient.ApiServiceImpl.modifyUserInfo(
+                appid = 1,
+                token = token!!,
+                nickname = null,
+                qq = qqNumber
+            )
+            if (qqResponse.isSuccess) {
+                withContext(Dispatchers.Main) {
+                    if (qqResponse.getOrNull()?.code == 1) {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = context.getString(R.string.qq_changed),
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                    } else {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = context.getString(
+                                    R.string.qq_change_failed,
+                                    qqResponse.getOrNull()?.msg ?: ""
+                                ),
+                                duration = SnackbarDuration.Short
+                            )
                         }
                     }
                 }
             }
+        }
 
-            withContext(Dispatchers.Main) {
-                onDeviceNameSaved()
-            }
+        withContext(Dispatchers.Main) {
+            onDeviceNameSaved()
+        }
 
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = context.getString(R.string.save_change_failed, e.message ?: ""),
-                        duration = SnackbarDuration.Short
-                    )
-                }
+    } catch (e: Exception) {
+        withContext(Dispatchers.Main) {
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(
+                    message = context.getString(R.string.save_change_failed, e.message ?: ""),
+                    duration = SnackbarDuration.Short
+                )
             }
         }
     }

@@ -2,7 +2,6 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
@@ -56,6 +55,7 @@ import cc.bbq.xq.ui.theme.AppShapes
 import cc.bbq.xq.ui.theme.BBQButton
 import cc.bbq.xq.ui.theme.BBQCard
 import cc.bbq.xq.ui.theme.BBQOutlinedButton
+import kotlinx.coroutines.flow.first
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -280,55 +280,53 @@ private fun ActionButtonsRow(
     ) {
         BBQButton(
             onClick = {
-                val token = AuthManager.getCredentials(context)?.third
-                if (token.isNullOrBlank()) {
-                    coroutineScope.launch {
+                coroutineScope.launch {
+                    val userCredentialsFlow = AuthManager.getCredentials(context)
+                    val userCredentials = userCredentialsFlow.first()
+                    val token = userCredentials?.token
+
+                    // 检查 token 是否为 null 或空
+                    if (token.isNullOrBlank()) {
                         snackbarHostState.showSnackbar(
                             message = context.getString(R.string.login_first),
                             duration = SnackbarDuration.Short
                         )
+                        // 注意：这里不能使用 return，因为我们在 lambda 中。
+                        // 我们可以使用 return@launch 来从协程中返回。
+                        return@launch
                     }
-                    return@BBQButton
-                }
-                coroutineScope.launch {
+
                     try {
                         val result = apiService.followUser(token = token, followedId = userData.id)
                         when (val response = result.getOrNull()) {
                             is KtorClient.BaseResponse -> {
                                 if (response.code == 1) {
+                                    // 更新 UI 状态
                                     isFollowing.value = !isFollowing.value
                                     val message = if (isFollowing.value) "关注成功" else "取消关注成功"
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            message = message,
-                                            duration = SnackbarDuration.Short
-                                        )
-                                    }
-                                } else {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            message = response.msg,
-                                            duration = SnackbarDuration.Short
-                                        )
-                                    }
-                                }
-                            }
-                            else -> {
-                                coroutineScope.launch {
                                     snackbarHostState.showSnackbar(
-                                        message = result.exceptionOrNull()?.message ?: "操作失败",
+                                        message = message,
+                                        duration = SnackbarDuration.Short
+                                    )
+                                } else {
+                                    snackbarHostState.showSnackbar(
+                                        message = response.msg,
                                         duration = SnackbarDuration.Short
                                     )
                                 }
                             }
+                            else -> {
+                                snackbarHostState.showSnackbar(
+                                    message = result.exceptionOrNull()?.message ?: "操作失败",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
                         }
                     } catch (e: Exception) {
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar(
-                                message = "网络错误: ${e.message}",
-                                duration = SnackbarDuration.Short
-                            )
-                        }
+                        snackbarHostState.showSnackbar(
+                            message = "网络错误: ${e.message}",
+                            duration = SnackbarDuration.Short
+                        )
                     }
                 }
             },

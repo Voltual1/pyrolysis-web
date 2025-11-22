@@ -2,7 +2,6 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
@@ -25,6 +24,8 @@ import java.util.*
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.res.stringResource
 import cc.bbq.xq.R
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow // 添加导入
 
 // 添加数据加载状态
 sealed class DataLoadState {
@@ -71,14 +72,19 @@ class HomeViewModel : ViewModel() {
     }
 
     fun loadUserData(context: Context, forceRefresh: Boolean = false) {
-        val credentials = AuthManager.getCredentials(context) ?: return
-
-        // 如果数据已经加载且不是强制刷新，则跳过
-        if (!forceRefresh && uiState.value.dataLoadState == DataLoadState.Loaded) {
-            return
-        }
-
+        // 将实际的加载逻辑移到一个协程中
         viewModelScope.launch {
+            // 显式指定类型
+            val userCredentialsFlow: Flow<AuthManager.UserCredentials?> = AuthManager.getCredentials(context)
+            val userCredentials = userCredentialsFlow.first()
+            if (userCredentials == null) return@launch // 如果没有凭证，则不加载数据
+
+            // 如果数据已经加载且不是强制刷新，则跳过
+            if (!forceRefresh && uiState.value.dataLoadState == DataLoadState.Loaded) {
+                return@launch
+            }
+
+            
             try {
                 uiState.value = uiState.value.copy(
                     isLoading = true,
@@ -88,7 +94,7 @@ class HomeViewModel : ViewModel() {
                 // 使用 KtorClient 发起网络请求
                 val response = withContext(Dispatchers.IO) {
                     //KtorClient.instance.getUserInfo(token = credentials.third)
-                    KtorClient.ApiServiceImpl.getUserInfo(token = credentials.third)
+                    KtorClient.ApiServiceImpl.getUserInfo(token = userCredentials.token)
                 }
 
                 response.onSuccess { result ->
@@ -149,10 +155,14 @@ class HomeViewModel : ViewModel() {
 
     // 签到功能
     fun signIn(context: Context) {
-        // 直接尝试获取凭证，即使为null也继续请求
-        val token = AuthManager.getCredentials(context)?.third ?: ""
-
+        // 将实际的签到逻辑移到一个协程中
         viewModelScope.launch {
+             // 显式指定类型
+            val userCredentialsFlow: Flow<AuthManager.UserCredentials?> = AuthManager.getCredentials(context)
+            val userCredentials = userCredentialsFlow.first()
+            val token = userCredentials?.token ?: ""
+
+            
             try {
                 uiState.value = uiState.value.copy(isLoading = true)
 

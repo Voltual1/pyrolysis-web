@@ -2,10 +2,9 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
 
 package cc.bbq.xq.ui.user
 
@@ -17,6 +16,7 @@ import androidx.lifecycle.viewModelScope
 import cc.bbq.xq.AuthManager
 import cc.bbq.xq.KtorClient
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 
 class UserDetailViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -68,15 +68,17 @@ class UserDetailViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     private fun loadData() {
-        val context = getApplication<Application>()
-        val credentials = AuthManager.getCredentials(context)
-        val token = credentials?.third ?: ""
-
-        if (_isLoading.value == true) return
-
-        _isLoading.postValue(true)
-
         viewModelScope.launch {
+            val context = getApplication<Application>()
+            val userCredentialsFlow = AuthManager.getCredentials(context)
+            val userCredentials = userCredentialsFlow.first()
+            val token = userCredentials?.token ?: ""
+
+            // 检查是否已经在加载
+            if (_isLoading.value == true) return@launch // 使用 return@launch 从协程返回
+
+            _isLoading.postValue(true)
+
             try {
                 val result = apiService.getUserInformation(
                     userId = _currentUserId,
@@ -105,4 +107,4 @@ class UserDetailViewModel(application: Application) : AndroidViewModel(applicati
             }
         }
     }
-}
+}    

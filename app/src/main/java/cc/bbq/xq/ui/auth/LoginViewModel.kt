@@ -2,7 +2,6 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
@@ -22,6 +21,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.InputStream
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow // 添加这个导入
 
 class LoginViewModel(
     application: Application
@@ -72,7 +73,11 @@ class LoginViewModel(
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                val deviceId = AuthManager.getDeviceId(getApplication())
+                // 显式转换为 Application 类型
+                val context: Application = getApplication()
+                // 显式指定 Flow 的类型为 String
+                val deviceIdFlow: Flow<String> = AuthManager.getDeviceId(context)
+                val deviceId = deviceIdFlow.first()
                 val loginResult = KtorClient.ApiServiceImpl.login(
                     username = _username.value,
                     password = _password.value,
@@ -112,7 +117,12 @@ class LoginViewModel(
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                val deviceId = AuthManager.getDeviceId(getApplication())
+                // 显式转换为 Application 类型
+                val context: Application = getApplication()
+                // 显式指定 Flow 的类型为 String
+                val deviceIdFlow: Flow<String> = AuthManager.getDeviceId(context)
+                val deviceId = deviceIdFlow.first()
+
                 val registerResult = KtorClient.ApiServiceImpl.register(
                     username = _username.value,
                     password = _password.value,
@@ -146,7 +156,11 @@ class LoginViewModel(
 
     private suspend fun loginAfterRegister() {
         try {
-            val deviceId = AuthManager.getDeviceId(getApplication())
+            // 显式转换为 Application 类型
+            val context: Application = getApplication()
+            // 显式指定 Flow 的类型为 String
+             val deviceIdFlow: Flow<String> = AuthManager.getDeviceId(context)
+                val deviceId = deviceIdFlow.first()
             val loginResult = KtorClient.ApiServiceImpl.login(
                 username = _username.value,
                 password = _password.value,
@@ -178,9 +192,11 @@ class LoginViewModel(
         _verificationCodeUrl.value = "http://apk.xiaoqu.online/api/get_image_verification_code?appid=1&type=2&t=${System.currentTimeMillis()}"
     }
 
-    private fun saveCredentialsAndNotifySuccess(usertoken: String, userId: Long) {
+    private suspend fun saveCredentialsAndNotifySuccess(usertoken: String, userId: Long) {
+        // 显式转换为 Application 类型
+        val context: Application = getApplication()
         AuthManager.saveCredentials(
-            getApplication(), _username.value, _password.value, usertoken, userId
+            context, _username.value, _password.value, usertoken, userId
         )
         _loginSuccess.value = true
     }

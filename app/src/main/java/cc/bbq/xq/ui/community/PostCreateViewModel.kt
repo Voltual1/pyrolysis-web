@@ -2,7 +2,6 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
@@ -34,6 +33,7 @@ import io.ktor.http.content.*
 import io.ktor.client.statement.bodyAsText
 import io.ktor.client.statement.HttpResponse
 import androidx.compose.material3.SnackbarHostState
+import kotlinx.coroutines.flow.Flow // 添加导入
 
 class PostCreateViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -87,17 +87,19 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     // 新增：恢复草稿方法
+    // 修改 restoreDraft 方法，因为 imageUriToUrlMap 不再是 DraftDto 的一部分
     private fun restoreDraft(draft: PostDraftRepository.DraftDto) {
         _uiState.update {
             it.copy(
                 title = draft.title,
                 content = draft.content,
                 imageUrls = draft.imageUrls,
-                imageUriToUrlMap = draft.imageUrls.split(",").filter { it.isNotBlank() }.map { Uri.EMPTY to it }.toMap(), // 修改
+                // imageUriToUrlMap 不再从草稿中恢复，它是在上传图片时构建的
                 selectedSubsectionId = draft.subsectionId
             )
         }
     }
+
 
     // 新增：处理对话框操作
     fun onRestoreDialogConfirm() {
@@ -168,7 +170,9 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
             _uiState.update { it.copy(showProgressDialog = true, progressMessage = "上传图片中...") }
 
             val realPath = withContext(Dispatchers.IO) {
-                FileUtil.getRealPathFromURI(getApplication(), uri)
+                // 显式转换为 Application 类型
+                val context: Application = getApplication()
+                FileUtil.getRealPathFromURI(context, uri)
             }
 
             if (realPath == null) {
@@ -183,9 +187,10 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
                 val uploadResult = uploadImageKtor(bytes, file.name)
 
                 if (uploadResult.isSuccess) {
-                    uploadResult.getOrNull()?.let {
+                    uploadResult.getOrNull()?.let { imageUrl ->
                         _uiState.update { currentState ->
-                            val newUrlMap = currentState.imageUriToUrlMap + (uri to it) // 修改
+                            // 构建新的 imageUriToUrlMap
+                            val newUrlMap = currentState.imageUriToUrlMap + (uri to imageUrl)
                             val newUrls = newUrlMap.values.joinToString(",")
                             currentState.copy(
                                 imageUrls = newUrls,
@@ -262,14 +267,18 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
             _postStatus.value = PostStatus.Loading
 
             try {
-                val credentials = AuthManager.getCredentials(getApplication())
-                if (credentials == null) {
+                // 显式转换为 Application 类型
+                val context: Application = getApplication()
+                // 显式指定类型
+                val userCredentialsFlow: Flow<AuthManager.UserCredentials?> = AuthManager.getCredentials(context)
+                val userCredentials = userCredentialsFlow.first()
+                if (userCredentials == null) {
                     _postStatus.value = PostStatus.Error("请先登录")
                     showSnackbar("请先登录")
                     return@launch
                 }
 
-                val token = credentials.third
+                val token = userCredentials.token
 
                 val finalContent = if (mode == "refund") {
                     val videoPart = if (bvNumber.isNotBlank()) "【视频：$bvNumber】" else ""
@@ -368,6 +377,7 @@ data class PostCreateUiState(
     val content: String = "",
     val selectedSubsectionId: Int = 11,
     val imageUrls: String = "",
+    // 将 imageUriToUrlMap 移到 UI 状态中
     val imageUriToUrlMap: Map<Uri, String> = emptyMap(),
     val showProgressDialog: Boolean = false,
     val progressMessage: String = ""
