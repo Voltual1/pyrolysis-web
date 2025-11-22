@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import cc.bbq.xq.data.proto.UserCredentialsKt
 import io.ktor.client.plugins.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
@@ -270,7 +271,7 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
                 // 显式转换为 Application 类型
                 val context: Application = getApplication()
                 // 显式指定类型
-                val userCredentialsFlow: Flow<AuthManager.UserCredentials?> = AuthManager.getCredentials(context)
+                val userCredentialsFlow = AuthManager.getCredentials(context)
                 val userCredentials = userCredentialsFlow.first()
                 if (userCredentials == null) {
                     _postStatus.value = PostStatus.Error("请先登录")
