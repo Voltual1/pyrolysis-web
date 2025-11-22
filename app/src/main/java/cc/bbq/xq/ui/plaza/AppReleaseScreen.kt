@@ -2,7 +2,6 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 // 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
@@ -58,11 +57,11 @@ import kotlinx.coroutines.launch
 fun AppReleaseScreen(
     viewModel: AppReleaseViewModel,
     navController: NavController, // 添加 NavController 参数
-    snackbarHostState: SnackbarHostState,
+    @Suppress("UNUSED_PARAMETER") snackbarHostState: SnackbarHostState, //fixed: mark as unused
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
+    val internalSnackbarHostState = remember { SnackbarHostState() } // fixed: rename to internalSnackbarHostState
     val scope = rememberCoroutineScope() // 创建 CoroutineScope
     val MAX_INTRO_IMAGES = 3
 
@@ -75,7 +74,7 @@ fun AppReleaseScreen(
             )
             val duration = if (result.isSuccess) SnackbarDuration.Short else SnackbarDuration.Long
             scope.launch {
-                snackbarHostState.showSnackbar(message, duration = duration)
+                internalSnackbarHostState.showSnackbar(message, duration = duration) //fixed: use internalSnackbarHostState
             }
             viewModel.clearProcessFeedback()
         }
@@ -87,7 +86,7 @@ fun AppReleaseScreen(
         uri?.let {
             viewModel.parseAndUploadApk(it)
         } ?: scope.launch {
-            snackbarHostState.showSnackbar(
+            internalSnackbarHostState.showSnackbar( //fixed: use internalSnackbarHostState
                 message = context.getString(R.string.no_file_selected),
                 duration = SnackbarDuration.Short
             )
@@ -101,7 +100,7 @@ fun AppReleaseScreen(
             viewModel.uploadIntroductionImages(uris)
         } else {
             scope.launch {
-                snackbarHostState.showSnackbar(
+                internalSnackbarHostState.showSnackbar( //fixed: use internalSnackbarHostState
                     message = context.getString(R.string.no_image_selected),
                     duration = SnackbarDuration.Short
                 )
@@ -151,7 +150,7 @@ fun AppReleaseScreen(
                         ) {
                             val state = painter.state
                             if (state is AsyncImagePainter.State.Loading || state is AsyncImagePainter.State.Error) {
-                                CircularProgressIndicator()
+                               CircularProgressIndicator()
                             } else {
                                 SubcomposeAsyncImageContent()
                             }
@@ -203,7 +202,7 @@ fun AppReleaseScreen(
                                 } catch (e: Exception) {
                                     //Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
                                     scope.launch {
-                                        snackbarHostState.showSnackbar(
+                                        internalSnackbarHostState.showSnackbar( //fixed: use internalSnackbarHostState
                                             message = context.getString(R.string.unable_to_open_link),
                                             duration = SnackbarDuration.Short
                                         )
@@ -244,38 +243,38 @@ fun AppReleaseScreen(
             }
 
             item {
-    Column {
-        Text("2. 上传应用介绍图 (至氪云)", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        BBQOutlinedButton(
-            onClick = { imageLauncher.launch("image/*") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = viewModel.introductionImageUrls.size < MAX_INTRO_IMAGES,
-            text = { Text("选择图片 (${viewModel.introductionImageUrls.size}/$MAX_INTRO_IMAGES)") }
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        if (viewModel.introductionImageUrls.isNotEmpty()) {
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                viewModel.introductionImageUrls.forEach { url ->
-                    ImagePreviewItem(
-                        imageUrl = url,
-                        onRemoveClick = { viewModel.removeIntroductionImage(url) },
-                        onImageClick = {
-                            navController.navigate(
-                                ImagePreview(
-                                    imageUrl = url
-                                ).createRoute()
-                            )
-                        }
+                Column {
+                    Text("2. 上传应用介绍图 (至氪云)", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    BBQOutlinedButton(
+                        onClick = { imageLauncher.launch("image/*") },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = viewModel.introductionImageUrls.size < MAX_INTRO_IMAGES,
+                        text = { Text("选择图片 (${viewModel.introductionImageUrls.size}/$MAX_INTRO_IMAGES)") }
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (viewModel.introductionImageUrls.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            viewModel.introductionImageUrls.forEach { url ->
+                                ImagePreviewItem(
+                                    imageUrl = url,
+                                    onRemoveClick = { viewModel.removeIntroductionImage(url) },
+                                    onImageClick = {
+                                        navController.navigate(
+                                            ImagePreview(
+                                                imageUrl = url
+                                            ).createRoute()
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
-        }
-    }
-}
 
             item { CategoryDropdown(viewModel) }
             item { PaymentSettings(viewModel) }
@@ -327,7 +326,7 @@ fun AppReleaseScreen(
     // Snackbar 宿主
     Box(modifier = Modifier.fillMaxSize()) {
         BBQSnackbarHost(
-            hostState = snackbarHostState,
+            hostState = internalSnackbarHostState, //fixed: use internalSnackbarHostState
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -354,7 +353,7 @@ private fun ApkUploadServiceDropdown(viewModel: AppReleaseViewModel) {
                 label = { Text("选择上传服务") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
-                    .menuAnchor()
+                    //fixed: remove menuAnchor
                     .fillMaxWidth()
             )
             ExposedDropdownMenu(
@@ -417,7 +416,7 @@ private fun CategoryDropdown(viewModel: AppReleaseViewModel) {
                 label = { Text("选择一个分类") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
-                    .menuAnchor()
+                   //fixed: remove menuAnchor
                     .fillMaxWidth()
             )
             ExposedDropdownMenu(

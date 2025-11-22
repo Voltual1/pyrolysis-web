@@ -104,14 +104,13 @@ fun AccountProfileScreen(modifier: Modifier = Modifier, snackbarHostState: Snack
                 avatarUri = avatarUri,
                 avatarUrl = avatarUrl,
                 onAvatarSelected = { uri ->
-                    avatarUri = uri
                     coroutineScope.launch {
                         // 直接调用非Composable函数
                         uploadAvatar(
                             context = context,
                             uri = uri,
-                            coroutineScope = coroutineScope,
-                            snackbarHostState = snackbarHostState,
+//                            coroutineScope = coroutineScope,
+//                            snackbarHostState = snackbarHostState,
                             onProgress = { message ->
                                 showProgressDialog = true
                                 progressMessage = message
@@ -240,8 +239,8 @@ fun AvatarUploadSection(
 suspend fun uploadAvatar(
     context: Context,
     uri: Uri,
-    coroutineScope: CoroutineScope,
-    snackbarHostState: SnackbarHostState,
+//    coroutineScope: CoroutineScope,
+//    snackbarHostState: SnackbarHostState,
     onProgress: (String) -> Unit = {},
     onComplete: () -> Unit = {},
     onError: (String) -> Unit = {}
@@ -304,7 +303,7 @@ suspend fun saveChanges(
     context: Context,
     nickname: String,
     qqNumber: String,
-    coroutineScope: CoroutineScope,
+    @Suppress("UNUSED_PARAMETER") coroutineScope: CoroutineScope, //fixed: mark as unused
     snackbarHostState: SnackbarHostState,
     onDeviceNameSaved: () -> Unit
 ) {

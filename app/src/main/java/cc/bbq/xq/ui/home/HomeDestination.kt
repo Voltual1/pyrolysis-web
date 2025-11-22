@@ -53,7 +53,8 @@ fun HomeDestination(
             if (!uiState.showLoginPrompt) {
                 viewModel.toggleDarkMode()
                 val modeName = if (ThemeManager.isAppDarkTheme) "深色" else "亮色"
-                viewModel.showSnackbar(context, context.getString(R.string.theme_changed,modeName))
+                // fixed: call snackbar with just message
+                viewModel.showSnackbar(context.getString(R.string.theme_changed,modeName))
                // Toast.makeText(context, "已切换至${modeName}模式", Toast.LENGTH_SHORT).show()
             } else {
                 navController.navigate(Login.route)
@@ -108,10 +109,12 @@ fun HomeDestination(
                 // 在协程中调用 first()
                 coroutineScope.launch {
                     val userId = userIdFlow.first()
-                    if (userId != null) {
+                    // fixed: check if userId is valid (greater than 0)
+                    if (userId > 0) {
                         navController.navigate(MyPosts(userId).createRoute())
                     } else {
-                         viewModel.showSnackbar(context, context.getString(R.string.unable_to_get_userid))
+                        // fixed: call snackbar with just message
+                        viewModel.showSnackbar(context.getString(R.string.unable_to_get_userid))
                         //Toast.makeText(context, "无法获取用户ID", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -119,11 +122,13 @@ fun HomeDestination(
             onMyResourcesClick = {
                  // 在协程中调用 first()
                 coroutineScope.launch{
-                     val userId = userIdFlow.first()
-                    if (userId != null) {
+                    val userId = userIdFlow.first()
+                    // fixed: check if userId is valid (greater than 0)
+                    if (userId > 0) {
                         navController.navigate(ResourcePlaza(isMyResource = true, userId = userId).createRoute())
                     } else {
-                         viewModel.showSnackbar(context, context.getString(R.string.login_first_my_resources))
+                        // fixed: call snackbar with just message
+                        viewModel.showSnackbar(context.getString(R.string.login_first_my_resources))
                         //Toast.makeText(context, "请先登录以查看我的资源", Toast.LENGTH_SHORT).show()
                         navController.navigate(Login.route)
                     }
@@ -136,7 +141,7 @@ fun HomeDestination(
             onAboutClick = { navController.navigate(About.route) },
             onAccountProfileClick = { navController.navigate(AccountProfile.route) },
             onRecalculateDays = { viewModel.recalculateDaysDiff() },
-             viewModel = viewModel,
+            viewModel = viewModel,
             snackbarHostState = snackbarHostState
         )
     }
