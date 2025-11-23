@@ -39,8 +39,8 @@ import androidx.compose.ui.unit.dp
 import cc.bbq.xq.ui.compose.PageJumpDialog
 import cc.bbq.xq.ui.compose.PaginationControls
 import cc.bbq.xq.ui.theme.AppShapes
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 
 @Composable
 fun ResourcePlazaScreen(
@@ -331,7 +331,7 @@ fun AppGridItem(
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(app.iconUrl)
-                    .crossfade(true)
+//                    .crossfade(true)
                     .build(),
                 contentDescription = app.name,
                 modifier = Modifier

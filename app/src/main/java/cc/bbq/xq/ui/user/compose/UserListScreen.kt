@@ -32,8 +32,8 @@ import androidx.compose.ui.unit.dp
 import cc.bbq.xq.KtorClient
 import cc.bbq.xq.R
 import cc.bbq.xq.ui.user.UserListViewModel
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -189,7 +189,7 @@ private fun StableUserListItem(
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(avatarUrl)
-                    .crossfade(true)
+//                    .crossfade(true)
                     .build(),
                 placeholder = painterResource(R.drawable.ic_menu_profile),
                 contentDescription = "用户头像",

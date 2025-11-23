@@ -38,7 +38,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import cc.bbq.xq.AuthManager
-import coil.compose.rememberAsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
 import com.github.dhaval2404.imagepicker.ImagePicker
 import kotlinx.coroutines.flow.first
 import cc.bbq.xq.ui.theme.ImagePreviewItem // 导入 ImagePreviewItem
@@ -166,15 +166,15 @@ fun PostCreateScreen(
         }
     }
 
-    val startImagePicker = {
-        activity?.let {
-            ImagePicker.with(it)
-                .crop()
-                .compress(1024)
-                .maxResultSize(1080, 1080)
-                .createIntent { intent -> imagePickerLauncher.launch(intent) } // 这行是正确的
-        }
+    val startImagePicker: () -> Unit = {
+    activity?.let {
+        ImagePicker.with(it)
+            .crop()
+            .compress(1024)
+            .maxResultSize(1080, 1080)
+            .createIntent { intent -> imagePickerLauncher.launch(intent) }
     }
+}
 
     if (uiState.showProgressDialog) {
         AlertDialog(

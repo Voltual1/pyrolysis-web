@@ -1,24 +1,25 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    id("com.google.devtools.ksp") version "1.9.23-1.0.20"
-    kotlin("plugin.serialization") version "1.9.23" //Kotlin 序列化插件
-    id("com.google.protobuf") version "0.9.4" // 添加 protobuf 插件
+    id("com.google.devtools.ksp") version "2.2.21-2.0.4"
+    kotlin("plugin.serialization") version "2.2.21"
+    id("com.google.protobuf") version "0.9.5"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.21"
 }
 
 android {
-    namespace = "cc.bbq.xq" // 修正包名以匹配项目
-    compileSdk = 34
+    namespace = "cc.bbq.xq"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "cc.bbq.xq" // 修正包名以匹配项目
+        applicationId = "cc.bbq.xq"
         minSdk = 21
-        targetSdk = 34
-        versionCode = 356
-        versionName = "13.5" // 更新版本名以作区分
+        targetSdk = 35
+        versionCode = 360
+        versionName = "14.0"
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
-        resourceConfigurations.add("zh-rCN")
+        resourceConfigurations += listOf("zh")
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -53,11 +54,7 @@ android {
 
     buildFeatures {
         compose = true
-        android.buildFeatures.buildConfig=true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
+        buildConfig = true
     }
 
     packaging {
@@ -65,18 +62,22 @@ android {
             excludes.add("/META-INF/{AL2.0,LGPL2.1}")
         }
     }
+    
+    kotlin {
+        jvmToolchain(17)
+    }
 }
 
 dependencies {
     // ===== 基础依赖 =====
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
     implementation("com.google.android.material:material:1.9.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:5.3.2")
     implementation("com.github.chrisbanes:PhotoView:2.3.0")
 
     // ===== Compose 全家桶 =====
-    implementation(platform("androidx.compose:compose-bom:2025.01.01"))
+    implementation(platform("androidx.compose:compose-bom:2025.11.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose")
@@ -84,12 +85,13 @@ dependencies {
     implementation("androidx.compose.runtime:runtime-livedata")
     implementation("androidx.lifecycle:lifecycle-runtime-compose")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose")
-    implementation("androidx.navigation:navigation-compose:2.8.9")
+    implementation("androidx.navigation:navigation-compose:2.9.6")
     implementation("androidx.compose.material:material")
 
     // ===== 图片加载方案 =====
-    implementation("io.coil-kt:coil-compose:2.7.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+    implementation("io.coil-kt.coil3:coil-compose:3.3.0")
+    implementation("io.coil-kt.coil3:coil-network-ktor3:3.3.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("com.github.dhaval2404:imagepicker:2.1")
 
     // ===== 播放器依赖 =====
@@ -100,48 +102,52 @@ dependencies {
     implementation("androidx.palette:palette-ktx:1.0.0")
 
     // ===== ROOM 数据库依赖 =====
-    val room_version = "2.6.1"
+    val room_version = "2.7.2"
     implementation("androidx.room:room-runtime:$room_version")
-    implementation("androidx.room:room-ktx:$room_version") // Kotlin Coroutines 支持
+    implementation("androidx.room:room-ktx:$room_version")
     implementation("io.insert-koin:koin-androidx-compose:4.0.4")
-    ksp("androidx.room:room-compiler:$room_version") // 使用 KSP 注解处理器
+    ksp("androidx.room:room-compiler:$room_version")
 
     // ===== Ktor 客户端依赖 =====
-    val ktor_version = "2.3.13"
+    val ktor_version = "3.3.2"
     implementation("io.ktor:ktor-client-core:$ktor_version")
-    implementation("io.ktor:ktor-client-okhttp:$ktor_version") // 使用 OkHttp 引擎
+    implementation("io.ktor:ktor-client-okhttp:$ktor_version")
     implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
     implementation("io.ktor:ktor-utils:$ktor_version")
     implementation("io.ktor:ktor-io:$ktor_version")
     implementation("io.ktor:ktor-client-logging:$ktor_version")
-    implementation("io.ktor:ktor-client-auth:$ktor_version") // 认证支持
+    implementation("io.ktor:ktor-client-auth:$ktor_version")
 
     // ===== kotlinx.serialization =====
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
     // ===== protobuf 依赖 =====
-    implementation("com.google.protobuf:protobuf-kotlin:4.27.0")
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("com.google.protobuf:protobuf-kotlin:4.32.1")//永远不要用lite!
+    implementation("androidx.security:security-crypto:1.1.0") // 加密库
 }
 
 protobuf {
-        protoc {
-            artifact = "com.google.protobuf:protoc:4.27.0" // Or the latest version
-        }
-        generateProtoTasks {
-            all().forEach { task ->
-                task.builtins {
-                    create("kotlin") // This enables Kotlin code generation
-                    create("java") // This enables Kotlin code generation
+    protoc {
+        artifact = "com.google.protobuf:protoc:4.32.1"
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.builtins {
+                create("java") {
+                    //去TM的lite，lite版本使用反射会被R8混淆
+                }
+                create("kotlin") {
+                    // 移除 option("lite")
                 }
             }
         }
     }
+}
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += "-XXLanguage:+UnitConversionsOnArbitraryExpressions"
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        freeCompilerArgs.add("-XXLanguage:+UnitConversionsOnArbitraryExpressions")
     }
 }
