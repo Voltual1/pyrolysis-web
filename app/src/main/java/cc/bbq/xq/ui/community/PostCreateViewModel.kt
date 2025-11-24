@@ -13,6 +13,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import io.ktor.client.call.*
 import androidx.lifecycle.viewModelScope
 import cc.bbq.xq.AuthManager
 import cc.bbq.xq.KtorClient
@@ -213,31 +214,38 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
             }
         }
     }
+    
 
     private suspend fun uploadImageKtor(fileBytes: ByteArray, fileName: String): Result<String> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
-                    setBody(
-                        MultiPartFormDataContent(
-                            formData {
-                                append("file", fileBytes, Headers.build {
-                                    append(HttpHeaders.ContentType, "image/jpeg")
-                                    append(HttpHeaders.ContentDisposition, "filename=\"$fileName\"")
-                                })
-                            }
-                        )
+    return withContext(Dispatchers.IO) {
+        try {
+            val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
+                setBody(
+                    MultiPartFormDataContent(
+                        formData {
+                            append("file", fileBytes, Headers.build {
+                                append(HttpHeaders.ContentType, "image/jpeg")
+                                append(HttpHeaders.ContentDisposition, "filename=\"$fileName\"")
+                            })
+                        }
                     )
-                }
-
-                val responseBody = response.bodyAsText()
-                val imageUrl = responseBody.substringAfter("\"viewurl\":\"").substringBefore("\"").trim()
-                Result.success(imageUrl)
-            } catch (e: Exception) {
-                Result.failure(e)
+                )
             }
+
+            // 修复：使用数据类解析响应
+            val responseBody: KtorClient.UploadResponse = response.body()
+            
+            // 修复：使用 downurl 字段，与 AppReleaseViewModel 保持一致
+            if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
+                Result.success(responseBody.downurl)
+            } else {
+                Result.failure(Throwable("上传失败: ${responseBody.msg}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
+}
 
     fun removeImage(uri: Uri) {
         if (!_preferencesState.value.noStoreDraft) {

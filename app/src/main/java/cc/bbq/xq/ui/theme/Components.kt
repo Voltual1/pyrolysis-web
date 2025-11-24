@@ -252,35 +252,29 @@ fun ImagePreviewItem(
             .clip(MaterialTheme.shapes.medium)
     ) {
         SubcomposeAsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(imageUrl)
-//                .crossfade(true)
-                .build(),
+            model = imageUrl, // Coil 3 可以直接使用字符串 URL
             contentDescription = "预览图片",
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
-                .clickable(onClick = onImageClick)
-        ) {
-            val state = painter.state
-            if (state is AsyncImagePainter.State.Loading) {
+                .clickable(onClick = onImageClick),
+            loading = {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(strokeWidth = 2.dp)
                 }
-            } else if (state is AsyncImagePainter.State.Error) {
+            },
+            error = {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Filled.BrokenImage, contentDescription = "加载失败")
                 }
-            } else {
-                SubcomposeAsyncImageContent()
             }
-        }
+        )
 
         IconButton(
             onClick = onRemoveClick,
@@ -288,12 +282,12 @@ fun ImagePreviewItem(
                 .align(Alignment.TopEnd)
                 .padding(4.dp)
                 .size(20.dp)
-                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape) // 使用 Material You 颜色
+                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
         ) {
             Icon(
                 imageVector = Icons.Filled.Close,
                 contentDescription = "移除图片",
-                tint = MaterialTheme.colorScheme.onPrimaryContainer, // 使用 Material You 颜色
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(14.dp)
             )
         }

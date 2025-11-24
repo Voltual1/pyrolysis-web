@@ -136,34 +136,33 @@ fun AppReleaseScreen(
                 )
             }
 
-            item {
-                val iconUrl by viewModel.iconUrl
-                val localIconUri by viewModel.localIconUri
+     item {
+    val iconUrl by viewModel.iconUrl
+    val localIconUri by viewModel.localIconUri
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val model: Any? = iconUrl ?: localIconUri
-                    if (model != null) {
-                        SubcomposeAsyncImage(
-                            model = model,
-                            contentDescription = "应用图标",
-                            modifier = Modifier.size(64.dp)
-                        ) {
-                            val state = painter.state
-                            if (state is AsyncImagePainter.State.Loading || state is AsyncImagePainter.State.Error) {
-                               CircularProgressIndicator()
-                            } else {
-                                SubcomposeAsyncImageContent()
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            if (iconUrl != null) "当前图标" else "已解析图标",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val model: Any? = iconUrl ?: localIconUri
+        if (model != null) {
+            SubcomposeAsyncImage(
+                model = model,
+                contentDescription = "应用图标",
+                modifier = Modifier.size(64.dp),
+                loading = {
+                    CircularProgressIndicator()
+                },
+                error = {
+                    Icon(Icons.Filled.BrokenImage, contentDescription = "加载失败")
                 }
-            }
-
+                // 移除 content 参数，因为 loading 和 error 已经包含了状态处理
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                if (iconUrl != null) "当前图标" else "已解析图标",
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+    }
+}
             item { FormTextField(label = "应用名称", state = viewModel.appName) }
             item {
                 FormTextField(
