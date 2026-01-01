@@ -1,69 +1,62 @@
+// /app/src/main/java/cc/bbq/xq/ui/plaza/AppReleaseScreen.kt
 //Copyright (C) 2025 Voltual
-// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
-//（或任意更新的版本）的条款重新分发和/或修改它。
-// 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-//
-// 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package cc.bbq.xq.ui.plaza
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import cc.bbq.xq.ui.ImagePreview
-import androidx.compose.foundation.background
-import androidx.navigation.NavController
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import cc.bbq.xq.ui.theme.BBQSnackbarHost // 导入 BBQSnackbarHost
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import cc.bbq.xq.ui.theme.BBQButton
-import cc.bbq.xq.ui.theme.BBQOutlinedButton
-import coil3.compose.AsyncImagePainter
-import coil3.compose.SubcomposeAsyncImage
-import coil3.compose.SubcomposeAsyncImageContent
-import coil3.request.ImageRequest
-import cc.bbq.xq.ui.theme.ImagePreviewItem // 导入 ImagePreviewItem
+import androidx.navigation.NavController
+import cc.bbq.xq.AppStore
 import cc.bbq.xq.R
+import cc.bbq.xq.ui.ImagePreview
+import cc.bbq.xq.ui.theme.*
+import coil3.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.launch
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import cc.bbq.xq.ui.theme.AppStoreDropdownMenu
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpOffset
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppReleaseScreen(
     viewModel: AppReleaseViewModel,
-    navController: NavController, // 添加 NavController 参数
-    @Suppress("UNUSED_PARAMETER") snackbarHostState: SnackbarHostState, //fixed: mark as unused
+    navController: NavController,
+    @Suppress("UNUSED_PARAMETER") snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val internalSnackbarHostState = remember { SnackbarHostState() } // fixed: rename to internalSnackbarHostState
-    val scope = rememberCoroutineScope() // 创建 CoroutineScope
-    val MAX_INTRO_IMAGES = 3
+    val internalSnackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    
+    val selectedStore by viewModel.selectedStore.collectAsStateWithLifecycle()
 
     val processFeedback by viewModel.processFeedback.collectAsStateWithLifecycle()
     LaunchedEffect(processFeedback) {
@@ -74,36 +67,34 @@ fun AppReleaseScreen(
             )
             val duration = if (result.isSuccess) SnackbarDuration.Short else SnackbarDuration.Long
             scope.launch {
-                internalSnackbarHostState.showSnackbar(message, duration = duration) //fixed: use internalSnackbarHostState
+                internalSnackbarHostState.showSnackbar(message, duration = duration)
             }
             viewModel.clearProcessFeedback()
+        }
+    }
+
+    // **新增**：当选择弦开放平台时，自动加载标签
+    LaunchedEffect(selectedStore) {
+        if (selectedStore == AppStore.SINE_OPEN_MARKET) {
+            // 自动加载弦开放平台的标签
+            viewModel.loadTagOptions()
         }
     }
 
     val apkLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            viewModel.parseAndUploadApk(it)
-        } ?: scope.launch {
-            internalSnackbarHostState.showSnackbar( //fixed: use internalSnackbarHostState
-                message = context.getString(R.string.no_file_selected),
-                duration = SnackbarDuration.Short
-            )
-        }
+        uri?.let { viewModel.parseAndUploadApk(it) }
     }
 
     val imageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris: List<Uri> ->
         if (uris.isNotEmpty()) {
-            viewModel.uploadIntroductionImages(uris)
-        } else {
-            scope.launch {
-                internalSnackbarHostState.showSnackbar( //fixed: use internalSnackbarHostState
-                    message = context.getString(R.string.no_image_selected),
-                    duration = SnackbarDuration.Short
-                )
+            if (selectedStore == AppStore.XIAOQU_SPACE) {
+                viewModel.uploadIntroductionImages(uris)
+            } else {
+                viewModel.addScreenshots(uris)
             }
         }
     }
@@ -120,170 +111,160 @@ fun AppReleaseScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item { Spacer(modifier = Modifier.height(4.dp)) }
-
-            item { ApkUploadServiceDropdown(viewModel) }
-
+            
+            // 商店选择
             item {
-                val selectedService by viewModel.selectedApkUploadService
+                AppStoreDropdownMenu(
+                    selectedStore = selectedStore,
+                    onStoreChange = { viewModel.onStoreSelected(it) },
+                    // 仅支持小趣空间和弦开放平台
+                    appStores = listOf(AppStore.XIAOQU_SPACE, AppStore.SINE_OPEN_MARKET)
+                )
+            }
+
+            // --- 公共部分：APK上传与图标 ---
+            item {
+
+                val buttonText =  "1. 选择 APK (解析并准备上传)"
+
+                
                 BBQButton(
                     onClick = { apkLauncher.launch("application/vnd.android.package-archive") },
                     modifier = Modifier.fillMaxWidth(),
-                    text = {
-                        Text(
-                            if (isUpdateMode) "1. 选择新版 APK (上传至${selectedService.displayName})" else "1. 选择并上传 APK (至${selectedService.displayName})"
-                        )
-                    }
-                )
-            }
-
-     item {
-    val iconUrl by viewModel.iconUrl
-    val localIconUri by viewModel.localIconUri
-
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        val model: Any? = iconUrl ?: localIconUri
-        if (model != null) {
-            SubcomposeAsyncImage(
-                model = model,
-                contentDescription = "应用图标",
-                modifier = Modifier.size(64.dp),
-                loading = {
-                    CircularProgressIndicator()
-                },
-                error = {
-                    Icon(Icons.Filled.BrokenImage, contentDescription = "加载失败")
-                }
-                // 移除 content 参数，因为 loading 和 error 已经包含了状态处理
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                if (iconUrl != null) "当前图标" else "已解析图标",
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
-    }
-}
-            item { FormTextField(label = "应用名称", state = viewModel.appName) }
-            item {
-                FormTextField(
-                    label = "APK 下载链接 (自动填充/可修改)",
-                    state = viewModel.apkDownloadUrl,
-                    singleLine = true
+                    text = { Text(buttonText) }
                 )
             }
 
             item {
-                val uploadUrl = "https://file.bz6.top/upload.php"
-                val annotatedString = buildAnnotatedString {
-                    append("如果氪云API上传不稳定? 你或许可以尝试直接使用氪云的网页端上传")
-                    pushStringAnnotation(tag = "URL", annotation = uploadUrl)
-                    withStyle(
-                        style = SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            textDecoration = TextDecoration.Underline
-                        )
-                    ) {
-                        append("点此访问网页版上传，但是记住复制下载链接回来填充")
-                    }
-                    pop()
-                }
+                val iconUrl by viewModel.iconUrl
+                val localIconUri by viewModel.localIconUri
 
-                // 修复：使用新的 LinkAnnotation API
-                androidx.compose.foundation.text.selection.SelectionContainer {
-                    androidx.compose.material3.Text(
-                        text = annotatedString,
-                        modifier = Modifier
-                            .padding(top = 4.dp, start = 4.dp)
-                            .clickable {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uploadUrl))
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    //Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
-                                    scope.launch {
-                                        internalSnackbarHostState.showSnackbar( //fixed: use internalSnackbarHostState
-                                            message = context.getString(R.string.unable_to_open_link),
-                                            duration = SnackbarDuration.Short
-                                        )
-                                    }
-                                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val model: Any? = iconUrl ?: localIconUri
+                    if (model != null) {
+                        SubcomposeAsyncImage(
+                            model = model,
+                            contentDescription = "应用图标",
+                            modifier = Modifier.size(64.dp),
+                            loading = {
+                                CircularProgressIndicator()
                             },
-                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                            error = {
+                                Icon(Icons.Filled.BrokenImage, contentDescription = "加载失败")
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            if (iconUrl != null) "当前图标" else "已解析图标",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                 }
             }
 
-            item {
-                FormTextField(
-                    label = "包名 (自动填充)",
-                    state = viewModel.packageName,
-                    enabled = !isUpdateMode
-                )
-            }
-            item { FormTextField(label = "版本名 (自动填充)", state = viewModel.versionName, enabled = false) }
-            item { FormTextField(label = "版本号 (用户可见)", state = viewModel.appVersion) }
-            item { FormTextField(label = "文件大小 (MB, 自动填充)", state = viewModel.appSize, enabled = false) }
-            item {
-                FormTextField(
-                    label = "资源介绍 (支持密码格式)",
-                    state = viewModel.appIntroduce,
-                    singleLine = false,
-                    minLines = 3
-                )
-            }
-            item {
-                FormTextField(
-                    label = "适配性能描述 (支持换行)",
-                    state = viewModel.appExplain,
-                    singleLine = false,
-                    minLines = 4
-                )
+            // --- 小趣空间表单 ---
+            if (selectedStore == AppStore.XIAOQU_SPACE) {
+                item { ApkUploadServiceDropdown(viewModel) }
+                item { FormTextField(label = "应用名称", state = viewModel.appName) }
+                item { FormTextField(label = "APK 下载链接 (自动填充)", state = viewModel.apkDownloadUrl, singleLine = true) }
+                item { FormTextField(label = "包名 (自动填充)", state = viewModel.packageName, enabled = !isUpdateMode) }
+                item { FormTextField(label = "版本名 (自动填充)", state = viewModel.versionName, enabled = false) }
+                item { FormTextField(label = "文件大小 (MB)", state = viewModel.appSize, enabled = false) }
+                item { FormTextField(label = "资源介绍", state = viewModel.appIntroduce, singleLine = false, minLines = 3) }
+                item { FormTextField(label = "适配性能描述", state = viewModel.appExplain, singleLine = false, minLines = 4) }
+                
+                item {
+                    Column {
+                        Text("2. 上传应用介绍图", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        BBQOutlinedButton(
+                            onClick = { imageLauncher.launch("image/*") },
+                            modifier = Modifier.fillMaxWidth(),
+                            text = { Text("选择图片") }
+                        )
+                         if (viewModel.introductionImageUrls.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                viewModel.introductionImageUrls.forEach { url ->
+                                    ImagePreviewItem(
+                                        imageUrl = url,
+                                        onRemoveClick = { viewModel.removeIntroductionImage(url) },
+                                        onImageClick = { navController.navigate(ImagePreview(url).createRoute()) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                item { CategoryDropdown(viewModel) }
+                item { PaymentSettings(viewModel) }
             }
 
-            item {
-                Column {
-                    Text("2. 上传应用介绍图 (至氪云)", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    BBQOutlinedButton(
-                        onClick = { imageLauncher.launch("image/*") },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = viewModel.introductionImageUrls.size < MAX_INTRO_IMAGES,
-                        text = { Text("选择图片 (${viewModel.introductionImageUrls.size}/$MAX_INTRO_IMAGES)") }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    if (viewModel.introductionImageUrls.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            viewModel.introductionImageUrls.forEach { url ->
-                                ImagePreviewItem(
-                                    imageUrl = url,
-                                    onRemoveClick = { viewModel.removeIntroductionImage(url) },
-                                    onImageClick = {
-                                        navController.navigate(
-                                            ImagePreview(
-                                                imageUrl = url
-                                            ).createRoute()
-                                        )
-                                    }
-                                )
+            // --- 弦开放平台表单 ---
+            if (selectedStore == AppStore.SINE_OPEN_MARKET) {
+                 item {
+        AppTypeDropdown(viewModel = viewModel)
+    }
+    item {
+        VersionTypeDropdown(viewModel = viewModel)
+    }
+    item {
+        TagDropdown(viewModel = viewModel)
+    }
+                item { FormTextField(label = "应用名称", state = viewModel.appName) }
+                item { FormTextField(label = "包名", state = viewModel.packageName) }
+                item { FormTextField(label = "版本名", state = viewModel.versionName) }
+                item { FormTextField(label = "开发者", state = viewModel.developer) }
+                item { FormTextField(label = "应用来源", state = viewModel.source) }
+                item { FormTextField(label = "关键字 (空格分隔)", state = viewModel.keyword) }
+                
+                item {
+                    FormTextField(label = "应用描述", state = viewModel.describe, singleLine = false, minLines = 3)
+                }
+                item {
+                    FormTextField(label = "更新日志", state = viewModel.updateLog, singleLine = false, minLines = 2)
+                }
+                item {
+                    FormTextField(label = "给审核员的留言", state = viewModel.uploadMessage, singleLine = false, minLines = 2)
+                }
+                
+                item {
+                    Column {
+                        Text("2. 添加应用截图 (发布时上传)", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        BBQOutlinedButton(
+                            onClick = { imageLauncher.launch("image/*") },
+                            modifier = Modifier.fillMaxWidth(),
+                            text = { Text("选择截图 (${viewModel.screenshotsUris.size})") }
+                        )
+                         if (viewModel.screenshotsUris.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                viewModel.screenshotsUris.forEach { uri ->
+                                    ImagePreviewItem(
+                                        imageUrl = uri.toString(), // 本地URI
+                                        onRemoveClick = { viewModel.removeScreenshot(uri) },
+                                        onImageClick = { /* 预览逻辑 */ }
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
 
-            item { CategoryDropdown(viewModel) }
-            item { PaymentSettings(viewModel) }
-
+            // --- 提交按钮 ---
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 BBQButton(
                     onClick = {
                         viewModel.releaseApp {
-                            // 发布成功后不需要手动调用 onBack，因为 NavGraph 会处理
+                            // 发布成功回调
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -300,84 +281,45 @@ fun AppReleaseScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = when {
-                                viewModel.isApkUploading.value -> "正在上传 APK..."
-                                viewModel.isIconUploading.value -> "正在上传图标..."
-                                viewModel.isIntroImagesUploading.value -> "正在上传介绍图..."
-                                viewModel.isReleasing.value -> if (isUpdateMode) "正在提交更新..." else "正在提交发布..."
-                                else -> "请稍候..."
-                            },
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
+                    CircularProgressIndicator()
                 }
             }
         }
-    }
 
-    // Snackbar 宿主
-    Box(modifier = Modifier.fillMaxSize()) {
         BBQSnackbarHost(
-            hostState = internalSnackbarHostState, //fixed: use internalSnackbarHostState
+            hostState = internalSnackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ApkUploadServiceDropdown(viewModel: AppReleaseViewModel) {
-    var expanded by remember { mutableStateOf(false) }
-    val services = ApkUploadService.values()
-    val selectedService by viewModel.selectedApkUploadService
+// --- 辅助 Composable 函数 ---
 
-    Column {
-        Text("APK 上传服务", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
-        ) {
-            OutlinedTextField(
-                value = selectedService.displayName,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("选择上传服务") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor( // 添加这行
-                        type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, // 使用正确的类型
-                        enabled = true
-                    )
-            )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                services.forEach { service ->
-                    DropdownMenuItem(
-                        text = { Text(service.displayName) },
-                        onClick = {
-                            viewModel.selectedApkUploadService.value = service
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-    }
+@Composable
+fun FormTextField(
+    label: String,
+    state: MutableState<String>,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    singleLine: Boolean = false,
+    minLines: Int = 1,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+) {
+    OutlinedTextField(
+        value = state.value,
+        onValueChange = { state.value = it },
+        label = { Text(label) },
+        modifier = modifier.fillMaxWidth(),
+        enabled = enabled,
+        singleLine = singleLine,
+        minLines = minLines,
+        keyboardOptions = keyboardOptions
+    )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PaymentSettings(viewModel: AppReleaseViewModel) {
+fun PaymentSettings(viewModel: AppReleaseViewModel) {
     Column {
         Text("付费设置", style = MaterialTheme.typography.titleMedium)
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -399,7 +341,7 @@ private fun PaymentSettings(viewModel: AppReleaseViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CategoryDropdown(viewModel: AppReleaseViewModel) {
+fun CategoryDropdown(viewModel: AppReleaseViewModel) {
     var expanded by remember { mutableStateOf(false) }
     val selectedCategoryName =
         viewModel.categories.getOrNull(viewModel.selectedCategoryIndex.value)?.categoryName ?: "请选择"
@@ -442,24 +384,191 @@ private fun CategoryDropdown(viewModel: AppReleaseViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FormTextField(
-    label: String,
-    state: MutableState<String>,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    singleLine: Boolean = false,
-    minLines: Int = 1,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
-) {
-    OutlinedTextField(
-        value = state.value,
-        onValueChange = { state.value = it },
-        label = { Text(label) },
-        modifier = modifier.fillMaxWidth(),
-        enabled = enabled,
-        singleLine = singleLine,
-        minLines = minLines,
-        keyboardOptions = keyboardOptions
-    )
+fun AppTypeDropdown(viewModel: AppReleaseViewModel) {
+    var expanded by remember { mutableStateOf(false) }
+    val appTypeOptions = viewModel.appTypeOptions
+    val selectedAppTypeId = viewModel.appTypeId.value
+
+    Column {
+        Text("应用类型", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            // 找到当前选中的应用类型名称
+            val selectedAppName = appTypeOptions.getOrNull(selectedAppTypeId - 1) ?: "请选择"
+            OutlinedTextField(
+                value = selectedAppName,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("选择应用类型") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(
+                        type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                        enabled = true
+                    )
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                appTypeOptions.forEachIndexed { index, appType ->
+                    val id = index + 1 // ID 从 1 开始
+                    DropdownMenuItem(
+                        text = { Text(appType) },
+                        onClick = {
+                            viewModel.appTypeId.value = id // 使用 setter 方法
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VersionTypeDropdown(viewModel: AppReleaseViewModel) {
+    var expanded by remember { mutableStateOf(false) }
+    val versionTypeOptions = viewModel.versionTypeOptions
+    val selectedVersionTypeId = viewModel.appVersionTypeId.value
+
+    Column {
+        Text("版本类型", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            // 找到当前选中的版本类型名称
+            val selectedVersionName = versionTypeOptions.getOrNull(selectedVersionTypeId - 1) ?: "请选择"
+            OutlinedTextField(
+                value = selectedVersionName,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("选择版本类型") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(
+                        type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                        enabled = true
+                    )
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                versionTypeOptions.forEachIndexed { index, versionType ->
+                    val id = index + 1 // ID 从 1 开始
+                    DropdownMenuItem(
+                        text = { Text(versionType) },
+                        onClick = {
+                            viewModel.appVersionTypeId.value = id // 使用 setter 方法
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TagDropdown(viewModel: AppReleaseViewModel) {
+    var expanded by remember { mutableStateOf(false) }
+    val tagOptions = viewModel.tagOptions
+    val selectedTagIndex = viewModel.appTags.value
+
+    Column {
+        Text("应用标签", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            // 找到当前选中的标签名称
+            val selectedTagName = tagOptions.getOrNull(selectedTagIndex) ?: "请选择"
+            OutlinedTextField(
+                value = selectedTagName,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("选择应用标签") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(
+                        type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                        enabled = true
+                    )
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                tagOptions.forEachIndexed { index, tag ->
+                    val id = index // ID 从 0 开始
+                    DropdownMenuItem(
+                        text = { Text(tag) },
+                        onClick = {
+                            viewModel.appTags.value = id // 使用 setter 方法
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ApkUploadServiceDropdown(viewModel: AppReleaseViewModel) {
+    var expanded by remember { mutableStateOf(false) }
+    val services = ApkUploadService.values()
+    val selectedService by viewModel.selectedApkUploadService
+
+    Column {
+        Text("APK 上传服务", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            OutlinedTextField(
+                value = selectedService.displayName,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("选择上传服务") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor( // 添加这行
+                        type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, // 使用正确的类型
+                        enabled = true
+                    )
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                services.forEach { service ->
+                    DropdownMenuItem(
+                        text = { Text(service.displayName) },
+                        onClick = {
+                            viewModel.selectedApkUploadService.value = service
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
 }

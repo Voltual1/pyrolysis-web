@@ -1,3 +1,4 @@
+// File: /app/src/main/java/cc/bbq/xq/AppStoreType.kt
 //Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
@@ -8,7 +9,9 @@
 
 package cc.bbq.xq
 
-enum class AppStore {
-    XIAOQU_SPACE,    // 小趣空间
-    SIENE_SHOP       // 弦应用商店
+enum class AppStore(val displayName: String) {
+    XIAOQU_SPACE("小趣空间"),
+    SIENE_SHOP("弦应用商店"),
+    SINE_OPEN_MARKET("弦-开放平台"), // 新增：弦-开放平台
+    LOCAL("本地应用")
 }

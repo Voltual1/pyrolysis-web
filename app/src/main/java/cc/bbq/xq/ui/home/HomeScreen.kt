@@ -1,8 +1,8 @@
+// File: /app/src/main/java/cc/bbq/xq/ui/home/HomeScreen.kt
 //Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>。
@@ -46,6 +46,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope // 添加导入
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,9 +69,127 @@ import cc.bbq.xq.ui.theme.BBQBackgroundCard
 import coil3.compose.AsyncImage
 import cc.bbq.xq.MainActivity
 import cc.bbq.xq.ui.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.navigation.NavController
+import androidx.compose.foundation.pager.rememberPagerState
+import kotlinx.coroutines.launch
+import cc.bbq.xq.SineShopClient
+import cc.bbq.xq.ui.Update // 导入 Update 导航目标
+import cc.bbq.xq.ui.MyComments // 导入 MyComments 导航目标
 
 @Composable
 fun HomeScreen(
+    state: HomeState,
+    sineShopUserInfo: SineShopClient.SineShopUserInfo?,
+    sineShopLoginPrompt: Boolean,
+    onSineShopLoginClick: () -> Unit,
+    onAvatarClick: () -> Unit,
+    onAvatarLongClick: () -> Unit,
+    onMessageCenterClick: () -> Unit,
+    onBrowseHistoryClick: () -> Unit,
+    onMyLikesClick: () -> Unit,
+    onFollowersClick: () -> Unit,
+    onFansClick: () -> Unit,
+    onPostsClick: () -> Unit,
+    onMyResourcesClick: () -> Unit,
+    onBillingClick: () -> Unit,
+    onLoginClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onPaymentCenterClick: () -> Unit,
+    onSignClick: () -> Unit,
+    onRecalculateDays: () -> Unit,
+    onAboutClick: () -> Unit,
+    onAccountProfileClick: () -> Unit,
+    onNavigateToUpdate: () -> Unit, 
+    onNavigateToMyComments: () -> Unit,
+    onNavigateToMyReviews: () -> Unit,
+    onNavigateToCreateAppRelease: () -> Unit, 
+    modifier: Modifier = Modifier,
+    viewModel: HomeViewModel,
+    snackbarHostState: SnackbarHostState,
+    navController: NavController // 添加 navController 参数
+) {
+    val pagerState = rememberPagerState(pageCount = { 2 })
+
+    LaunchedEffect(Unit) {
+        viewModel.setSnackbarHostState(snackbarHostState)
+    }
+
+    HorizontalPager(
+        state = pagerState,
+        modifier = modifier.fillMaxSize()
+    ) { page ->
+        when (page) {
+            0 -> {
+                // 小趣空间主页
+                XiaoquSpaceHomePage(
+                    state = state,
+                    onAvatarClick = onAvatarClick,
+                    onAvatarLongClick = onAvatarLongClick,
+                    onMessageCenterClick = onMessageCenterClick,
+                    onBrowseHistoryClick = onBrowseHistoryClick,
+                    onMyLikesClick = onMyLikesClick,
+                    onFollowersClick = onFollowersClick,
+                    onFansClick = onFansClick,
+                    onPostsClick = onPostsClick,
+                    onMyResourcesClick = onMyResourcesClick,
+                    onBillingClick = onBillingClick,
+                    onLoginClick = onLoginClick,
+                    onSettingsClick = onSettingsClick,
+                    onPaymentCenterClick = onPaymentCenterClick,
+                    onSignClick = onSignClick,
+                    onRecalculateDays = onRecalculateDays,
+                    onAboutClick = onAboutClick,
+                    onAccountProfileClick = onAccountProfileClick,
+                    onSineShopLoginClick = onSineShopLoginClick, // 传递新参数
+                    viewModel = viewModel,
+                    snackbarHostState = snackbarHostState
+                )
+            }
+            1 -> {
+                // 弦应用商店个人主页
+                if (sineShopLoginPrompt) {
+                    SineShopLoginPrompt(onSineShopLoginClick = onSineShopLoginClick)
+                } else {
+                    SineShopProfileScreen(
+                        userInfo = sineShopUserInfo,
+                        modifier = Modifier.fillMaxSize(),
+                        onNavigateToResourcePlaza = { mode ->
+                            // 根据模式导航到不同的资源广场
+                            when (mode) {
+                                "my_upload" -> {
+                                    // 导航到弦应用商店的我的上传
+                                    navController.navigate(ResourcePlaza(isMyResource = true, mode = "my_upload").createRoute())
+                                }
+                                "my_favourite" -> {
+                                    // 导航到弦应用商店的我的收藏
+                                    navController.navigate(ResourcePlaza(isMyResource = true, mode = "my_favourite").createRoute())
+                                }
+                                "my_history" -> {
+                                    // 导航到弦应用商店的历史足迹
+                                    navController.navigate(ResourcePlaza(isMyResource = true, mode = "my_history").createRoute())
+                                }
+                                else -> {
+                                    // 默认导航到公共资源广场
+                                    navController.navigate(ResourcePlaza(false).createRoute())
+                                }
+                            }
+                        },
+                        onNavigateToUpdate = onNavigateToUpdate,
+                        onNavigateToMyComments = onNavigateToMyComments,
+                        onNavigateToMyReviews = onNavigateToMyReviews,
+                        onNavigateToCreateAppRelease = onNavigateToCreateAppRelease,                        
+                        navController = navController
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun XiaoquSpaceHomePage(
     state: HomeState,
     onAvatarClick: () -> Unit,
     onAvatarLongClick: () -> Unit,
@@ -89,16 +208,11 @@ fun HomeScreen(
     onRecalculateDays: () -> Unit,
     onAboutClick: () -> Unit, // 添加onAboutClick参数
     onAccountProfileClick: () -> Unit, // 新增“账号资料”点击事件
+    onSineShopLoginClick: () -> Unit, // 新增参数
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel,
-    snackbarHostState: SnackbarHostState//新增ViewModel和snackbar参数
+    snackbarHostState: SnackbarHostState
 ) {
-  
-
-    LaunchedEffect(Unit) {
-        viewModel.setSnackbarHostState(snackbarHostState)
-    }
-
     Box(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -622,3 +736,27 @@ data class HomeState(
     val exp: Int = 0,
     val displayDaysDiff: Int = 0
 )
+
+@Composable
+fun SineShopLoginPrompt(onSineShopLoginClick: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "您尚未登录弦应用商店，请登录后使用完整功能",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        TextButton(
+            onClick = onSineShopLoginClick,
+            modifier = Modifier.padding(horizontal = 32.dp)
+        ) {
+            Text("立即登录", style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+}

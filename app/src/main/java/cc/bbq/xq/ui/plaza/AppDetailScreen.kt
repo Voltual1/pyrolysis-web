@@ -1,19 +1,13 @@
-//Copyright (C) 2025 Voltual
-// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
-//（或任意更新的版本）的条款重新分发和/或修改它。
-//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
-//
-// 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+// 文件路径: cc/bbq.xq.ui/plaza/AppDetailScreen.kt
 package cc.bbq.xq.ui.plaza
 
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import cc.bbq.xq.ui.theme.BBQSnackbarHost // 导入 BBQSnackbarHost
 import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,40 +15,60 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+// 修复：从正确的包导入 pullRefresh 相关组件
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import coil3.request.ImageRequest
+import coil3.request.CachePolicy
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import cc.bbq.xq.KtorClient
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-//import cc.bbq.xq.RetrofitClient
-import cc.bbq.xq.ui.*
+import cc.bbq.xq.data.unified.UnifiedAppDetail
+import cc.bbq.xq.data.unified.UnifiedComment
+import cc.bbq.xq.ui.ImagePreview
+import cc.bbq.xq.ui.UserDetail
+import cc.bbq.xq.ui.PaymentForApp
 import cc.bbq.xq.ui.community.compose.CommentDialog
+import cc.bbq.xq.ui.CreateRefundPost
+import cc.bbq.xq.ui.UpdateAppRelease
 import cc.bbq.xq.ui.community.compose.CommentItem
+import cc.bbq.xq.ui.theme.BBQSnackbarHost
+import cc.bbq.xq.ui.theme.DownloadSourceDrawer
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
+import cc.bbq.xq.ui.Download
+import cc.bbq.xq.AppStore
+import cc.bbq.xq.util.formatTimestamp
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import cc.bbq.xq.ui.theme.UnifiedCommentItem
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun AppDetailScreen(
-    viewModel: AppDetailComposeViewModel,
-    appId: Long,
+    appId: String,
     versionId: Long,
+    storeName: String,
     navController: NavController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: AppDetailComposeViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
     val appDetail by viewModel.appDetail.collectAsState()
@@ -65,19 +79,91 @@ fun AppDetailScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
+    val showDownloadDrawer by viewModel.showDownloadDrawer.collectAsState()
+    val downloadSources by viewModel.downloadSources.collectAsState()
+
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    // 应用删除确认对话框
+    var showDeleteAppDialog by remember { mutableStateOf(false) }
 
-    // 简化的初始化 - 只调用 ViewModel 的初始化方法
-    LaunchedEffect(appId, versionId) {
-        viewModel.initializeData(appId, versionId)
+    // 评论删除确认对话框
+    var showDeleteCommentDialog by remember { mutableStateOf(false) }
+    var commentToDeleteId by remember { mutableStateOf<String?>(null) }
+    var showMoreMenu by remember { mutableStateOf(false) }
+
+    LaunchedEffect(appId, versionId, storeName) {
+        viewModel.initializeData(appId, versionId, storeName)
     }
 
-    // 下拉刷新状态
-    var refreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        viewModel.openUrlEvent.collectLatest { url ->
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                snackbarHostState.showSnackbar("无法打开链接: $url")
+            }
+        }
+    }
+    
+    // 监听 ViewModel 中的 snackbarEvent
+    LaunchedEffect(viewModel.snackbarEvent) {
+        viewModel.snackbarEvent.collectLatest { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+    // 监听更新事件
+    LaunchedEffect(viewModel.snackbarEvent) {
+            viewModel.updateEvent.collectLatest { jsonString ->
+        // 直接导航到 UpdateAppRelease
+        navController.navigate(UpdateAppRelease(jsonString).createRoute())
+    }
+}
+    
+    // 监听退款和更新事件
+LaunchedEffect(Unit) {
+    viewModel.refundEvent.collectLatest { refundInfo ->
+        navController.navigate(
+            CreateRefundPost(
+                appId = refundInfo.appId.toLongOrNull() ?: 0L,
+                versionId = refundInfo.versionId,
+                appName = refundInfo.appName,
+                payMoney = refundInfo.payMoney
+            ).createRoute()
+        )
+    }
+    
+    
+   }
+    
+    // 监听支付导航事件
+    LaunchedEffect(Unit) {
+        viewModel.navigateToPaymentEvent.collectLatest { paymentInfo ->
+            navController.navigate(
+                PaymentForApp(
+                    appId = paymentInfo.appId,
+                    appName = paymentInfo.appName,
+                    versionId = paymentInfo.versionId,
+                    price = paymentInfo.price,
+                    iconUrl = paymentInfo.iconUrl,
+                    previewContent = paymentInfo.previewContent
+                ).createRoute()
+            )
+        }
+    }
+    
+    // 监听 ViewModel 中的 navigateToDownloadEvent
+    LaunchedEffect(viewModel.navigateToDownloadEvent) {
+        viewModel.navigateToDownloadEvent.collectLatest { navigate ->
+            if (navigate) {
+                navController.navigate(Download.route)
+            }
+        }
+    }
 
+    var refreshing by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = {
         refreshing = true
         viewModel.refresh()
@@ -86,170 +172,196 @@ fun AppDetailScreen(
 
     LaunchedEffect(errorMessage) {
         if (errorMessage.isNotEmpty()) {
-            coroutineScope.launch {
-                snackbarHostState.showSnackbar(errorMessage)
+            coroutineScope.launch { snackbarHostState.showSnackbar(errorMessage) }
+        }
+    }
+
+    // 处理分享功能
+    fun handleShare() {
+        appDetail?.let { detail ->
+            when (detail.store) {
+                AppStore.XIAOQU_SPACE -> {
+                    // 小趣空间：使用 posturl
+                    val raw = detail.raw as? cc.bbq.xq.KtorClient.AppDetail
+                    val shareUrl = raw?.posturl
+                    if (!shareUrl.isNullOrBlank()) {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("应用链接", shareUrl)
+                        clipboard.setPrimaryClip(clip)
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("已复制分享链接: $shareUrl")
+                        }
+                    } else {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("分享链接无效")
+                        }
+                    }
+                }
+                AppStore.SIENE_SHOP -> {
+                    // 弦应用商店：使用自定义格式
+                    val shareUrl = "sinemarket://app/${detail.id}"
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val clip = ClipData.newPlainText("应用链接", shareUrl)
+                    clipboard.setPrimaryClip(clip)
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("已复制分享链接: $shareUrl")
+                    }
+                }
+                AppStore.SINE_OPEN_MARKET -> {
+                    // 弦开放市场：暂不支持分享
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("暂不支持该商店的分享功能")
+                    }
+                }
+                AppStore.LOCAL -> {
+                    // 本地商店：暂不支持分享
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("暂不支持该商店的分享功能")
+                    }
+                }
             }
         }
     }
 
-    fun shareApp() {
-        val postUrl = appDetail?.posturl
-        if (!postUrl.isNullOrBlank()) {
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("应用链接", postUrl)
-            clipboard.setPrimaryClip(clip)
-            coroutineScope.launch {
-                snackbarHostState.showSnackbar("已复制应用链接: $postUrl")
-            }
-        } else {
-            coroutineScope.launch {
-                snackbarHostState.showSnackbar("分享链接无效")
-            }
-        }
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .pullRefresh(pullRefreshState)
-    ) {
+    Box(modifier = modifier.fillMaxSize().pullRefresh(pullRefreshState)) {
         if (isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else if (appDetail != null) {
-            AppDetailContent(
-                navController = navController,
-                appDetail = appDetail!!,
-                comments = comments,
-                onCommentReply = { comment ->
-                    viewModel.openReplyDialog(comment)
-                },
-                onDownload = { downloadUrl ->
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("无法打开下载链接")
+            val pageCount = if (appDetail!!.store == AppStore.SIENE_SHOP) 2 else 1
+            val pagerState = rememberPagerState(pageCount = { pageCount })
+            
+            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                when (page) {
+                    0 -> {
+                        AppDetailContent(
+                            navController = navController,
+                            appDetail = appDetail!!,
+                            comments = comments,
+                            onCommentReply = { viewModel.openReplyDialog(it) },
+                            onDownloadClick = { viewModel.handleDownloadClick() },
+                            onCommentLongClick = { commentId ->
+                                commentToDeleteId = commentId
+                                showDeleteCommentDialog = true
+                            },
+                            onDeleteAppClick = { showDeleteAppDialog = true },
+                            onShareClick = { handleShare() },
+                            onMoreMenuClick = { showMoreMenu = true },
+                            onImagePreview = { url -> navController.navigate(ImagePreview(url).createRoute()) },
+                            onRefundClick = { viewModel.requestRefund() },
+                            onUpdateClick = { viewModel.requestUpdate() }
+                        )
+                    }
+                    1 -> {
+                        if (appDetail!!.store == AppStore.SIENE_SHOP) {
+                            // 版本列表页面
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("版本列表功能？还没做完呢")
+                            }
+                        } else {
+                            Text("版本列表仅在弦应用商店提供")
                         }
                     }
-                },
-                onCommentDelete = { commentId ->
-                    viewModel.deleteAppComment(commentId)
-                },
-                onUpdateClick = {
-                    appDetail?.let { detail ->
-                        // 使用 KtorClient 的 JsonConverter
-                        val appDetailJson = KtorClient.JsonConverter.toJson(detail)
-                        navController.navigate(UpdateAppRelease(appDetailJson).createRoute())
-                    }
-                },
-                onRefundClick = {
-                    appDetail?.let { detail ->
-                        val destination = CreateRefundPost(
-                            appId = detail.id,
-                            versionId = detail.apps_version_id,
-                            appName = detail.appname,
-                            payMoney = detail.pay_money
-                        )
-                        navController.navigate(destination.createRoute())
-                    }
-                },
-                onDeleteClick = {
-                    showDeleteConfirmDialog = true
-                },
-                onShareClick = {
-                    shareApp()
-                },
-                onImagePreview = { imageUrl ->
-    navController.navigate(
-        ImagePreview(
-            imageUrl = imageUrl
-        ).createRoute()
-    )
-}
-            )
+                }
+            }
         }
 
         // 浮动评论按钮
         FloatingActionButton(
             onClick = { viewModel.openCommentDialog() },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
             containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
+            contentColor = MaterialTheme.colorScheme.onPrimary
         ) {
             Icon(Icons.AutoMirrored.Filled.Comment, "评论")
         }
 
         PullRefreshIndicator(
-            refreshing = refreshing,
-            state = pullRefreshState,
-            modifier = Modifier.align(Alignment.TopCenter),
-            contentColor = MaterialTheme.colorScheme.primary,
-            backgroundColor = MaterialTheme.colorScheme.surface
+            refreshing, 
+            pullRefreshState, 
+            Modifier.align(Alignment.TopCenter),
+            backgroundColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary
+        )
+        BBQSnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))
+    }
+
+
+    // 删除应用确认对话框
+    if (showDeleteAppDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAppDialog = false },
+            title = { Text("确认删除应用") },
+            text = { Text("确定要删除此应用吗？此操作不可撤销。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteAppDialog = false
+                    viewModel.deleteApp { 
+                        navController.popBackStack() 
+                    }
+                }) { 
+                    Text("删除", color = MaterialTheme.colorScheme.error) 
+                }
+            },
+            dismissButton = { 
+                TextButton(onClick = { showDeleteAppDialog = false }) { 
+                    Text("取消") 
+                }
+            }
         )
     }
 
-    // 评论对话框
+    // 删除评论确认对话框
+    if (showDeleteCommentDialog && commentToDeleteId != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteCommentDialog = false },
+            title = { Text("确认删除评论") },
+            text = { Text("确定要删除这条评论吗？") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteCommentDialog = false
+                    commentToDeleteId?.let { viewModel.deleteComment(it) }
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { 
+                TextButton(onClick = { showDeleteCommentDialog = false }) { 
+                    Text("取消") 
+                }
+            }
+        )
+    }
+
+    DownloadSourceDrawer(
+        show = showDownloadDrawer,
+        onDismissRequest = { viewModel.closeDownloadDrawer() },
+        sources = downloadSources,
+        onSourceSelected = { source ->
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(source.url))
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                coroutineScope.launch { snackbarHostState.showSnackbar("无法打开链接") }
+            }
+        }
+    )
+
     if (showCommentDialog) {
         CommentDialog(
-            hint = "输入评论内容...",
+            hint = "输入评论...",
             onDismiss = { viewModel.closeCommentDialog() },
-            context = LocalContext.current,
-            onSubmit = { content, imageUrl ->
-                viewModel.submitAppComment(content, imageUrl)
-            }
+            context = context,
+            onSubmit = { content, _ -> viewModel.submitComment(content) }
         )
     }
 
     if (showReplyDialog && currentReplyComment != null) {
         CommentDialog(
-            hint = "回复 @${currentReplyComment?.nickname}",
+            hint = "回复 @${currentReplyComment!!.sender.displayName}",
             onDismiss = { viewModel.closeReplyDialog() },
-            context = LocalContext.current,
-            onSubmit = { content, imageUrl ->
-                viewModel.submitAppComment(content, imageUrl)
-            }
-        )
-    }
-
-    // 删除确认对话框
-    if (showDeleteConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("确认删除") },
-            text = { Text("您确定要删除此应用吗？此操作不可撤销。") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirmDialog = false
-                        viewModel.deleteApp {
-                            // 删除成功后不需要手动调用 onAppDeleted，因为 NavGraph 会处理
-                        }
-                    }
-                ) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showDeleteConfirmDialog = false }
-                ) {
-                    Text("取消")
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surfaceVariant, // 设置对话框背景色
-            titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant, // 设置标题文字颜色
-            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant // 设置文本内容颜色
-        )
-    }
-
-    // Snackbar 宿主
-    Box(modifier = Modifier.fillMaxSize()) {
-        BBQSnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
+            context = context,
+            onSubmit = { content, _ -> viewModel.submitComment(content) }
         )
     }
 }
@@ -257,333 +369,573 @@ fun AppDetailScreen(
 @Composable
 fun AppDetailContent(
     navController: NavController,
-    appDetail: KtorClient.AppDetail, // 改为 KtorClient 模型
-    comments: List<KtorClient.Comment>, // 改为 KtorClient 模型
-    onCommentReply: (KtorClient.Comment) -> Unit, // 改为 KtorClient 模型
-    onDownload: (String) -> Unit,
-    onCommentDelete: (Long) -> Unit,
-    onUpdateClick: () -> Unit,
-    onRefundClick: () -> Unit,
-    onDeleteClick: () -> Unit,
+    appDetail: UnifiedAppDetail,
+    comments: List<UnifiedComment>,
+    onCommentReply: (UnifiedComment) -> Unit,
+    onDownloadClick: () -> Unit,
+    onCommentLongClick: (String) -> Unit,
+    onDeleteAppClick: () -> Unit,
     onShareClick: () -> Unit,
-    onImagePreview: (String) -> Unit
+    onMoreMenuClick: () -> Unit,
+    onImagePreview: (String) -> Unit,
+        onRefundClick: () -> Unit,
+    onUpdateClick: () -> Unit
 ) {
-    val context = navController.context
-    val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
-
-    val clipboardManager = remember {
-        context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    }
-
-    // 将下拉菜单状态移到内容组件内部
-    var showMoreMenu by remember { mutableStateOf(false) }
-
+var showMoreMenu by remember { mutableStateOf(false) }
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // --- 应用头部信息 ---
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant, // 使用 surfaceVariant 背景色
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            ) {
+            Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         AsyncImage(
-                            model = appDetail.app_icon,
-                            contentDescription = "应用图标",
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable {
-                                    if (appDetail.app_icon.isNotEmpty()) {
-                                        onImagePreview(appDetail.app_icon)
-                                    }
-                                },
+                            model = appDetail.iconUrl,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp).clip(RoundedCornerShape(16.dp))
+                                .clickable { onImagePreview(appDetail.iconUrl) },
                             contentScale = ContentScale.Crop
                         )
                         Spacer(Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(Modifier.weight(1f)) {
                             Text(
-                                text = appDetail.appname,
-                                style = MaterialTheme.typography.titleLarge,
+                                appDetail.name, 
+                                style = MaterialTheme.typography.titleLarge, 
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(
-                                text = "版本: ${appDetail.version}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "大小: ${appDetail.app_size}MB",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text("版本: ${appDetail.versionName}", style = MaterialTheme.typography.bodyMedium)
+                            Text("大小: ${appDetail.size ?: "未知"}", style = MaterialTheme.typography.bodyMedium)
                         }
-
-                        // 更多菜单按钮与下拉菜单正确集成
+                        
                         Box {
                             IconButton(
                                 onClick = { showMoreMenu = true }
                             ) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "更多选项")
+                                Icon(Icons.Default.MoreVert, "更多")
                             }
-
+                            
                             // 下拉菜单直接与按钮关联
                             DropdownMenu(
                                 expanded = showMoreMenu,
-                                onDismissRequest = { showMoreMenu = false }
+                                onDismissRequest = { showMoreMenu = false },
+                                modifier = Modifier.width(180.dp)
                             ) {
+                                // 分享选项
                                 DropdownMenuItem(
-                                    text = { Text("更新") },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        onUpdateClick()
-                                    }
-                                )
-                                if (appDetail.is_pay == 1) {
-                                    DropdownMenuItem(
-                                        text = { Text("退币") },
-                                        onClick = {
-                                            showMoreMenu = false
-                                            onRefundClick()
-                                        }
-                                    )
-                                }
-                                DropdownMenuItem(
-                                    text = { Text("删除") },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        onDeleteClick()
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("分享") },
+                                    text = { Text("分享应用") },
                                     onClick = {
                                         showMoreMenu = false
                                         onShareClick()
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Share, contentDescription = null)
                                     }
                                 )
+                                
+                                // 根据商店类型显示不同选项
+                                when (appDetail.store) {
+                                    AppStore.XIAOQU_SPACE -> {
+                                        val raw = appDetail.raw as? cc.bbq.xq.KtorClient.AppDetail
+                                        
+                                        // 更新选项（总是显示）
+                                        DropdownMenuItem(
+                                            text = { Text("更新应用") },
+                                            onClick = {
+                                                showMoreMenu = false
+                                                onUpdateClick()
+                                            }
+                                        )
+                                        
+                                        // 退币选项（仅当应用是付费应用时显示）
+                                        if (raw?.is_pay == 1 && raw.pay_money > 0) {
+                                            DropdownMenuItem(
+                                                text = { Text("申请退币") },
+                                                onClick = {
+                                                    showMoreMenu = false
+                                                    onRefundClick()
+                                                }
+                                            )
+                                        }
+                                        
+                                        // 删除选项
+                                        DropdownMenuItem(
+                                            text = { Text("删除应用") },
+                                            onClick = {
+                                                showMoreMenu = false
+                                                onDeleteAppClick()
+                                            },
+                                            leadingIcon = {
+                                                Icon(Icons.Default.Delete, contentDescription = null)
+                                            }
+                                        )
+                                    }
+                                    AppStore.SIENE_SHOP -> {
+                                        // 弦应用商店：暂不显示特殊选项
+                                    }
+                                    AppStore.SINE_OPEN_MARKET -> {
+                                        // 弦开放市场：无特殊选项
+                                    }
+                                    AppStore.LOCAL -> {
+                                        // 本地商店：无特殊选项
+                                    }
+                                }
                             }
                         }
                     }
-
+                    
+                    Spacer(Modifier.height(16.dp))
+                    
+                    // 显示付费信息（如果是付费应用）
+                    val raw = appDetail.raw as? cc.bbq.xq.KtorClient.AppDetail
+                    
                     Button(
-                        onClick = {
-                            if (appDetail.is_pay == 0 || appDetail.is_user_pay) {
-                                val downloadUrl = appDetail.download
-                                if (!downloadUrl.isNullOrBlank()) {
-                                    onDownload(downloadUrl)
-                                } else {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("下载链接无效")
-                                    }
-                                }
-                            } else if (appDetail.is_pay == 1 && !appDetail.is_user_pay) {
-                                val destination = PaymentForApp(
-                                    appId = appDetail.id,
-                                    appName = appDetail.appname,
-                                    versionId = appDetail.apps_version_id,
-                                    price = appDetail.pay_money,
-                                    iconUrl = appDetail.app_icon,
-                                    previewContent = appDetail.app_introduce?.take(30) ?: ""
-                                )
-                                navController.navigate(destination.createRoute())
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(Icons.Filled.Download, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            when {
-                                appDetail.is_pay == 0 || appDetail.is_user_pay -> "下载应用"
-                                appDetail.is_pay == 1 && appDetail.pay_money > 0 ->
-                                    "购买应用 (${appDetail.pay_money}硬币)"
-                                else -> "购买应用"
-                            }
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant, // 使用 surfaceVariant 背景色
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "应用介绍",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Text(
-                        text = appDetail.app_introduce?.replace("<br>", "\n") ?: "暂无介绍",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant, // 使用 surfaceVariant 背景色
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "应用信息",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Text(
-                        text = "更新时间: ${appDetail.update_time}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "创建时间: ${appDetail.create_time}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "子分类: ${appDetail.sub_category_name}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "应用说明: ${appDetail.app_explain}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant, // 使用 surfaceVariant 背景色
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable {
-                            // 修复：点击作者头像跳转到用户详情页
-                            navController.navigate(UserDetail(appDetail.userid).createRoute())
-                        },
-                    verticalAlignment = Alignment.CenterVertically
+                    onClick = onDownloadClick,  // 这里会触发购买检查
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = true  // 总是启用，ViewModel会处理购买逻辑
                 ) {
-                    AsyncImage(
-                        model = appDetail.usertx,
-                        contentDescription = "用户头像",
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .clickable {
-                                if (appDetail.usertx.isNotEmpty()) {
-                                    onImagePreview(appDetail.usertx)
-                                }
-                            },
-                        contentScale = ContentScale.Crop
-                    )
+                    Icon(Icons.Filled.Download, null)
                     Spacer(Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            text = appDetail.nickname,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "查看用户详情",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    Text(
+                        when {
+                            raw?.is_pay == 1 && raw.pay_money > 0 && raw.is_user_pay != true -> 
+                                "购买并下载 (${raw.pay_money}硬币)"
+                            raw?.is_pay == 1 && raw.is_user_pay == true -> 
+                                "下载应用 (已购买)"
+                            else -> "下载应用"
+                        }
+                    )
+                }
+            }
+        }
+    }
+        
+        // --- 更新日志（弦应用商店） ---
+        if (appDetail.store == AppStore.SIENE_SHOP && !appDetail.updateLog.isNullOrEmpty()) {
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("更新日志", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        Text(appDetail.updateLog!!)
                     }
                 }
             }
         }
 
-        if (!appDetail.app_introduction_image_array.isNullOrEmpty()) {
-            item {
-                Column {
-                    Text(
-                        text = "应用截图",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(appDetail.app_introduction_image_array) { imageUrl ->
-                            AsyncImage(
-                                model = imageUrl,
-                                contentDescription = "应用截图",
-                                modifier = Modifier
-                                    .height(200.dp)
-                                    .width(300.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .clickable { onImagePreview(imageUrl) },
-                                contentScale = ContentScale.Crop
+        // --- 适配说明（小趣空间） ---
+        if (appDetail.store == AppStore.XIAOQU_SPACE) {
+            val appExplain = when (val raw = appDetail.raw) {
+                is cc.bbq.xq.KtorClient.AppDetail -> raw.app_explain
+                else -> null
+            }
+            
+            if (!appExplain.isNullOrEmpty()) {
+                item {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("适配说明", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(8.dp))
+                            Text(appExplain)
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- 应用信息卡片 ---
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("应用信息", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(12.dp))
+
+                    // 根据不同商店显示不同的信息字段
+                    when (appDetail.store) {
+                        AppStore.XIAOQU_SPACE -> {
+                            // 小趣空间信息
+                            val raw = appDetail.raw as? cc.bbq.xq.KtorClient.AppDetail
+                            
+                            InfoRow(
+                                label = "应用类型",
+                                value = appDetail.type
+                            )
+                            InfoRow(
+                                label = "下载次数",
+                                value = "${appDetail.downloadCount} 次"
+                            )
+                            if (appDetail.size != null) {
+                                InfoRow(
+                                    label = "安装包大小",
+                                    value = appDetail.size
+                                )
+                            }
+                            InfoRow(
+                                label = "上传时间",
+                                value = raw?.create_time ?: "未知"
+                            )
+                            InfoRow(
+                                label = "更新时间",
+                                value = raw?.update_time ?: "未知"
                             )
                         }
+                        AppStore.SIENE_SHOP -> {
+                            // 弦应用商店信息
+                            val raw = appDetail.raw as? cc.bbq.xq.SineShopClient.SineShopAppDetail
+                            val deviceInfo = getDeviceInfo(raw?.app_sdk_min ?: 0)
+                            
+                            InfoRow(
+                                label = "应用类型",
+                                value = appDetail.type
+                            )
+                            InfoRow(
+                                label = "版本类型",
+                                value = raw?.app_version_type ?: "未知"
+                            )
+                            
+                            // 支持系统信息（包含最低SDK、目标SDK和设备兼容性）
+                            val supportSystem = buildString {
+                                append("最低SDK: ${raw?.app_sdk_min ?: "未知"}")
+                                if (raw?.app_sdk_target != null && raw.app_sdk_target != raw.app_sdk_min) {
+                                    append(" (目标SDK: ${raw.app_sdk_target})")
+                                }
+                                append(" • ")
+                                append(deviceInfo)
+                            }
+                            InfoRow(
+                                label = "支持系统",
+                                value = supportSystem
+                            )
+                            
+                            if (appDetail.size != null) {
+                                InfoRow(
+                                    label = "安装包大小",
+                                    value = appDetail.size
+                                )
+                            }
+                            InfoRow(
+                                label = "下载次数",
+                                value = "${appDetail.downloadCount} 次"
+                            )
+                            InfoRow(
+                                label = "应用开发者",
+                                value = raw?.app_developer ?: "未知"
+                            )
+                            InfoRow(
+                                label = "应用来源",
+                                value = raw?.app_source ?: "未知"
+                            )
+                            InfoRow(
+                                label = "上传时间",
+                                value = if (raw?.upload_time != null) formatTimestamp(raw.upload_time) else "未知"
+                            )
+                            InfoRow(
+                                label = "资料时间",
+                                value = if (raw?.update_time != null) formatTimestamp(raw.update_time) else "未知"
+                            )
+                            
+                            // 显示应用标签
+                            if (!raw?.tags.isNullOrEmpty()) {
+                                InfoRow(
+                                    label = "应用标签",
+                                    value = raw?.tags?.joinToString(", ") { it.name } ?: ""
+                                )
+                            }
+                            
+                            // 显示审核状态（如果有审核失败的情况）
+                            if (raw?.audit_status == 0 && !raw.audit_reason.isNullOrEmpty()) {
+                                InfoRow(
+                                    label = "审核状态",
+                                    value = raw.audit_reason
+                                )
+                            }
+                        }
+                        AppStore.SINE_OPEN_MARKET -> {
+                            // 弦开放市场信息
+                            InfoRow(
+                                label = "应用类型",
+                                value = appDetail.type
+                            )
+                            if (appDetail.size != null) {
+                                InfoRow(
+                                    label = "安装包大小",
+                                    value = appDetail.size
+                                )
+                            }
+                            InfoRow(
+                                label = "下载次数",
+                                value = "${appDetail.downloadCount} 次"
+                            )
+                        }
+                        AppStore.LOCAL -> {
+                            // 本地商店信息
+                            InfoRow(
+                                label = "应用类型",
+                                value = appDetail.type
+                            )
+                            if (appDetail.size != null) {
+                                InfoRow(
+                                    label = "安装包大小",
+                                    value = appDetail.size
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
 
+        // --- 应用介绍 ---
         item {
-            Text(
-                text = "用户评论 (${appDetail.comment_count})",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("应用介绍", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text(appDetail.description ?: "暂无介绍")
+                }
+            }
         }
 
-        if (comments.isNotEmpty()) {
-            items(comments) { comment ->
-                CommentItem(
-                    comment = comment,
-                    navController = navController,
-                    onReply = { onCommentReply(comment) },
-                    onDelete = { onCommentDelete(comment.id) },
-                    clipboardManager = clipboardManager,
-                    snackbarHostState = snackbarHostState, // 传递 SnackbarHostState
-                    context = context
-                )
+        // --- 应用截图 ---
+        if (!appDetail.previews.isNullOrEmpty()) {
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("应用截图", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(appDetail.previews) { url ->
+                                AsyncImage(
+                                    model = url,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .height(200.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { onImagePreview(url) },
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- 作者信息 ---
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("作者信息", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(12.dp))
+
+                    when (appDetail.store) {
+                        AppStore.SIENE_SHOP -> {
+                            // 弦应用商店：同时显示上传者和审核员
+                            val raw = appDetail.raw as? cc.bbq.xq.SineShopClient.SineShopAppDetail
+                            
+                            // 上传者信息
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable {
+                                        val userId = raw?.user?.id
+                                        if (userId != null) {
+                                            navController.navigate(UserDetail(userId.toLong(), appDetail.store).createRoute())
+                                        }
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(raw?.user?.userAvatar ?: "https://static.sineshop.xin/images/user_avatar/default_avatar.png")
+                                        .diskCachePolicy(CachePolicy.DISABLED) // 禁用磁盘缓存
+                                        .build(),
+                                    contentDescription = "上传者头像",
+                                    modifier = Modifier.size(40.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(Modifier.width(16.dp))
+                                Column {
+                                    Text(raw?.user?.displayName ?: "未知上传者", style = MaterialTheme.typography.titleMedium)
+                                    Text("上传者", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            
+                            // 审核员信息
+                            if (raw?.audit_user != null) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .clickable {
+                                            val userId = raw.audit_user?.id
+                                            if (userId != null) {
+                                                navController.navigate(UserDetail(userId.toLong(), appDetail.store).createRoute())
+                                            }
+                                        },
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(raw.audit_user?.userAvatar ?: "https://static.sineshop.xin/images/user_avatar/default_avatar.png")
+                                            .diskCachePolicy(CachePolicy.DISABLED) // 禁用磁盘缓存
+                                            .build(),
+                                        contentDescription = "审核员头像",
+                                        modifier = Modifier.size(40.dp).clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Spacer(Modifier.width(16.dp))
+                                    Column {
+                                        Text(raw.audit_user?.displayName ?: "未知审核员", style = MaterialTheme.typography.titleMedium)
+                                        Text("审核员", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                        AppStore.XIAOQU_SPACE -> {
+                            // 小趣空间只显示上传者
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                                    .clickable {
+                                        val userId = appDetail.user.id.toLongOrNull()
+                                        if (userId != null) {
+                                            navController.navigate(UserDetail(userId, appDetail.store).createRoute())
+                                        }
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AsyncImage(
+                                    model = appDetail.user.avatarUrl,
+                                    contentDescription = "上传者头像",
+                                    modifier = Modifier.size(40.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(Modifier.width(16.dp))
+                                Text(appDetail.user.displayName, style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
+                        AppStore.SINE_OPEN_MARKET -> {
+                            // 弦开放市场只显示上传者
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                                    .clickable {
+                                        val userId = appDetail.user.id.toLongOrNull()
+                                        if (userId != null) {
+                                            navController.navigate(UserDetail(userId, appDetail.store).createRoute())
+                                        }
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AsyncImage(
+                                    model = appDetail.user.avatarUrl,
+                                    contentDescription = "上传者头像",
+                                    modifier = Modifier.size(40.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(Modifier.width(16.dp))
+                                Text(appDetail.user.displayName, style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
+                        AppStore.LOCAL -> {
+                            // 本地商店只显示上传者
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                                    .clickable {
+                                        val userId = appDetail.user.id.toLongOrNull()
+                                        if (userId != null) {
+                                            navController.navigate(UserDetail(userId, appDetail.store).createRoute())
+                                        }
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AsyncImage(
+                                    model = appDetail.user.avatarUrl,
+                                    contentDescription = "上传者头像",
+                                    modifier = Modifier.size(40.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(Modifier.width(16.dp))
+                                Text(appDetail.user.displayName, style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- 评论列表 ---
+        item {
+            Text("评论 (${appDetail.reviewCount})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+
+        if (comments.isEmpty()) {
+            item {
+                Text("暂无评论", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 16.dp))
             }
         } else {
-            item {
-                Text(
-                    text = "暂无评论",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp)
+            items(comments) { comment ->
+                UnifiedCommentItem(
+                    comment = comment,
+                    onReply = { onCommentReply(comment) },
+                    onLongClick = { onCommentLongClick(comment.id) },
+                    onUserClick = {
+                        val userId = comment.sender.id.toLongOrNull()
+                        if (userId != null) {
+                            navController.navigate(UserDetail(userId, appDetail.store).createRoute())
+                        }
+                    }
                 )
             }
+        }
+    }
+}
+
+// 新增：信息行组件
+@Composable
+fun InfoRow(label: String, value: String?) {
+    if (!value.isNullOrEmpty() && value != "未知" && value != "") {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        Divider(modifier = Modifier.padding(vertical = 2.dp))
+    }
+}
+
+// 新增：获取设备兼容性信息
+@Composable
+fun getDeviceInfo(minSdk: Int?): String {
+    val context = LocalContext.current
+    val deviceSdk = android.os.Build.VERSION.SDK_INT
+    
+    return buildString {
+        append("当前设备SDK:  $deviceSdk")
+        if (minSdk != null && deviceSdk >= minSdk) {
+            append(" • 兼容")
+        } else {
+            append(" • 不兼容")
         }
     }
 }

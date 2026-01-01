@@ -136,3 +136,5 @@
 - 部分图标使用了图标包 Whicons 中的图标
 - 虽然 Whicons 图标包许可证是 CC BY-SA 4.0，但知识共享组织官方表示，CC BY-SA 4.0 是一个"兼容 GPLv3 的协议"
 - 见 https://creativecommons.org/2015/10/08/cc-by-sa-4-0-now-one-way-compatible-with-gplv3/
+-MarkDown渲染借用了RikkaHub的代码。
+-PackageManagerExt是借用了Droid-ify的代码

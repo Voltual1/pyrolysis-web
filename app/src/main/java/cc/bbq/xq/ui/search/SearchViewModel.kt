@@ -15,6 +15,8 @@ import androidx.lifecycle.viewModelScope
 import cc.bbq.xq.BBQApplication
 import cc.bbq.xq.KtorClient // 导入 KtorClient
 import kotlinx.coroutines.flow.*
+import org.koin.android.annotation.KoinViewModel
+import cc.bbq.xq.data.SearchHistoryDataStore
 import kotlinx.coroutines.launch
 
 enum class SearchMode {
@@ -30,8 +32,8 @@ sealed class SearchResultItem {
     data class LogItem(val log: cc.bbq.xq.data.db.LogEntry) : SearchResultItem()
 }
 
-class SearchViewModel : ViewModel() {
-    private val searchHistoryDataStore = BBQApplication.instance.searchHistoryDataStore
+@KoinViewModel
+class SearchViewModel(private val searchHistoryDataStore: SearchHistoryDataStore) : ViewModel() {
     private val browseHistoryDao = BBQApplication.instance.database.browseHistoryDao()
     private val logDao = BBQApplication.instance.database.logDao()
     //private val apiService = RetrofitClient.instance // 移除 RetrofitClient

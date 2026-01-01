@@ -1,3 +1,4 @@
+// /app/src/main/java/cc/bbq/xq/ui/theme/Components.kt
 //Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
@@ -9,58 +10,94 @@
 package cc.bbq.xq.ui.theme
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.ui.Alignment
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.foundation.background
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.collectAsState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.Image
-import androidx.compose.ui.layout.ContentScale
-import coil3.compose.rememberAsyncImagePainter
-import androidx.compose.foundation.layout.width // 添加正确的导入路径
-// --- 新增导入 ---
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.clickable // 确保导入 clickable
-import androidx.compose.material.icons.Icons // 导入 Icons
-import androidx.compose.material.icons.filled.BrokenImage
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape // 确保导入 CircleShape
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.foundation.layout.Arrangement
-import coil3.compose.SubcomposeAsyncImage // 确保导入 SubcomposeAsyncImage
-import coil3.compose.rememberAsyncImagePainter
-import coil3.compose.AsyncImagePainter
-import coil3.compose.SubcomposeAsyncImageContent
-import coil3.request.ImageRequest // 确保导入 ImageRequest
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarData
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import cc.bbq.xq.AppStore
+import cc.bbq.xq.data.unified.UnifiedAppItem
+import cc.bbq.xq.data.unified.UnifiedDownloadSource
+import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.*
+import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import cc.bbq.xq.data.unified.UnifiedComment
 
 // 基础按钮组件
 @Composable
@@ -219,7 +256,7 @@ fun BBQIconButton(
     }
 }
 
-//移动帖子详情页“带文本的开关”到theme下的公共位置以便复用
+//移动帖子详情页"带文本的开关"到theme下的公共位置以便复用
 @Composable
 fun SwitchWithText(
     text: String,
@@ -323,7 +360,7 @@ fun BBQSnackbar(
 fun BBQSuccessSnackbar(
     snackbarData: SnackbarData,
     modifier: Modifier = Modifier,
-    actionOnNewLine: Boolean = false,
+    actionOnNewLine: Boolean = true,
     shape: Shape = MaterialTheme.shapes.medium
 ) {
     BBQSnackbar(
@@ -399,9 +436,371 @@ fun BBQSnackbarHost(
         BBQSnackbar(snackbarData)
     }
 ) {
+    // 直接应用圆屏内边距修饰符
     SnackbarHost(
         hostState = hostState,
-        modifier = modifier,
+        modifier = modifier, 
         snackbar = snackbar
     )
+}
+
+/**
+ * 商店切换下拉菜单组件
+ * 用于在不同商店之间切换，可在多个界面复用
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppStoreDropdownMenu(
+    selectedStore: AppStore,
+    onStoreChange: (AppStore) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    label: String = "选择商店",
+    // 添加 appStores 参数，带有默认值以保证向后兼容性
+    appStores: List<AppStore> = AppStore.entries 
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it }
+    ) {
+        OutlinedTextField(
+            modifier = modifier
+                .fillMaxWidth()
+                // 使用强类型的 menuAnchor
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled),
+            readOnly = true,
+            value = selectedStore.displayName,
+            onValueChange = {},
+            label = { Text(label) },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            shape = AppShapes.medium
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            // 使用传入的 appStores 列表进行迭代
+            appStores.forEach { store ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            store.displayName,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    onClick = {
+                        onStoreChange(store)
+                        expanded = false
+                    },
+                    colors = MenuDefaults.itemColors(
+                        textColor = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 商店切换卡片组件
+ * 包含标签和下拉菜单的完整卡片形式
+ */
+@Composable
+fun AppStoreSelectorCard(
+    selectedStore: AppStore,
+    onStoreChange: (AppStore) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    title: String = "商店选择",
+    description: String? = "选择要浏览的应用商店"
+) {
+    BBQCard(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // 标题和描述
+            Column(
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                description?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+
+            // 下拉菜单
+            AppStoreDropdownMenu(
+                selectedStore = selectedStore,
+                onStoreChange = onStoreChange,
+                enabled = enabled,
+                label = "当前商店"
+            )
+
+            // 当前选择提示
+            Text(
+                "已选择: ${selectedStore.displayName}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+}
+
+// 该组件ModelList.kt（下载列表）的原始版本来源自 https://github.com/rikkahub/rikkahub
+// 本版本仅作简化修改适应项目实际用途
+// License: AGPLv3 (Compatible with GPLv3)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DownloadSourceDrawer(
+    show: Boolean,
+    onDismissRequest: () -> Unit,
+    sources: List<UnifiedDownloadSource>,
+    shape: Shape = AppShapes.medium,
+    onSourceSelected: (UnifiedDownloadSource) -> Unit
+) {
+    if (show) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val scope = rememberCoroutineScope()
+        ModalBottomSheet(
+            onDismissRequest = onDismissRequest,
+            sheetState = sheetState,
+            shape = shape,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxHeight(0.5f) // 限制高度
+                    .imePadding()
+            ) {
+                Text(
+                    text = "选择下载源",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(sources) { source ->
+                        DownloadSourceItem(
+                            source = source,
+                            onClick = {
+                                scope.launch {
+                                    sheetState.hide()
+                                    onDismissRequest()
+                                    onSourceSelected(source)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DownloadSourceItem(
+    source: UnifiedDownloadSource,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (source.isOfficial) Icons.Default.Download else Icons.Default.Link,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = source.name,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = source.url,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 应用网格项组件
+ * 显示单个应用的信息，包括图标和名称
+ */
+@Composable
+fun AppGridItem(
+    app: UnifiedAppItem,
+    onClick: () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 120.dp),
+        shape = AppShapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 1.dp,
+            pressedElevation = 2.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(4.dp)
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(app.iconUrl)
+                    .build(),
+                contentDescription = app.name,
+                modifier = Modifier
+                    .size(56.dp)
+                    .padding(bottom = 8.dp)
+            )
+            Text(
+                text = app.name,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                minLines = 2,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+        }
+    }
+}
+
+/**
+ * 应用网格组件
+ * 显示应用列表的网格布局
+ */
+@Composable
+fun AppGrid(
+    apps: List<UnifiedAppItem>,
+    columns: Int,
+    onItemClick: (UnifiedAppItem) -> Unit,
+    gridState: LazyGridState = rememberLazyGridState()
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(columns),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        state = gridState
+    ) {
+        items(apps, key = { it.uniqueId }) { app ->
+            AppGridItem(
+                app = app,
+                onClick = { onItemClick(app) }
+            )
+        }
+    }
+}
+/**
+ * 评论项组件
+ * 显示单条评论，支持回复和长按操作
+ * @param comment 评论数据
+ * @param onReply 回复按钮点击回调
+ * @param onLongClick 长按评论的回调
+ * @param onUserClick 点击用户头像或用户名的回调
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun UnifiedCommentItem(
+    comment: UnifiedComment,
+    onReply: () -> Unit,
+    onLongClick: () -> Unit,
+    onUserClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            // 添加长按支持
+            .combinedClickable(
+                onClick = {}, // 点击事件目前没有特殊操作，留空
+                onLongClick = onLongClick
+            )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(
+                    model = comment.sender.avatarUrl,
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp).clip(CircleShape).clickable(onClick = onUserClick),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(comment.sender.displayName, style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = "回复",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable(onClick = onReply)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(comment.content, style = MaterialTheme.typography.bodyMedium)
+
+            if (comment.fatherReply != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                ) {
+                    Text(
+                        text = "回复 @${comment.fatherReply.sender.displayName}: ${comment.fatherReply.content}",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+            }
+        }
+    }
 }

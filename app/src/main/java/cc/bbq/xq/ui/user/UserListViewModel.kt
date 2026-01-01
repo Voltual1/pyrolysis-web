@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
+import org.koin.android.annotation.KoinViewModel
 
 enum class UserListType {
     FOLLOWERS,  // 关注列表
@@ -33,6 +34,7 @@ data class UserListState(
     val listType: UserListType = UserListType.FOLLOWERS
 )
 
+@KoinViewModel
 class UserListViewModel(application: Application) : AndroidViewModel(application) {
 
     private var currentListType: UserListType = UserListType.FOLLOWERS

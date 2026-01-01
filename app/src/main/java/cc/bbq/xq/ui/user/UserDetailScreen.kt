@@ -2,16 +2,18 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-
+    
 package cc.bbq.xq.ui.user
 
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
+import cc.bbq.xq.util.formatTimestamp
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -49,6 +51,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import coil3.request.ImageRequest
+import coil3.request.CachePolicy
+import androidx.compose.ui.platform.LocalContext
 import cc.bbq.xq.R
 import cc.bbq.xq.AuthManager
 import cc.bbq.xq.ui.theme.AppShapes
@@ -56,15 +61,17 @@ import cc.bbq.xq.ui.theme.BBQButton
 import cc.bbq.xq.ui.theme.BBQCard
 import cc.bbq.xq.ui.theme.BBQOutlinedButton
 import kotlinx.coroutines.flow.first
+import cc.bbq.xq.data.unified.UnifiedUserDetail  // 导入 UnifiedUserDetail
+import cc.bbq.xq.AppStore
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun UserDetailScreen(
-    userData: KtorClient.UserInformationData?,
+    userData: UnifiedUserDetail?,  // 使用 UnifiedUserDetail
     isLoading: Boolean,
     errorMessage: String?,
     onPostsClick: () -> Unit,
-    onResourcesClick: (Long) -> Unit,
+    onResourcesClick: (Long, AppStore) -> Unit, // 修改：增加 AppStore 参数
     onImagePreview: (String) -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState
@@ -107,11 +114,11 @@ fun UserDetailScreen(
 @Composable
 private fun ScreenContent(
     modifier: Modifier = Modifier,
-    userData: KtorClient.UserInformationData?,
+    userData: UnifiedUserDetail?,  // 使用 UnifiedUserDetail
     isLoading: Boolean,
     errorMessage: String?,
     onPostsClick: () -> Unit,
-    onResourcesClick: (Long) -> Unit,
+    onResourcesClick: (Long, AppStore) -> Unit, // 修改：增加 AppStore 参数: (Long) -> Unit,
     onImagePreview: (String) -> Unit,
     snackbarHostState: SnackbarHostState
 ) {
@@ -124,22 +131,34 @@ private fun ScreenContent(
             isLoading -> LoadingState(Modifier.align(Alignment.Center))
             !errorMessage.isNullOrEmpty() -> ErrorState(message = errorMessage, modifier = Modifier.align(Alignment.Center))
             userData == null -> EmptyState(modifier = Modifier.align(Alignment.Center))
-            else -> UserProfileContent(
-                userData = userData,
-                onPostsClick = onPostsClick,
-                onResourcesClick = onResourcesClick,
-                onImagePreview = onImagePreview,
-                snackbarHostState = snackbarHostState
-            )
+            else -> {
+                // 根据 store 选择不同的 UI
+                when (userData.store) {
+                    AppStore.XIAOQU_SPACE -> XiaoQuProfileContent(  // 使用 UnifiedUserDetail
+                        userData = userData,
+                        onPostsClick = onPostsClick,
+                        onResourcesClick = onResourcesClick,
+                        onImagePreview = onImagePreview,
+                        snackbarHostState = snackbarHostState
+                    )
+                    AppStore.SIENE_SHOP -> SieneShopProfileContent(
+                        userData = userData,
+                        onResourcesClick = onResourcesClick,
+                        onImagePreview = onImagePreview,
+                        snackbarHostState = snackbarHostState
+                    )
+                    else -> Text("不支持的应用商店")
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun UserProfileContent(
-    userData: KtorClient.UserInformationData,
+private fun XiaoQuProfileContent( // 使用 UnifiedUserDetail
+    userData: UnifiedUserDetail,
     onPostsClick: () -> Unit,
-    onResourcesClick: (Long) -> Unit,
+    onResourcesClick: (Long, AppStore) -> Unit, // 修改：增加 AppStore 参数: (Long) -> Unit,
     onImagePreview: (String) -> Unit,
     snackbarHostState: SnackbarHostState
 ) {
@@ -153,15 +172,16 @@ private fun UserProfileContent(
         HeaderCard(
             userData = userData,
             onAvatarClick = {
-                if (userData.usertx.isNotEmpty()) {
-                    onImagePreview(userData.usertx)
+                if (!userData.avatarUrl.isNullOrEmpty()) {
+                    onImagePreview(userData.avatarUrl)
                 }
             }
         )
 
+        // 修复传递给 ActionButtonsRow 的 onResourcesClick
         ActionButtonsRow(
             userData = userData,
-            onResourcesClick = { onResourcesClick(userData.id) },
+            onResourcesClick = { userId -> onResourcesClick(userId, userData.store) }, // 传递完整的 lambda
             snackbarHostState = snackbarHostState
         )
 
@@ -175,8 +195,114 @@ private fun UserProfileContent(
 }
 
 @Composable
+private fun SieneShopProfileContent(
+    userData: UnifiedUserDetail,
+    onResourcesClick: (Long, AppStore) -> Unit, // 修改：增加 AppStore 参数: (Long) -> Unit,
+    onImagePreview: (String) -> Unit,
+    snackbarHostState: SnackbarHostState
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // 顶部区域：渐变背景 + 头像 + 用户信息
+        BBQCard {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                ProfileBackground() // 使用和小趣空间相同的渐变背景
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    // 头像
+                    AsyncImage(
+    model = ImageRequest.Builder(LocalContext.current)
+        .data(userData.avatarUrl ?: "https://static.sineshop.xin/images/user_avatar/default_avatar.png")
+        .diskCachePolicy(CachePolicy.DISABLED) // 禁用磁盘缓存
+        .build(),
+    contentDescription = "用户头像",
+    contentScale = ContentScale.Crop,
+    modifier = Modifier
+        .size(80.dp)
+        .clip(CircleShape)
+        .clickable {
+            if (!userData.avatarUrl.isNullOrEmpty()) {
+                onImagePreview(userData.avatarUrl)
+            }
+        }
+)
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 用户名
+                    Text(
+                        text = userData.displayName,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    // 用户ID
+                    Text(
+                        text = "ID: ${userData.username}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // 详细信息卡片
+        BBQCard {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "详细信息",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // 描述
+                userData.description?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
+                // 其他信息
+                InfoItem(label = "上传数量:", value = userData.uploadCount?.toString() ?: "0")
+                InfoItem(label = "评论数量:", value = userData.replyCount?.toString() ?: "0")
+                InfoItem(label = "加入时间:", value = userData.joinTime?.let { formatTimestamp(it) } ?: "无")
+                InfoItem(label = "上次登录设备:", value = userData.lastLoginDevice ?: "无")
+                InfoItem(label = "上次在线:", value = userData.lastOnlineTime?.let { formatTimestamp(it) } ?: "无")                                
+                InfoItem(label = "绑定QQ:", value = userData.bindQq?.toString() ?: "无")
+            }
+        }
+
+        // "XXX 的资源" 按钮
+        BBQOutlinedButton(
+            onClick = { onResourcesClick(userData.id, userData.store) }, // 传递 store
+            modifier = Modifier.fillMaxWidth(),
+            text = { Text("${userData.displayName}的资源") }
+        )
+    }
+}
+
+@Composable
 private fun HeaderCard(
-    userData: KtorClient.UserInformationData,
+    userData: UnifiedUserDetail, // 使用 UnifiedUserDetail
     onAvatarClick: () -> Unit,
 ) {
     BBQCard {
@@ -185,7 +311,7 @@ private fun HeaderCard(
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     UserAvatar(
-                        avatarUrl = userData.usertx,
+                        avatarUrl = userData.avatarUrl ?: "",
                         onAvatarClick = onAvatarClick
                     )
                     Spacer(modifier = Modifier.width(16.dp))
@@ -233,26 +359,28 @@ private fun UserAvatar(
 }
 
 @Composable
-private fun UserBasicInfo(userData: KtorClient.UserInformationData) {
+private fun UserBasicInfo(userData: UnifiedUserDetail) { // 使用 UnifiedUserDetail
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = userData.nickname,
+                text = userData.displayName,
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = userData.hierarchy,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier
-                    .background(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = AppShapes.small
-                    )
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
-            )
+            userData.hierarchy?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier
+                        .background(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = AppShapes.small
+                        )
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
@@ -265,86 +393,40 @@ private fun UserBasicInfo(userData: KtorClient.UserInformationData) {
 
 @Composable
 private fun ActionButtonsRow(
-    userData: KtorClient.UserInformationData,
-    onResourcesClick: () -> Unit,
+    userData: UnifiedUserDetail, // 使用 UnifiedUserDetail
+    onResourcesClick: (Long) -> Unit,
     snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val isFollowing = remember { mutableStateOf(userData.follow_status == "2") }
-    val apiService = KtorClient.ApiServiceImpl
+    //val isFollowing = remember { mutableStateOf(userData.follow_status == "2") }
+    //val apiService = KtorClient.ApiServiceImpl
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        BBQButton(
-            onClick = {
-                coroutineScope.launch {
-                    val userCredentialsFlow = AuthManager.getCredentials(context)
-                    val userCredentials = userCredentialsFlow.first()
-                    val token = userCredentials?.token
-
-                    // 检查 token 是否为 null 或空
-                    if (token.isNullOrBlank()) {
-                        snackbarHostState.showSnackbar(
-                            message = context.getString(R.string.login_first),
-                            duration = SnackbarDuration.Short
-                        )
-                        // 注意：这里不能使用 return，因为我们在 lambda 中。
-                        // 我们可以使用 return@launch 来从协程中返回。
-                        return@launch
-                    }
-
-                    try {
-                        val result = apiService.followUser(token = token, followedId = userData.id)
-                        when (val response = result.getOrNull()) {
-                            is KtorClient.BaseResponse -> {
-                                if (response.code == 1) {
-                                    // 更新 UI 状态
-                                    isFollowing.value = !isFollowing.value
-                                    val message = if (isFollowing.value) "关注成功" else "取消关注成功"
-                                    snackbarHostState.showSnackbar(
-                                        message = message,
-                                        duration = SnackbarDuration.Short
-                                    )
-                                } else {
-                                    snackbarHostState.showSnackbar(
-                                        message = response.msg,
-                                        duration = SnackbarDuration.Short
-                                    )
-                                }
-                            }
-                            else -> {
-                                snackbarHostState.showSnackbar(
-                                    message = result.exceptionOrNull()?.message ?: "操作失败",
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                        }
-                    } catch (e: Exception) {
-                        snackbarHostState.showSnackbar(
-                            message = "网络错误: ${e.message}",
-                            duration = SnackbarDuration.Short
-                        )
-                    }
-                }
-            },
-            modifier = Modifier.weight(1f),
-            text = { Text(if (isFollowing.value) "已关注" else "关注") }
-        )
+        if (userData.store == AppStore.XIAOQU_SPACE) {
+            BBQButton(
+                onClick = {
+                   //TODO
+                },
+                modifier = Modifier.weight(1f),
+                text = { Text("关注") }
+            )
+        }
 
         BBQOutlinedButton(
-            onClick = onResourcesClick,
+            onClick = { onResourcesClick(userData.id) },
             modifier = Modifier.weight(1f),
-            text = { Text("${userData.nickname}的资源") }
+            text = { Text("${userData.displayName}的资源") }
         )
     }
 }
 
 @Composable
 private fun StatsCard(
-    userData: KtorClient.UserInformationData,
+    userData: UnifiedUserDetail, // 使用 UnifiedUserDetail
     onPostsClick: () -> Unit
 ) {
     BBQCard {
@@ -358,7 +440,7 @@ private fun StatsCard(
 
 @Composable
 private fun UserStats(
-    userData: KtorClient.UserInformationData,
+    userData: UnifiedUserDetail, // 使用 UnifiedUserDetail
     onPostsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -366,30 +448,38 @@ private fun UserStats(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceAround
     ) {
-        StatItem(
-            count = userData.followerscount,
-            label = "关注",
-            modifier = Modifier.weight(1f)
-        )
-        VerticalDivider()
-        StatItem(
-            count = userData.fanscount,
-            label = "粉丝",
-            modifier = Modifier.weight(1f)
-        )
-        VerticalDivider()
-        StatItem(
-            count = userData.postcount,
-            label = "帖子",
-            onClick = onPostsClick,
-            modifier = Modifier.weight(1f)
-        )
-        VerticalDivider()
-        StatItem(
-            count = userData.likecount,
-            label = "获赞",
-            modifier = Modifier.weight(1f)
-        )
+        userData.followersCount?.let {
+            StatItem(
+                count = it,
+                label = "关注",
+                modifier = Modifier.weight(1f)
+            )
+            VerticalDivider()
+        }
+        userData.fansCount?.let {
+            StatItem(
+                count = it,
+                label = "粉丝",
+                modifier = Modifier.weight(1f)
+            )
+            VerticalDivider()
+        }
+        userData.postCount?.let {
+            StatItem(
+                count = it,
+                label = "帖子",
+                onClick = onPostsClick,
+                modifier = Modifier.weight(1f)
+            )
+            VerticalDivider()
+        }
+        userData.likeCount?.let {
+            StatItem(
+                count = it,
+                label = "获赞",
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
@@ -419,7 +509,7 @@ private fun InfoItem(
 }
 
 @Composable
-private fun DetailsCard(userData: KtorClient.UserInformationData) {
+private fun DetailsCard(userData: UnifiedUserDetail) { // 使用 UnifiedUserDetail
     BBQCard {
         Column(
             modifier = Modifier
@@ -433,14 +523,16 @@ private fun DetailsCard(userData: KtorClient.UserInformationData) {
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            InfoItem(label = "硬币:", value = userData.money.toString())
-            userData.commentcount?.let {
-                InfoItem(label = "评论数:", value = it)
+            userData.money?.let {
+                InfoItem(label = "硬币:", value = it.toString())
             }
-            userData.series_days?.let {
+            userData.commentCount?.let {
+                InfoItem(label = "评论数:", value = it.toString())
+            }
+            userData.seriesDays?.let {
                 InfoItem(label = "总签到:", value = "$it 天")
             }
-            userData.last_activity_time?.let {
+            userData.lastActivityTime?.let {
                 InfoItem(label = "上次在线:", value = it)
             }
         }

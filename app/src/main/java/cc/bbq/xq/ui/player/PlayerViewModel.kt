@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.zip.Inflater
+import org.koin.android.annotation.KoinViewModel
 
 enum class VideoScaleMode { FIT, FILL, ZOOM }
 
@@ -27,7 +28,7 @@ data class PlayerSettings(
     val danmakuSize: Float = 1.2f // NEW: 添加弹幕字号属性
 )
 
-// UPDATED: 改为 AndroidViewModel 以获取 Context
+@KoinViewModel
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
 
     private val playerDataStore = PlayerDataStore(application)

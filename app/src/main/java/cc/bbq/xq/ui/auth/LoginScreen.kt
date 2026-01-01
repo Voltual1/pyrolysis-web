@@ -1,3 +1,4 @@
+// File: /app/src/main/java/cc/bbq/xq/ui/auth/LoginScreen.kt
 //Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
@@ -9,7 +10,6 @@
 
 package cc.bbq.xq.ui.auth
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -20,21 +20,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-//import cc.bbq.xq.RetrofitClient
+import cc.bbq.xq.AppStore
+import cc.bbq.xq.ui.theme.AppStoreDropdownMenu
 import coil3.compose.rememberAsyncImagePainter
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.InputStream
-import cc.bbq.xq.ui.theme.BBQSnackbarHost // 导入 BBQSnackbarHost
+import cc.bbq.xq.ui.theme.BBQSnackbarHost
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,6 +75,7 @@ fun LoginContent(
     var passwordVisible by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val selectedStore by viewModel.selectedStore.collectAsState()
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
@@ -93,6 +89,16 @@ fun LoginContent(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // 商店选择下拉菜单
+            AppStoreDropdownMenu(
+                selectedStore = selectedStore,
+                onStoreChange = { viewModel.onStoreSelected(it) },
+                modifier = Modifier.fillMaxWidth(),
+                // 排除本地应用，包含 小趣空间、弦应用商店、弦-开放平台
+                appStores = remember { AppStore.entries.filter { it != AppStore.LOCAL } }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
             OutlinedTextField(
                 value = username,
                 onValueChange = { viewModel.onUsernameChange(it) },
@@ -122,9 +128,21 @@ fun LoginContent(
             ) {
                 Text("登录")
             }
-            TextButton(onClick = onNavigateToRegister, modifier = Modifier.fillMaxWidth()) {
-                Text("注册新账号")
+            
+            // 仅在小趣空间模式下显示注册按钮
+            if (selectedStore == AppStore.XIAOQU_SPACE) {
+                TextButton(onClick = onNavigateToRegister, modifier = Modifier.fillMaxWidth()) {
+                    Text("注册新账号")
+                }
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "暂不支持应用内注册",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
+            
             if (isLoading) {
                 Spacer(modifier = Modifier.height(16.dp))
                 CircularProgressIndicator()
@@ -150,8 +168,6 @@ fun RegisterContent(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // 核心修正 #2: 使用 LaunchedEffect 按需加载验证码
-    // 当 RegisterContent 进入组合时，这个 effect 会运行一次
     LaunchedEffect(Unit) {
         viewModel.loadVerificationCode()
     }
@@ -203,7 +219,6 @@ fun RegisterContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // 核心修改 #3: 使用 Coil 加载网络图片
                 verificationCodeUrl?.let { url ->
                     Image(
                         painter = rememberAsyncImagePainter(url),

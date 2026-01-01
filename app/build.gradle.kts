@@ -15,8 +15,8 @@ android {
         applicationId = "cc.bbq.xq"
         minSdk = 21
         targetSdk = 35
-        versionCode = 363
-        versionName = "14.3"
+        versionCode = 400
+        versionName = "15.0"
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         resourceConfigurations += listOf("zh")
@@ -82,7 +82,6 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.compose.runtime:runtime-livedata")
     implementation("androidx.lifecycle:lifecycle-runtime-compose")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose")
     implementation("androidx.navigation:navigation-compose:2.9.6")
@@ -105,8 +104,15 @@ dependencies {
     val room_version = "2.7.2"
     implementation("androidx.room:room-runtime:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
-    implementation("io.insert-koin:koin-androidx-compose:4.0.4")
     ksp("androidx.room:room-compiler:$room_version")
+    
+// 添加 Koin Annotations 相关的依赖：
+val koin_version = "4.1.1"
+implementation("io.insert-koin:koin-androidx-compose:$koin_version")
+implementation("io.insert-koin:koin-core:$koin_version")
+val koin_annotations_version = "2.3.1"
+implementation("io.insert-koin:koin-annotations:$koin_annotations_version") // 添加注解库
+ksp("io.insert-koin:koin-ksp-compiler:$koin_annotations_version") // 添加 KSP 处理器
 
     // ===== Ktor 客户端依赖 =====
     val ktor_version = "3.3.2"
@@ -117,7 +123,6 @@ dependencies {
     implementation("io.ktor:ktor-utils:$ktor_version")
     implementation("io.ktor:ktor-io:$ktor_version")
     implementation("io.ktor:ktor-client-logging:$ktor_version")
-    implementation("io.ktor:ktor-client-auth:$ktor_version")
 
     // ===== kotlinx.serialization =====
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
@@ -125,6 +130,9 @@ dependencies {
     // ===== protobuf 依赖 =====
     implementation("com.google.protobuf:protobuf-kotlin:4.32.1")//永远不要用lite!
     implementation("androidx.security:security-crypto:1.1.0") // 加密库
+    
+    // ===== MarkDown 依赖 =====
+    implementation("org.jetbrains:markdown:0.7.3")
 }
 
 protobuf {
@@ -148,6 +156,6 @@ protobuf {
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        freeCompilerArgs.add("-XXLanguage:+UnitConversionsOnArbitraryExpressions")
+//        freeCompilerArgs.add("-XXLanguage:+UnitConversionsOnArbitraryExpressions")
     }
 }

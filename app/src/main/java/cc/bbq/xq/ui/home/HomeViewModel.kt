@@ -14,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import cc.bbq.xq.AuthManager
 //import cc.bbq.xq.RetrofitClient // 移除 RetrofitClient
 import cc.bbq.xq.KtorClient // 导入 KtorClient
+import cc.bbq.xq.SineShopClient
 import cc.bbq.xq.ui.theme.ThemeManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -27,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import cc.bbq.xq.R
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow // 添加导入
+import org.koin.android.annotation.KoinViewModel
 
 // 添加数据加载状态
 sealed class DataLoadState {
@@ -57,9 +59,14 @@ data class HomeUiState(
     val lastSignTime: String = "",
     val displayDaysDiff: Int = 0,
     // 添加数据加载状态
-    val dataLoadState: DataLoadState = DataLoadState.NotLoaded
+    val dataLoadState: DataLoadState = DataLoadState.NotLoaded,
+    // 新增：弦应用商店用户信息
+    val sineShopUserInfo: SineShopClient.SineShopUserInfo? = null,
+    // 新增：弦应用商店登录提示
+    val sineShopLoginPrompt: Boolean = true
 )
 
+@KoinViewModel
 class HomeViewModel : ViewModel() {
     var uiState = mutableStateOf(HomeUiState())
         private set
@@ -144,6 +151,55 @@ class HomeViewModel : ViewModel() {
                 )
             }
         }
+    }
+       
+    // 新增：加载弦应用商店用户信息
+    private fun loadSineShopUserInfo(context: Context) {
+        viewModelScope.launch {
+            try {
+                // 获取弦应用商店token
+                val sineShopTokenFlow = AuthManager.getSineMarketToken(context)
+                val sineShopToken = sineShopTokenFlow.first()
+
+                // 如果没有token，则显示登录提示
+                if (sineShopToken.isNullOrEmpty()) {
+                    uiState.value = uiState.value.copy(
+                        sineShopLoginPrompt = true,
+                        sineShopUserInfo = null
+                    )
+                    return@launch
+                }
+
+                val sineShopUserInfoResult = withContext(Dispatchers.IO) {
+                    SineShopClient.getUserInfo()
+                }
+
+                sineShopUserInfoResult.onSuccess { userInfo ->
+                    uiState.value = uiState.value.copy(
+                        sineShopUserInfo = userInfo,
+                        sineShopLoginPrompt = false
+                    )
+                }.onFailure { e ->
+                    // 处理失败情况，例如显示错误信息
+                    println("Failed to load SineShop user info: ${e.message}")
+                    uiState.value = uiState.value.copy(
+                        sineShopLoginPrompt = true,
+                        sineShopUserInfo = null
+                    )
+                }
+            } catch (e: Exception) {
+                println("Error loading SineShop user info: ${e.message}")
+                uiState.value = uiState.value.copy(
+                    sineShopLoginPrompt = true,
+                    sineShopUserInfo = null
+                )
+            }
+        }
+    }
+
+    // 新增：更新弦应用商店登录提示状态
+    fun updateSineShopLoginState(isLoggedIn: Boolean) {
+        uiState.value = uiState.value.copy(sineShopLoginPrompt = !isLoggedIn)
     }
 
     // 强制刷新用户数据
@@ -255,6 +311,32 @@ class HomeViewModel : ViewModel() {
     fun showSnackbar(message: String) {
         viewModelScope.launch {
             snackbarHostState.value?.showSnackbar(message)
+        }
+    }
+
+    // 新增：显式检查和更新弦应用商店登录状态的方法
+    fun checkAndUpdateSineShopLoginState(context: Context) {
+        viewModelScope.launch {
+            try {
+                // 获取弦应用商店token
+                val sineShopTokenFlow = AuthManager.getSineMarketToken(context)
+                val sineShopToken = sineShopTokenFlow.first()
+
+                // 更新登录状态
+                val isLoggedIn = !sineShopToken.isNullOrEmpty()
+                uiState.value = uiState.value.copy(sineShopLoginPrompt = !isLoggedIn)
+
+                // 如果已登录，加载用户信息
+                if (isLoggedIn) {
+                    loadSineShopUserInfo(context)
+                }
+            } catch (e: Exception) {
+                println("Error checking SineShop login state: ${e.message}")
+                uiState.value = uiState.value.copy(
+                    sineShopLoginPrompt = true,
+                    sineShopUserInfo = null
+                )
+            }
         }
     }
 }

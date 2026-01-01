@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
+import org.koin.android.annotation.KoinViewModel
 import kotlinx.coroutines.Dispatchers
 
 data class MessageState(
@@ -28,6 +29,7 @@ data class MessageState(
     val isInitialized: Boolean = false
 )
 
+@KoinViewModel
 class MessageViewModel(application: Application) : AndroidViewModel(application) {
     private val _state = MutableStateFlow(MessageState())
     val state: StateFlow<MessageState> = _state.asStateFlow()

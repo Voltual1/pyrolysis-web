@@ -10,7 +10,9 @@ package cc.bbq.xq.ui
 
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import android.net.Uri
 import java.net.URLEncoder
+import cc.bbq.xq.AppStore
 import java.nio.charset.StandardCharsets
 
 /**
@@ -72,10 +74,15 @@ object StoreManager : AppDestination {
     override val route = "store_manager"
 }
 
-//新增更新设置
 object UpdateSettings : AppDestination {
     override val route = "update_settings"
 }
+
+// 新增：应用更新屏幕目的地
+object Update : AppDestination {
+    override val route = "update"
+}
+
 
 // --- 社区与帖子 ---
 
@@ -97,6 +104,10 @@ object FollowingPosts : AppDestination {
 
 object BrowseHistory : AppDestination {
     override val route = "browse_history"
+}
+
+object Download : AppDestination {
+    override val route = "download"
 }
 
 data class PostDetail(val postId: Long) : AppDestination {
@@ -149,13 +160,13 @@ data class ImagePreview(val imageUrl: String) : AppDestination {
 
 // --- 用户相关 ---
 
-data class UserDetail(val userId: Long) : AppDestination {
-    override val route = "user_detail/{${AppDestination.ARG_USER_ID}}"
-    fun createRoute() = "user_detail/$userId"
-
+data class UserDetail(val userId: Long, val store: AppStore = AppStore.XIAOQU_SPACE) : AppDestination {
+    override val route = "user_detail/{${AppDestination.ARG_USER_ID}}/{store}"
+    fun createRoute() = "user_detail/$userId/${store.name}"
     companion object {
         val arguments = listOf(
-            navArgument(AppDestination.ARG_USER_ID) { type = NavType.LongType }
+            navArgument(AppDestination.ARG_USER_ID) { type = NavType.LongType },
+            navArgument("store") { type = NavType.StringType; defaultValue = AppStore.XIAOQU_SPACE.name }
         )
     }
 }
@@ -171,6 +182,14 @@ data class MyPosts(val userId: Long) : AppDestination {
     }
 }
 
+object MyComments : AppDestination {
+    override val route = "my_comments"
+}
+
+object MyReviews : AppDestination {
+    override val route = "my_reviews"
+}
+
 object FollowList : AppDestination {
     override val route = "follow_list"
 }
@@ -180,31 +199,54 @@ object FanList : AppDestination {
 }
 
 object AccountProfile : AppDestination {
-    override val route = "account_profile"
+    override val route = "account_profile?store={store}"
+    fun createRoute(store: AppStore = AppStore.XIAOQU_SPACE) = "account_profile?store=${store.name}"
+}
+
+object AccountProfileArgs {
+    val arguments = listOf(
+        navArgument("store") {
+            type = NavType.StringType
+            defaultValue = AppStore.XIAOQU_SPACE.name
+        }
+    )
 }
 
 // --- 资源广场与应用 ---
 
-data class ResourcePlaza(val isMyResource: Boolean, val userId: Long = -1L) : AppDestination {
-    override val route = "plaza?${AppDestination.ARG_IS_MY_RESOURCE}={${AppDestination.ARG_IS_MY_RESOURCE}}&${AppDestination.ARG_USER_ID}={${AppDestination.ARG_USER_ID}}"
-    fun createRoute() = "plaza?${AppDestination.ARG_IS_MY_RESOURCE}=$isMyResource&${AppDestination.ARG_USER_ID}=$userId"
-
+data class ResourcePlaza(
+    val isMyResource: Boolean, 
+    val userId: Long = -1L, 
+    val mode: String = "public",
+    val storeName: String = AppStore.XIAOQU_SPACE.name // 新增 storeName 参数
+) : AppDestination {
+    // 更新 route 定义，增加 store 参数
+    override val route = "plaza?${AppDestination.ARG_IS_MY_RESOURCE}={${AppDestination.ARG_IS_MY_RESOURCE}}&${AppDestination.ARG_USER_ID}={${AppDestination.ARG_USER_ID}}&mode={mode}&store={store}"
+    
+    // 更新 createRoute
+    fun createRoute() = "plaza?${AppDestination.ARG_IS_MY_RESOURCE}=$isMyResource&${AppDestination.ARG_USER_ID}=$userId&mode=$mode&store=$storeName"
+    
     companion object {
         val arguments = listOf(
             navArgument(AppDestination.ARG_IS_MY_RESOURCE) { type = NavType.BoolType; defaultValue = false },
-            navArgument(AppDestination.ARG_USER_ID) { type = NavType.LongType; defaultValue = -1L }
+            navArgument(AppDestination.ARG_USER_ID) { type = NavType.LongType; defaultValue = -1L },
+            navArgument("mode") { type = NavType.StringType; defaultValue = "public" },
+            navArgument("store") { type = NavType.StringType; defaultValue = AppStore.XIAOQU_SPACE.name } // 新增参数定义
         )
     }
 }
 
-data class AppDetail(val appId: Long, val versionId: Long) : AppDestination {
-    override val route = "app_detail/{${AppDestination.ARG_APP_ID}}/{${AppDestination.ARG_VERSION_ID}}"
-    fun createRoute() = "app_detail/$appId/$versionId"
+// ... (保留后面的代码)
+
+data class AppDetail(val appId: String, val versionId: Long, val storeName: String) : AppDestination {
+    override val route = "app_detail/{${AppDestination.ARG_APP_ID}}/{${AppDestination.ARG_VERSION_ID}}/{storeName}"
+    fun createRoute() = "app_detail/${Uri.encode(appId)}/$versionId/$storeName"
 
     companion object {
         val arguments = listOf(
-            navArgument(AppDestination.ARG_APP_ID) { type = NavType.LongType },
-            navArgument(AppDestination.ARG_VERSION_ID) { type = NavType.LongType }
+            navArgument(AppDestination.ARG_APP_ID) { type = NavType.StringType },
+            navArgument(AppDestination.ARG_VERSION_ID) { type = NavType.LongType },
+            navArgument("storeName") { type = NavType.StringType }
         )
     }
 }
@@ -213,9 +255,10 @@ object CreateAppRelease : AppDestination {
     override val route = "app_release_create"
 }
 
+// 修改 UpdateAppRelease 定义
 data class UpdateAppRelease(val appDetailJson: String) : AppDestination {
-    override val route = "app_release_update?json={${AppDestination.ARG_APP_DETAIL_JSON}}"
-    fun createRoute() = "app_release_update?json=${encode(appDetailJson)}"
+    override val route = "app_release_update/{${AppDestination.ARG_APP_DETAIL_JSON}}"
+    fun createRoute() = "app_release_update/${encode(appDetailJson)}"
 
     companion object {
         val arguments = listOf(
@@ -226,7 +269,6 @@ data class UpdateAppRelease(val appDetailJson: String) : AppDestination {
         )
     }
 }
-
 // --- 消息、账单、支付 ---
 
 object MessageCenter : AppDestination {

@@ -14,6 +14,7 @@ import cc.bbq.xq.KtorClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.koin.android.annotation.KoinViewModel
 
 // 排序类型枚举
 enum class SortType(val displayName: String, val apiValue: String) {
@@ -32,6 +33,7 @@ data class RankingListState(
     val sortType: SortType = SortType.MONEY // 默认硬币排行
 )
 
+@KoinViewModel
 class RankingListViewModel : ViewModel() {
 
     private val _state = MutableStateFlow(RankingListState())

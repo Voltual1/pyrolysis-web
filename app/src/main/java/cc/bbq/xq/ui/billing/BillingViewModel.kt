@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import org.koin.android.annotation.KoinViewModel
 
 data class BillingState(
     val billings: List<KtorClient.BillingItem> = emptyList(), // 使用 KtorClient.BillingItem
@@ -28,6 +29,7 @@ data class BillingState(
     val totalPages: Int = 1
 )
 
+@KoinViewModel
 class BillingViewModel(application: Application) : AndroidViewModel(application) {
     private val _state = MutableStateFlow(BillingState())
     val state: StateFlow<BillingState> = _state.asStateFlow()

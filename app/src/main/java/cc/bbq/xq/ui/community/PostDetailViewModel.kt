@@ -17,8 +17,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.koin.android.annotation.KoinViewModel
 import kotlinx.coroutines.flow.first
 
+@KoinViewModel
 class PostDetailViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _postDetail = MutableStateFlow<KtorClient.PostDetail?>(null)

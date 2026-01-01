@@ -37,6 +37,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import cc.bbq.xq.ui.compose.UserAgreementDialog// 确保导入 UserAgreementDialog
 import cc.bbq.xq.ui.theme.BBQTheme
 import cc.bbq.xq.ui.theme.ThemeColorStore
 import cc.bbq.xq.ui.theme.ThemeCustomizeScreen
@@ -46,6 +47,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import cc.bbq.xq.ui.CrashLogActivity
+import cc.bbq.xq.ui.theme.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import cc.bbq.xq.data.db.LogEntry
@@ -61,8 +63,8 @@ import cc.bbq.xq.util.UpdateChecker//导入公共的更新函数
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
 import android.app.Activity
-// 导入 BBQSnackbarHost
 import cc.bbq.xq.ui.theme.BBQSnackbarHost
+import cc.bbq.xq.data.UserAgreementDataStore // 导入 UserAgreementDataStore
 
 class MainActivity : ComponentActivity() {
 
@@ -77,21 +79,68 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val snackbarHostState = remember { SnackbarHostState() }
+            val context = LocalContext.current
+
+            // 修复：添加加载状态
+            var isAgreementDataLoaded by remember { mutableStateOf(false) }
+            
+            val userAgreementDataStore = remember { UserAgreementDataStore(context) }
+            
+            // 使用 collectAsState 监听所有协议状态
+            val userAgreementAccepted by userAgreementDataStore.userAgreementFlow.collectAsState(initial = false)
+            val xiaoquUserAgreementAccepted by userAgreementDataStore.xiaoquUserAgreementFlow.collectAsState(initial = false)
+            val sineUserAgreementAccepted by userAgreementDataStore.sineUserAgreementFlow.collectAsState(initial = false)
+            val sinePrivacyPolicyAccepted by userAgreementDataStore.sinePrivacyPolicyFlow.collectAsState(initial = false)
+
+            // 修复：在 LaunchedEffect 中标记数据已加载
+            LaunchedEffect(Unit) {
+                // 等待一小段时间确保 DataStore 状态已加载
+                delay(100)
+                isAgreementDataLoaded = true
+            }
+
+            // 计算是否显示协议对话框
+            val showAgreementDialog = remember(
+                userAgreementAccepted, 
+                xiaoquUserAgreementAccepted, 
+                sineUserAgreementAccepted, 
+                sinePrivacyPolicyAccepted,
+                isAgreementDataLoaded
+            ) {
+                // 只有在数据加载完成后才决定是否显示对话框
+                if (!isAgreementDataLoaded) {
+                    false // 数据未加载完成时不显示
+                } else {
+                    !(userAgreementAccepted && 
+                      xiaoquUserAgreementAccepted && 
+                      sineUserAgreementAccepted && 
+                      sinePrivacyPolicyAccepted)
+                }
+            }
 
             BBQTheme(appDarkTheme = ThemeManager.isAppDarkTheme) {
-                Scaffold( // 使用 Scaffold
-                    snackbarHost = { BBQSnackbarHost(hostState = snackbarHostState) }, // 添加 SnackbarHost
+                Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     content = { innerPadding ->
                         Surface(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(innerPadding), // 应用内边距
+                                .roundScreenPadding()  // 新增：圆屏 padding
+                                .padding(innerPadding),
                             color = MaterialTheme.colorScheme.background
                         ) {
-                            MainComposeApp(snackbarHostState = snackbarHostState) // 传递 SnackbarHostState
-                            // 检查更新
-                            CheckForUpdates(snackbarHostState) // 传递 snackbarHostState
+                            MainComposeApp(snackbarHostState = snackbarHostState)
+                            CheckForUpdates(snackbarHostState)
+
+                            // 修复：正确使用状态控制对话框显示
+                            if (showAgreementDialog) {
+                                UserAgreementDialog(
+                                    onDismissRequest = { /* 禁止取消 */ },
+                                    onAgreed = {
+                                        // 当用户同意所有协议后，状态会自动更新，对话框会消失
+                                    }
+                                )
+                            }
                         }
                     }
                 )
@@ -309,16 +358,24 @@ fun getTitleForDestination(backStackEntry: NavBackStackEntry?): String {
     val route = backStackEntry?.destination?.route
     val isMyResource = backStackEntry?.arguments?.getBoolean(AppDestination.ARG_IS_MY_RESOURCE) ?: false
     val userId = backStackEntry?.arguments?.getLong(AppDestination.ARG_USER_ID, -1L) ?: -1L
-
+    val mode = backStackEntry?.arguments?.getString("mode") ?: "public" // 获取模式参数
     val routeBase = route?.substringBefore("?")?.substringBefore("/")
-
+    
     return when (routeBase) {
         Home.route -> "首页"
         Login.route -> "登录"
         "plaza" -> {
-            if (userId != -1L) "Ta的资源"
-            else if (isMyResource) "我的资源"
-            else "资源广场"
+            // 根据模式设置不同的标题
+            when (mode) {
+                "my_upload" -> "我的上传"
+                "my_favourite" -> "我的收藏"
+                "my_history" -> "历史足迹"
+                else -> {
+                    if (userId != -1L) "Ta的资源"
+                    else if (isMyResource) "我的资源"
+                    else "资源广场"
+                }
+            }
         }
         RankingList.route -> "天梯竞赛"
         MessageCenter.route -> "消息中心"
@@ -334,7 +391,7 @@ fun getTitleForDestination(backStackEntry: NavBackStackEntry?): String {
         CreateAppRelease.route -> "发布应用"
         "app_release_update" -> "更新应用"
         LogViewer.route -> "日志"
-        AccountProfile.route -> "账号资料"
+        "account_profile?store={store}" -> "账号资料"
         FollowList.route -> "我的关注"
         FanList.route -> "我的粉丝"
         MyLikes.route -> "我喜欢的"
@@ -350,6 +407,10 @@ fun getTitleForDestination(backStackEntry: NavBackStackEntry?): String {
         StoreManager.route -> "存储管理"
         "app_detail" -> "应用详情"
         UpdateSettings.route -> "更新设置"
+        Download.route -> "下载管理"
+        Update.route -> "应用更新（未完工）"
+        "my_comments" -> "我的评论"
+        "my_reviews" -> "我的评价"
         else -> "BBQ"
     }
 }
@@ -407,16 +468,15 @@ fun MainComposeApp(snackbarHostState: SnackbarHostState) {
     val isLoggedIn = remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        val userCredentialsFlow = AuthManager.getCredentials(context)
-        val userCredentials = userCredentialsFlow.first()
-        // 检查 userCredentials 是否存在，且 username 和 password 都不为空
-        isLoggedIn.value = userCredentials?.userId != 0L // fixed: remove unnecessary non-null assertion
+    val userCredentialsFlow = AuthManager.getCredentials(context)
+    val userCredentials = userCredentialsFlow.first()
+    isLoggedIn.value = userCredentials?.userId != 0L
 
-        // 只有在用户已登录的情况下才尝试自动登录
-        if (isLoggedIn.value) {
-            tryAutoLogin(userCredentials!!.username, userCredentials.password, context, navController, snackbarHostState) // 传递 snackbarHostState
-        }
+    // 只有在用户已登录的情况下才尝试自动登录
+    if (isLoggedIn.value && userCredentials != null) {
+        tryAutoLogin(userCredentials.username, userCredentials.password, context, navController, snackbarHostState)
     }
+}
     
 
     ModalNavigationDrawer(

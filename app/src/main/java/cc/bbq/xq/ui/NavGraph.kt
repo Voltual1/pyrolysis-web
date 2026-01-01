@@ -14,16 +14,18 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.layout.fillMaxSize
 import org.koin.androidx.compose.koinViewModel
 import androidx.compose.foundation.layout.padding
-import cc.bbq.xq.ui.settings.storage.StoreManagerScreen // 导入 StoreManagerScreen
+import cc.bbq.xq.ui.download.DownloadScreen // 导入 DownloadScreen
+import cc.bbq.xq.ui.update.UpdateScreen // 新增导入
+import cc.bbq.xq.ui.settings.storage.StoreManagerScreen
 import org.koin.core.parameter.parametersOf
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import cc.bbq.xq.AppStore
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.ViewModelProvider
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
@@ -31,14 +33,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import cc.bbq.xq.AuthManager
-//import cc.bbq.xq.RetrofitClient移除时代的眼泪
-import cc.bbq.xq.KtorClient // 导入 KtorClient
+import cc.bbq.xq.KtorClient
 import cc.bbq.xq.ui.auth.LoginScreen
 import cc.bbq.xq.ui.auth.LoginViewModel
 import cc.bbq.xq.ui.billing.BillingScreen
 import cc.bbq.xq.ui.billing.BillingViewModel
-//import cc.bbq.xq.ui.bot.BotSettingsScreen
-// import cc.bbq.xq.ui.bot.BotSettingsViewModel
 import cc.bbq.xq.ui.community.*
 import cc.bbq.xq.ui.community.compose.BaseComposeListScreen
 import cc.bbq.xq.ui.community.compose.PostDetailScreen
@@ -148,8 +147,15 @@ fun AppNavHost(
                 modifier = Modifier.fillMaxSize() // 添加 modifier
             )
         }
+        // 新增：应用更新屏幕的导航项
+        composable(route = Update.route) {
+            UpdateScreen(
+                snackbarHostState = snackbarHostState, // 传递来自 AppNavHost 的 snackbarHostState
+                modifier = Modifier.fillMaxSize()
+                // viewModel 会通过 viewModel() 工厂自动注入
+            )
+        }
 
-        // 在 NavGraph.kt 中更新主题定制屏幕的调用
         composable(route = ThemeCustomize.route) {
             ThemeCustomizeScreen(
                 modifier = Modifier.fillMaxSize() // 添加 modifier
@@ -226,47 +232,62 @@ composable(route = CreateRefundPost(0, 0, "", 0).route, arguments = CreateRefund
                 onClose = { navController.popBackStack() }
             )
         }
+        
+        composable(route = Download.route) {
+    DownloadScreen(modifier = Modifier.fillMaxSize())
+}
 
-        // --- 用户 ---
-        // 在 NavGraph.kt 中修复 UserDetailScreen 调用
+composable(route = MyComments.route) {
+    MyCommentsScreen(
+        navController = navController,
+        modifier = Modifier.fillMaxSize()
+    )
+}
 
-        // 在 NavGraph.kt 中更新 UserDetailScreen 的调用
+composable(route = MyReviews.route) {
+    MyReviewsScreen(
+        navController = navController,
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
 composable(route = UserDetail(0).route, arguments = UserDetail.arguments) { backStackEntry ->
     val userId = backStackEntry.arguments?.getLong(AppDestination.ARG_USER_ID) ?: -1L
+    val storeName = backStackEntry.arguments?.getString("store") ?: AppStore.XIAOQU_SPACE.name
+    val store = try {
+        AppStore.valueOf(storeName)
+    } catch (e: IllegalArgumentException) {
+        AppStore.XIAOQU_SPACE // 默认值
+    }
     
     // 使用 koinViewModel() 而不是 viewModel()
     val viewModel: UserDetailViewModel = koinViewModel()
-
+    
     // 简化的LaunchedEffect - 只设置用户ID
-    LaunchedEffect(userId) {
+    LaunchedEffect(userId, store) {
         if (userId != -1L) {
-            viewModel.loadUserDetails(userId)
+            viewModel.loadUserDetails(userId, store)
         }
     }
-
-    val userData by viewModel.userData.observeAsState()
-    val isLoading by viewModel.isLoading.observeAsState(false)
-    val errorMessage by viewModel.errorMessage.observeAsState()
-
+    
+    val userData by viewModel.userData.collectAsStateWithLifecycle()
+val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     UserDetailScreen(
-        userData = userData,
-        isLoading = isLoading,
-        snackbarHostState = snackbarHostState, // 传递 SnackbarHostState
-        errorMessage = errorMessage,
-//        onBackClick = { navController.popBackStack() },
-        onPostsClick = { 
-            navController.navigate(MyPosts(userId).createRoute()) 
-        },
-        onResourcesClick = { uid -> 
-            navController.navigate(ResourcePlaza(isMyResource = false, userId = uid).createRoute()) 
-        },
-        onImagePreview = { imageUrl ->
-            navController.navigate(ImagePreview(imageUrl).createRoute())
-        },
-        modifier = Modifier.fillMaxSize()//,
-     //   navController = navController
-    )
-}
+                userData = userData,
+                isLoading = isLoading,
+                snackbarHostState = snackbarHostState,
+                errorMessage = errorMessage,
+                onPostsClick = { navController.navigate(MyPosts(userId).createRoute()) },
+                onResourcesClick = { uid, store -> // 接收 store 参数
+    navController.navigate(ResourcePlaza(isMyResource = false, userId = uid, mode = "public", storeName = store.name).createRoute())
+},
+                onImagePreview = { imageUrl ->
+                    navController.navigate(ImagePreview(imageUrl).createRoute())
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
         composable(route = MyPosts(0).route, arguments = MyPosts.arguments) { backStackEntry ->
     val userId = backStackEntry.arguments?.getLong(AppDestination.ARG_USER_ID) ?: -1L
     MyPostsScreen(
@@ -325,57 +346,54 @@ composable(route = FanList.route) {
     )
 }
 
-        composable(route = AccountProfile.route) {
-            AccountProfileScreen(
-                modifier = Modifier.fillMaxSize(),
-                snackbarHostState = snackbarHostState // 传递 SnackbarHostState
+composable(route = AccountProfile.route, arguments = AccountProfileArgs.arguments) { backStackEntry ->
+    val storeName = backStackEntry.arguments?.getString("store") ?: AppStore.XIAOQU_SPACE.name
+    val store = try {
+        AppStore.valueOf(storeName)
+    } catch (e: IllegalArgumentException) {
+        AppStore.XIAOQU_SPACE
+    }
+    
+    AccountProfileScreen(
+        modifier = Modifier.fillMaxSize(),
+        snackbarHostState = snackbarHostState,
+        store = store // 传递 store 参数
+    )
+}
+
+        // --- 资源广场 ---
+composable(route = ResourcePlaza(false).route, arguments = ResourcePlaza.arguments) { backStackEntry ->
+            val isMyResource = backStackEntry.arguments?.getBoolean(AppDestination.ARG_IS_MY_RESOURCE) ?: false
+            val userId = backStackEntry.arguments?.getLong(AppDestination.ARG_USER_ID) ?: -1L
+            val mode = backStackEntry.arguments?.getString("mode") ?: "public"
+            val storeName = backStackEntry.arguments?.getString("store") ?: AppStore.XIAOQU_SPACE.name // 获取 storeName
+
+            ResourcePlazaScreen(
+                isMyResourceMode = isMyResource,
+                mode = mode,
+                storeName = storeName, // 传递 storeName
+                navigateToAppDetail = { appId, versionId, store ->
+                    navController.navigate(AppDetail(appId, versionId, store).createRoute())
+                },
+                userId = if (userId != -1L) userId.toString() else null,
+                modifier = Modifier.fillMaxSize()
             )
         }
 
-        // --- 资源广场 ---
-        // 在 NavGraph.kt 中修复 PlazaViewModel 的创建
-        // 修改 ResourcePlazaScreen 调用部分
-composable(route = ResourcePlaza(false).route, arguments = ResourcePlaza.arguments) { backStackEntry ->
-    val isMyResource = backStackEntry.arguments?.getBoolean(AppDestination.ARG_IS_MY_RESOURCE) ?: false
-    val userId = backStackEntry.arguments?.getLong(AppDestination.ARG_USER_ID) ?: -1L
+        // --- 应用详情页 ---
+        composable(route = AppDetail("", 0, "").route, arguments = AppDetail.arguments) { backStackEntry ->
+            val appId = backStackEntry.arguments?.getString(AppDestination.ARG_APP_ID) ?: ""
+            val versionId = backStackEntry.arguments?.getLong(AppDestination.ARG_VERSION_ID) ?: 0L
+            val storeName = backStackEntry.arguments?.getString("storeName") ?: "XIAOQU_SPACE"
 
-    // 更新 ViewModel 的模式
-    LaunchedEffect(isMyResource) {
-        plazaViewModel.setMyResourceMode(isMyResource)
-    }
-
-    ResourcePlazaScreen(
-        viewModel = plazaViewModel,
-        isMyResourceMode = isMyResource,
-        navigateToAppDetail = { appId, versionId ->
-            navController.navigate(AppDetail(appId.toLong(), versionId).createRoute())
-        },
-        userId = if (userId != -1L) userId else null,
-        modifier = Modifier.fillMaxSize()//,
-        //navController = navController // 确保传递了 navController
-    )
-}
-
-        // 在 NavGraph.kt 中更新 AppDetailScreen 的调用
-composable(route = AppDetail(0, 0).route, arguments = AppDetail.arguments) { backStackEntry ->
-    val appId = backStackEntry.arguments?.getLong(AppDestination.ARG_APP_ID) ?: 0L
-    val versionId = backStackEntry.arguments?.getLong(AppDestination.ARG_VERSION_ID) ?: 0L
-
-    // 使用公共方法 initializeData() 替代私有方法
-    LaunchedEffect(appId, versionId) {
-        if (appId != 0L && versionId != 0L) {
-            appDetailViewModel.initializeData(appId, versionId)
+            AppDetailScreen(
+                appId = appId,
+                versionId = versionId,
+                storeName = storeName,
+                navController = navController,
+                modifier = Modifier.fillMaxSize()
+            )
         }
-    }
-
-    AppDetailScreen(
-        viewModel = appDetailViewModel,
-        appId = appId, // 添加 appId 参数
-        versionId = versionId, // 添加 versionId 参数
-        navController = navController,
-        modifier = Modifier.fillMaxSize()
-    )
-}
 
 
         // 在 NavGraph.kt 中更新 AppReleaseScreen 的调用
@@ -408,14 +426,6 @@ composable(route = UpdateAppRelease("").route, arguments = UpdateAppRelease.argu
     )
 }
 
-        // cc/bbq/xq/bot/ui/NavGraph.kt
-// ... (之前的代码)
-
-        // --- 机器人 & 日志 ---
- /*       composable(route = BotSettings.route) {
-            BotSettingsNavHost(navController = navController)
-        }
-*/
         composable(route = LogViewer.route) {
             val logViewModel: LogViewModel = org.koin.androidx.compose.koinViewModel()
             LogScreen(
@@ -446,13 +456,12 @@ composable(route = UpdateAppRelease("").route, arguments = UpdateAppRelease.argu
             )
         }
 
-        // 在 NavGraph.kt 中更新支付相关的调用
         composable(route = PaymentCenterAdvanced.route) {
             paymentViewModel.setPaymentInfo(type = PaymentType.POST_REWARD, locked = false)
             PaymentCenterScreen(
                 viewModel = paymentViewModel,
-                modifier = Modifier.fillMaxSize()//,
-//                navController = navController // 传递 navController
+                modifier = Modifier.fillMaxSize(),
+                navController = navController // 传递 navController
             )
         }
 
@@ -470,8 +479,8 @@ composable(route = UpdateAppRelease("").route, arguments = UpdateAppRelease.argu
             )
             PaymentCenterScreen(
                 viewModel = paymentViewModel,
-                modifier = Modifier.fillMaxSize()//,
-//                navController = navController // 传递 navController
+                modifier = Modifier.fillMaxSize(),
+                navController = navController // 传递 navController
             )
         }
 
@@ -489,12 +498,11 @@ composable(route = UpdateAppRelease("").route, arguments = UpdateAppRelease.argu
             )
             PaymentCenterScreen(
                 viewModel = paymentViewModel,
-                modifier = Modifier.fillMaxSize()//,
-//                navController = navController // 传递 navController
+                modifier = Modifier.fillMaxSize(),
+                navController = navController // 传递 navController
             )
         }
-        
-        // 新增更新设置屏幕
+       
 
 composable(
     route = UpdateSettings.route
@@ -527,48 +535,6 @@ composable(FollowingPosts.route) { FollowingPostsScreen(navController, following
     }
 }
 
-/*
-@Composable
-private fun BotSettingsNavHost(navController: NavHostController) {
-    val slideDistance = rememberSlideDistance()
-
-    // 创建独立的导航控制器用于机器人设置内部导航
-    val innerNavController = rememberNavController()
-
-    val activityViewModel: BotSettingsViewModel = org.koin.androidx.compose.koinViewModel()
-    val loginViewModel: LoginViewModel = org.koin.androidx.compose.koinViewModel()
-    
-    NavHost(
-        navController = innerNavController, // 使用内部导航控制器
-        startDestination = "settings",
-        enterTransition = { materialSharedAxisXIn(forward = true, slideDistance = slideDistance) },
-        exitTransition = { materialSharedAxisXOut(forward = true, slideDistance = slideDistance) },
-        popEnterTransition = { materialSharedAxisXIn(forward = false, slideDistance = slideDistance) },
-        popExitTransition = { materialSharedAxisXOut(forward = false, slideDistance = slideDistance) }
-    ) {
-        composable("settings") {
-            BotSettingsScreen(
-                viewModel = activityViewModel,
-//                onBackClick = { (navController.context as? Activity)?.finish() },
-                onNavigateToBotLogin = { innerNavController.navigate("bot_login") }, // 使用内部导航
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-
-        composable("bot_login") {
-            LoginScreen(
-                viewModel = loginViewModel,
-                onLoginSuccess = { 
-                    // 登录成功后返回到设置页面
-                    innerNavController.popBackStack() 
-                },
-                isBotLoginMode = true, // 这里应该是 true，因为是机器人登录模式
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-    }
-}
-*/
 
 // 在 NavGraph.kt 中修复社区屏幕的导航逻辑
 @OptIn(ExperimentalMaterial3Api::class)

@@ -25,10 +25,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import org.koin.android.annotation.KoinViewModel
 import android.content.Context // 导入 Context
 
 private val Context.dataStore by preferencesDataStore(name = "payment_requests")
 
+@KoinViewModel
 class PaymentViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dataStore = application.applicationContext.dataStore
@@ -62,8 +64,11 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
     val paymentRequestId: StateFlow<String?> = _paymentRequestId
 
     private var _downloadUrl: String? = null
+    private var _downloadFileName: String? = null
 
     fun getDownloadUrl(): String? = _downloadUrl
+    
+    fun getDownloadFileName(): String? = _downloadFileName
 
     // 设置支付信息（更新参数）
     fun setPaymentInfo(
@@ -96,6 +101,11 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             authorAvatar = authorAvatar,
             postTime = postTime
         )
+        
+        // 设置默认下载文件名
+        if (type == PaymentType.APP_PURCHASE && appName.isNotEmpty()) {
+            _downloadFileName = "${appName.replace(" ", "_")}_v${versionId}.apk"
+        }
     }
 
     fun loadPostInfo(postId: Long) {
@@ -310,6 +320,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
         _paymentStatus.value = PaymentStatus.INITIAL
         _errorMessage.value = null
         _downloadUrl = null
+        _downloadFileName = null
     }
 
     // 保存 paymentRequestId 到 DataStore

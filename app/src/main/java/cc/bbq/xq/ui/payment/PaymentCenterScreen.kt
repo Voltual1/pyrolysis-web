@@ -8,8 +8,8 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package cc.bbq.xq.ui.payment
 
+import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,7 +18,6 @@ import androidx.navigation.NavController
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,7 +37,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Download // 修改这里
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -75,6 +74,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import cc.bbq.xq.service.download.DownloadService
 import cc.bbq.xq.ui.theme.AppShapes
 import cc.bbq.xq.ui.theme.BBQButton
 import cc.bbq.xq.ui.theme.BBQCard
@@ -84,7 +84,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun PaymentCenterScreen(
     viewModel: PaymentViewModel,
-//    navController: NavController,
+    navController: NavController? = null, // 添加 NavController 参数
     modifier: Modifier = Modifier // 新增：接收外部 modifier
 ) {
     val isLoadingBalance by viewModel.isLoadingBalance.collectAsState()
@@ -93,36 +93,39 @@ fun PaymentCenterScreen(
     val paymentStatus by viewModel.paymentStatus.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val context = LocalContext.current
-
+/*
     // 支付成功后自动触发下载
     LaunchedEffect(paymentStatus) {
         if (paymentStatus == PaymentStatus.SUCCESS) {
             val downloadUrl = viewModel.getDownloadUrl()
             if (!downloadUrl.isNullOrEmpty()) {
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
-                    context.startActivity(intent)
-                } catch (e: Exception) {
-                    // 处理异常
-                }
+                // 使用内部下载服务
+                val fileName = viewModel.getDownloadFileName() ?: "download_file.apk"
+                startInternalDownload(context, downloadUrl, fileName)
+                
+                // 导航到下载屏幕 - 使用字符串路由
+                navController?.navigate("download") // 改为字符串路由
             }
         }
     }
+    */
 
     when (paymentStatus) {
         PaymentStatus.SUCCESS -> {
             PaymentResultDialog(
                 success = true,
-                onDismiss = { viewModel.resetPaymentStatus() },
+                onDismiss = { 
+                    viewModel.resetPaymentStatus()
+                    // 完成后可以返回上一页
+                    navController?.popBackStack()
+                },
                 onDownload = {
                     val downloadUrl = viewModel.getDownloadUrl()
-                    if (!downloadUrl.isNullOrEmpty()) {
-                        try {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            // 处理异常
-                        }
+                    val fileName = viewModel.getDownloadFileName()
+                    if (!downloadUrl.isNullOrEmpty() && !fileName.isNullOrEmpty()) {
+                        startInternalDownload(context, downloadUrl, fileName)
+                        // 导航到下载屏幕 - 使用字符串路由
+                        navController?.navigate("download") // 改为字符串路由
                     }
                 },
                 showDownloadButton = paymentInfo?.type == PaymentType.APP_PURCHASE
@@ -132,7 +135,9 @@ fun PaymentCenterScreen(
             PaymentResultDialog(
                 success = false,
                 error = errorMessage,
-                onDismiss = { viewModel.resetPaymentStatus() },
+                onDismiss = { 
+                    viewModel.resetPaymentStatus()
+                },
                 showDownloadButton = false
             )
         }
@@ -164,7 +169,6 @@ fun PaymentContent(
     isPaymentProcessing: Boolean = false, // 添加一个参数来表示是否正在支付处理中
     modifier: Modifier = Modifier // 新增：接收外部 modifier
 ) {
-//    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -658,4 +662,25 @@ fun PaymentResultDialog(
             }
         }
     }
+}
+
+/**
+ * 启动内部下载服务
+ */
+private fun startInternalDownload(context: Context, downloadUrl: String, fileName: String) {
+    val intent = Intent(context, DownloadService::class.java).apply {
+        action = DownloadService.ACTION_START_DOWNLOAD
+        putExtra(DownloadService.EXTRA_URL, downloadUrl)
+        putExtra(DownloadService.EXTRA_FILE_NAME, fileName)
+        // 可以根据需要添加保存路径
+        putExtra(DownloadService.EXTRA_SAVE_PATH, getDefaultDownloadPath(context))
+    }
+    context.startService(intent)
+}
+
+/**
+ * 获取默认下载路径
+ */
+private fun getDefaultDownloadPath(context: Context): String {
+    return context.getExternalFilesDir(null)?.absolutePath ?: context.filesDir.absolutePath + "/downloads"
 }
