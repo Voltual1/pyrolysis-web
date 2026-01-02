@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
+import cc.bbq.xq.ui.compose.LinkifyText
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -525,24 +526,29 @@ var showMoreMenu by remember { mutableStateOf(false) }
         }
 
         // --- 适配说明（小趣空间） ---
-        if (appDetail.store == AppStore.XIAOQU_SPACE) {
-            val appExplain = when (val raw = appDetail.raw) {
-                is cc.bbq.xq.KtorClient.AppDetail -> raw.app_explain
-                else -> null
-            }
-            
-            if (!appExplain.isNullOrEmpty()) {
-                item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("适配说明", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.height(8.dp))
-                            Text(appExplain)
-                        }
-                    }
+if (appDetail.store == AppStore.XIAOQU_SPACE) {
+    val appExplain = when (val raw = appDetail.raw) {
+        is cc.bbq.xq.KtorClient.AppDetail -> raw.app_explain
+        else -> null
+    }
+    
+    if (!appExplain.isNullOrEmpty()) {
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("适配说明", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    LinkifyText(
+                        text = appExplain,
+                        navController = navController,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+                    )
                 }
             }
         }
+    }
+}
 
         // --- 应用信息卡片 ---
         item {
@@ -687,15 +693,24 @@ var showMoreMenu by remember { mutableStateOf(false) }
         }
 
         // --- 应用介绍 ---
-        item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("应用介绍", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    Text(appDetail.description ?: "暂无介绍")
-                }
+item {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("应用介绍", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            if (!appDetail.description.isNullOrEmpty()) {
+                LinkifyText(
+                    text = appDetail.description,
+                    navController = navController,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+                )
+            } else {
+                Text("暂无介绍", style = MaterialTheme.typography.bodyMedium)
             }
         }
+    }
+}
 
         // --- 应用截图 ---
         if (!appDetail.previews.isNullOrEmpty()) {
@@ -881,19 +896,20 @@ var showMoreMenu by remember { mutableStateOf(false) }
                 Text("暂无评论", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 16.dp))
             }
         } else {
-            items(comments) { comment ->
-                UnifiedCommentItem(
-                    comment = comment,
-                    onReply = { onCommentReply(comment) },
-                    onLongClick = { onCommentLongClick(comment.id) },
-                    onUserClick = {
-                        val userId = comment.sender.id.toLongOrNull()
-                        if (userId != null) {
-                            navController.navigate(UserDetail(userId, appDetail.store).createRoute())
-                        }
-                    }
-                )
+items(comments) { comment ->
+    UnifiedCommentItem(
+        comment = comment,
+        onReply = { onCommentReply(comment) },
+        onLongClick = { onCommentLongClick(comment.id) },
+        onUserClick = {
+            val userId = comment.sender.id.toLongOrNull()
+            if (userId != null) {
+                navController.navigate(UserDetail(userId, appDetail.store).createRoute())
             }
+        },
+        navController = navController // 新增参数
+    )
+}
         }
     }
 }

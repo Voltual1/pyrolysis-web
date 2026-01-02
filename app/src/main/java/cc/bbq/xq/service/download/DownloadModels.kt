@@ -55,5 +55,7 @@ data class DownloadTask(
     val totalBytes: Long,
     val downloadedBytes: Long,
     val status: String, // 使用字符串存储下载状态，方便转换
-    val progress: Float
+    val progress: Float,
+    val speed: String? = null,
+    val errorMessage: String? = null
 )

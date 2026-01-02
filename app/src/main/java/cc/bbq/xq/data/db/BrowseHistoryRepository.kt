@@ -12,7 +12,9 @@ package cc.bbq.xq.data.db
 
 import cc.bbq.xq.BBQApplication
 import cc.bbq.xq.ui.community.BrowseHistory
+import org.koin.core.annotation.Single
 
+@Single
 class BrowseHistoryRepository {
     private val browseHistoryDao = BBQApplication.instance.database.browseHistoryDao()
     private val MAX_HISTORY = 100

@@ -55,6 +55,12 @@ fun SearchScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val totalPages by viewModel.totalPages.collectAsState()
     val hasMoreData by viewModel.hasMoreData.collectAsState()
+    
+    // 新增：用户筛选相关状态（多个用户）
+    val allUserFilters by viewModel.allUserFilters.collectAsState()
+    val activeNickname by viewModel.activeNickname.collectAsState()
+    val activeUserId by viewModel.activeUserId.collectAsState()
+    val isUserFilterMode by viewModel.isUserFilterMode.collectAsState()
 
     // 新增：跳页对话框状态
     var showJumpDialog by remember { mutableStateOf(false) }
@@ -136,24 +142,28 @@ fun SearchScreen(
     Column(modifier = modifier.fillMaxSize()) {
         // 搜索栏 - 优化布局避免按钮被挤出去
         SearchHeader(
-            query = query,
-            searchMode = searchMode,
-            totalPages = totalPages,
-            onQueryChange = viewModel::onQueryChange,
-            onSearchSubmit = {
-                viewModel.submitSearch(it)
-                keyboardController?.hide()
-            },
-            onModeChange = viewModel::onSearchModeChange,
-            onJumpClick = { 
-                showJumpDialog = true
-                inputPage = ""
-            },
-            focusRequester = focusRequester,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        )
+        query = query,
+        searchMode = searchMode,
+        totalPages = totalPages,
+        onQueryChange = viewModel::onQueryChange,
+        onSearchSubmit = { viewModel.submitSearch(it)
+            keyboardController?.hide() },
+        onModeChange = viewModel::onSearchModeChange,
+        onJumpClick = { showJumpDialog = true
+            inputPage = "" },
+        focusRequester = focusRequester,
+        allUserFilters = allUserFilters, // 新增参数：所有用户
+        activeUserId = activeUserId, // 新增参数：当前激活用户ID
+        activeNickname = activeNickname, // 新增参数：当前激活用户昵称
+        isUserFilterMode = isUserFilterMode, // 新增参数
+        onSetActiveFilter = viewModel::setActiveUserFilter, // 新增回调：设置激活用户
+        onRemoveFilter = viewModel::removeUserFilter, // 新增回调：移除用户
+        onClearAllFilters = viewModel::clearAllUserFilters, // 新增回调：清除所有用户
+        onClearFilter = viewModel::clearUserFilter, // 新增回调：清除激活状态
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    )
 
         // 搜索结果和状态显示
         when {
@@ -238,21 +248,30 @@ private fun SearchHeader(
     onModeChange: (SearchMode) -> Unit,
     onJumpClick: () -> Unit,
     focusRequester: FocusRequester,
+    allUserFilters: Map<Long, String>,  // 新增参数：所有用户筛选信息
+    activeUserId: Long?,  // 新增参数：当前激活用户ID
+    activeNickname: String?,  // 新增参数：当前激活用户昵称
+    isUserFilterMode: Boolean,  // 新增参数
+    onSetActiveFilter: (Long?) -> Unit,  // 新增回调：设置激活用户
+    onRemoveFilter: (Long) -> Unit,  // 新增回调：移除用户
+    onClearAllFilters: () -> Unit,  // 新增回调：清除所有用户
+    onClearFilter: () -> Unit,  // 新增回调：清除激活状态
     modifier: Modifier = Modifier
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-
+    var showModeMenu by remember { mutableStateOf(false) }
+    var showFilterMenu by remember { mutableStateOf(false) }  // 新增：筛选菜单状态
+    
     Column(modifier = modifier) {
-        // 修复：使用更紧凑的布局避免按钮被挤出去
+        // 第一行：模式选择和用户筛选指示器
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 模式选择 - 使用更紧凑的按钮
+            // 模式选择按钮
             Box {
                 AssistChip(
-                    onClick = { showMenu = true },
+                    onClick = { showModeMenu = true },
                     label = {
                         Text(
                             text = when(searchMode) {
@@ -272,54 +291,206 @@ private fun SearchHeader(
                 )
                 
                 DropdownMenu(
-                    expanded = showMenu, 
-                    onDismissRequest = { showMenu = false }
+                    expanded = showModeMenu, 
+                    onDismissRequest = { showModeMenu = false }
                 ) {
                     DropdownMenuItem(
                         text = { Text("帖子") }, 
                         onClick = { 
                             onModeChange(SearchMode.POSTS)
-                            showMenu = false 
+                            showModeMenu = false 
                         }
                     )
                     DropdownMenuItem(
                         text = { Text("浏览历史") }, 
                         onClick = { 
                             onModeChange(SearchMode.HISTORY)
-                            showMenu = false 
+                            showModeMenu = false 
                         }
                     )
                     DropdownMenuItem(
                         text = { Text("日志") }, 
                         onClick = { 
                             onModeChange(SearchMode.LOGS)
-                            showMenu = false 
+                            showModeMenu = false 
                         }
                     )
                 }
             }
             
-            // 跳页按钮（仅帖子模式且有多页时显示）- 使用更小的图标
-            if (searchMode == SearchMode.POSTS && totalPages > 1) {
-                IconButton(
-                    onClick = onJumpClick,
-                    modifier = Modifier.size(32.dp) // 更小的按钮尺寸
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.kakao_page),
-                        contentDescription = "跳页",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp) // 更小的图标尺寸
+            // 用户筛选指示器和菜单按钮
+            Box {
+                if (allUserFilters.isNotEmpty()) {
+                    val chipText = if (isUserFilterMode && activeNickname != null) {
+                        "筛选: $activeNickname"
+                    } else if (allUserFilters.size == 1) {
+                        "已保存1个用户"
+                    } else {
+                        "已保存${allUserFilters.size}个用户"
+                    }
+                    
+                    AssistChip(
+                        onClick = { showFilterMenu = true },
+                        label = {
+                            Text(
+                                text = chipText,
+                                maxLines = 1
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Person,
+                                null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.size(16.dp))
+                        },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (isUserFilterMode) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                            labelColor = if (isUserFilterMode) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
                     )
+                    
+                    // 用户筛选菜单
+                    DropdownMenu(
+                        expanded = showFilterMenu, 
+                        onDismissRequest = { showFilterMenu = false }
+                    ) {
+                        // 菜单标题
+                        DropdownMenuItem(
+                            text = { 
+                                Text(
+                                    "用户筛选 (${allUserFilters.size})",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
+                            onClick = { },
+                            enabled = false
+                        )
+                        
+                        Divider()
+                        
+                        // 当前激活的用户（如果有）
+                        if (isUserFilterMode && activeNickname != null && activeUserId != null) {
+                            DropdownMenuItem(
+                                text = { 
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("✓ $activeNickname")
+                                        IconButton(
+                                            onClick = {
+                                                onRemoveFilter(activeUserId)
+                                                showFilterMenu = false
+                                            },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Close,
+                                                "移除",
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }, 
+                                onClick = { 
+                                    onSetActiveFilter(null) // 取消激活
+                                    showFilterMenu = false
+                                }
+                            )
+                            Divider()
+                        }
+                        
+                        // 其他用户列表
+                        allUserFilters.forEach { (userId, nickname) ->
+                            // 跳过当前激活的用户（已经在上面显示）
+                            if (isUserFilterMode && userId == activeUserId) return@forEach
+                            
+                            DropdownMenuItem(
+                                text = { 
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(nickname)
+                                        IconButton(
+                                            onClick = {
+                                                onRemoveFilter(userId)
+                                                showFilterMenu = false
+                                            },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Close,
+                                                "移除",
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }, 
+                                onClick = { 
+                                    onSetActiveFilter(userId) // 设置为激活用户
+                                    showFilterMenu = false
+                                }
+                            )
+                        }
+                        
+                        Divider()
+                        
+                        // 操作菜单项
+                        DropdownMenuItem(
+                            text = { Text("清除所有用户") }, 
+                            onClick = { 
+                                onClearAllFilters()
+                                showFilterMenu = false
+                            }
+                        )
+                        
+                        if (isUserFilterMode) {
+                            DropdownMenuItem(
+                                text = { Text("取消筛选") }, 
+                                onClick = { 
+                                    onClearFilter()
+                                    showFilterMenu = false
+                                }
+                            )
+                        }
+                    }
+                } else if (searchMode == SearchMode.POSTS && totalPages > 1) {
+                    // 如果没有用户筛选，显示跳页按钮
+                    IconButton(
+                        onClick = onJumpClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.kakao_page),
+                            contentDescription = "跳页",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                } else {
+                    // 占位空间，保持布局平衡
+                    Spacer(modifier = Modifier.size(32.dp))
                 }
-            } else {
-                // 占位空间，保持布局平衡
-                Spacer(modifier = Modifier.size(32.dp))
             }
         }
-
+        
         Spacer(modifier = Modifier.height(8.dp))
-
+        
         // 搜索输入框
         TextField(
             value = query,
@@ -327,7 +498,16 @@ private fun SearchHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester),
-            placeholder = { Text("输入关键词搜索...") },
+            placeholder = { 
+                Text(
+                    if (isUserFilterMode && activeNickname != null) 
+                        "在 $activeNickname 的帖子中搜索..." 
+                    else if (allUserFilters.isNotEmpty())
+                        "选择用户筛选或在全部帖子中搜索..."
+                    else 
+                        "输入关键词搜索..."
+                )
+            },
             leadingIcon = {
                 Icon(Icons.Default.Search, "搜索", modifier = Modifier.size(20.dp))
             },

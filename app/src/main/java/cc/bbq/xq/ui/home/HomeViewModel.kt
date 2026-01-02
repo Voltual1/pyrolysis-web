@@ -15,6 +15,7 @@ import cc.bbq.xq.AuthManager
 //import cc.bbq.xq.RetrofitClient // 移除 RetrofitClient
 import cc.bbq.xq.KtorClient // 导入 KtorClient
 import cc.bbq.xq.SineShopClient
+import cc.bbq.xq.data.SignInSettingsDataStore // 导入 SignInSettingsDataStore
 import cc.bbq.xq.ui.theme.ThemeManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -50,6 +51,7 @@ data class HomeUiState(
     val followersCount: String = "?",
     val fansCount: String = "?",
     val postsCount: String = "?",
+    val signToday: Boolean = false, // 添加今日签到状态
     val likesCount: String = "?",
     // 签到相关状态
     val seriesDays: Int = 0,
@@ -117,6 +119,13 @@ class HomeViewModel : ViewModel() {
                             userData.create_time,
                             userData.signlasttime
                         )
+                        
+                        // 根据 sign_today 字段设置签到状态消息
+                val signStatusMessage = if (!userData.sign_today) {
+                    "点这里签到领经验和硬币哦"
+                } else {
+                    null // 已签到则显示 null，会显示默认文案
+                }
 
                         uiState.value = uiState.value.copy(
                             showLoginPrompt = false,
@@ -135,8 +144,13 @@ class HomeViewModel : ViewModel() {
                             displayDaysDiff = daysDiff,
                             isLoading = false,
                             exp = userData.exp,
+                            signToday = userData.sign_today, // 更新签到状态
+                    signStatusMessage = signStatusMessage, // 设置签到状态消息
                             dataLoadState = DataLoadState.Loaded
                         )
+                        
+                        // 检查自动签到设置，如果今日未签到且自动签到开启，则自动签到
+                        checkAndAutoSignIn(context)
                     }
                 }.onFailure { _ ->
                     uiState.value = uiState.value.copy(
@@ -148,6 +162,101 @@ class HomeViewModel : ViewModel() {
                 uiState.value = uiState.value.copy(
                     isLoading = false,
                     dataLoadState = DataLoadState.Error
+                )
+            }
+        }
+    }
+    
+    // 新增：检查并执行自动签到
+    private fun checkAndAutoSignIn(context: Context) {
+        viewModelScope.launch {
+            // 检查今日是否已签到
+            if (uiState.value.signToday) {
+                return@launch // 已签到，无需执行
+            }
+            
+            // 检查自动签到设置
+            val autoSignInEnabled = SignInSettingsDataStore.autoSignIn.first()
+            if (autoSignInEnabled) {
+                // 自动签到已开启，执行签到
+                signIn(context, true) // true 表示是自动签到
+            }
+        }
+    }
+    
+    // 修改签到方法，添加 isAutoSignIn 参数
+    fun signIn(context: Context, isAutoSignIn: Boolean = false) {
+        // 将实际的签到逻辑移到一个协程中
+        viewModelScope.launch {
+            val userCredentialsFlow = AuthManager.getCredentials(context)
+            val userCredentials = userCredentialsFlow.first()
+            val token = userCredentials?.token ?: ""
+
+            
+            try {
+                uiState.value = uiState.value.copy(isLoading = true)
+
+                // 使用 KtorClient 发起网络请求
+                val response = withContext(Dispatchers.IO) {
+                    //RetrofitClient.instance.userSignIn(token = token)
+                    KtorClient.ApiServiceImpl.userSignIn(token = token)
+                }
+
+                response.onSuccess { result ->
+                    // 处理服务器返回的401错误
+                    if (result.code == 401) {
+                        uiState.value = uiState.value.copy(
+                            signStatusMessage = "登录已过期，请长按头像刷新",
+                            showLoginPrompt = true,
+                            signToday = true, // 标记为已签到
+                            isLoading = false
+                        )
+                        // 重置加载状态，因为登录已过期
+                        resetLoadState()
+                    } else {
+                        // 如果是自动签到，显示特定消息
+                        val message = if (isAutoSignIn) {
+                            "自动签到成功: ${result.msg}"
+                        } else {
+                            result.msg
+                        }
+                        
+                        uiState.value = uiState.value.copy(
+                            signStatusMessage = message,
+                            isLoading = false
+                        )
+
+                        // 2秒后清除状态消息
+                        launch {
+                            delay(2000)
+                            uiState.value = uiState.value.copy(signStatusMessage = null)
+                        }
+
+                        // 重新加载用户数据（强制刷新）
+                        refreshUserData(context)
+                    }
+                }.onFailure { _ ->
+                    val message = if (isAutoSignIn) {
+                        "自动签到失败: 网络请求错误"
+                    } else {
+                        "签到失败: 网络请求错误"
+                    }
+                    
+                    uiState.value = uiState.value.copy(
+                        signStatusMessage = message,
+                        isLoading = false
+                    )
+                }
+            } catch (e: Exception) {
+                val message = if (isAutoSignIn) {
+                    "自动签到网络错误: ${e.message}"
+                } else {
+                    "网络错误: ${e.message}"
+                }
+                
+                uiState.value = uiState.value.copy(
+                    signStatusMessage = message,
+                    isLoading = false
                 )
             }
         }
@@ -213,65 +322,6 @@ class HomeViewModel : ViewModel() {
             dataLoadState = DataLoadState.NotLoaded,
             showLoginPrompt = true
         )
-    }
-
-    // 签到功能
-    fun signIn(context: Context) {
-        // 将实际的签到逻辑移到一个协程中
-        viewModelScope.launch {
-            val userCredentialsFlow = AuthManager.getCredentials(context)
-            val userCredentials = userCredentialsFlow.first()
-            val token = userCredentials?.token ?: ""
-
-            
-            try {
-                uiState.value = uiState.value.copy(isLoading = true)
-
-                // 使用 KtorClient 发起网络请求
-                val response = withContext(Dispatchers.IO) {
-                    //RetrofitClient.instance.userSignIn(token = token)
-                    KtorClient.ApiServiceImpl.userSignIn(token = token)
-                }
-
-                response.onSuccess { result ->
-                    // 处理服务器返回的401错误
-                    if (result.code == 401) {
-                        uiState.value = uiState.value.copy(
-                            signStatusMessage = "登录已过期，请长按头像刷新",
-                            showLoginPrompt = true,
-                            isLoading = false
-                        )
-                        // 重置加载状态，因为登录已过期
-                        resetLoadState()
-                    } else {
-                        // 正常处理成功响应
-                        uiState.value = uiState.value.copy(
-                            signStatusMessage = result.msg,
-                            isLoading = false
-                        )
-
-                        // 2秒后清除状态消息
-                        launch {
-                            delay(2000)
-                            uiState.value = uiState.value.copy(signStatusMessage = null)
-                        }
-
-                        // 重新加载用户数据（强制刷新）
-                        refreshUserData(context)
-                    }
-                }.onFailure { _ ->
-                    uiState.value = uiState.value.copy(
-                        signStatusMessage = "签到失败: 网络请求错误",
-                        isLoading = false
-                    )
-                }
-            } catch (e: Exception) {
-                uiState.value = uiState.value.copy(
-                    signStatusMessage = "网络错误: ${e.message}",
-                    isLoading = false
-                )
-            }
-        }
     }
 
     // 计算两个日期之间的天数差

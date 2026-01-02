@@ -54,10 +54,6 @@ object Login : AppDestination {
     override val route = "login"
 }
 
-object Search : AppDestination {
-    override val route = "search"
-}
-
 object About : AppDestination {
     override val route = "about"
 }
@@ -171,15 +167,46 @@ data class UserDetail(val userId: Long, val store: AppStore = AppStore.XIAOQU_SP
     }
 }
 
-data class MyPosts(val userId: Long) : AppDestination {
-    override val route = "my_posts/{${AppDestination.ARG_USER_ID}}"
-    fun createRoute() = "my_posts/$userId"
-
+// 修改 MyPosts 路由定义
+data class MyPosts(
+    val userId: Long,
+    val nickname: String? = null  // 新增可选参数
+) : AppDestination {
+    override val route = "my_posts/{${AppDestination.ARG_USER_ID}}/{nickname}"
+    fun createRoute() = "my_posts/$userId/${nickname?.let { URLEncoder.encode(it, "UTF-8") } ?: ""}"
+    
     companion object {
         val arguments = listOf(
-            navArgument(AppDestination.ARG_USER_ID) { type = NavType.LongType }
+            navArgument(AppDestination.ARG_USER_ID) { type = NavType.LongType },
+            navArgument("nickname") { 
+                type = NavType.StringType
+                nullable = false
+                defaultValue = ""
+            }
         )
     }
+}
+
+// /app/src/main/java/cc/bbq/xq/ui/Navigation.kt
+// 修改 Search 路由定义
+object Search : AppDestination {
+    override val route = "search?userId={userId}&nickname={nickname}"
+    
+    fun createRoute(userId: Long? = null, nickname: String? = null) = 
+        "search?${if (userId != null) "userId=$userId&" else ""}nickname=${if (nickname != null) java.net.URLEncoder.encode(nickname, "UTF-8") else ""}"
+    
+    val arguments = listOf(
+        navArgument("userId") { 
+            type = NavType.StringType // 改为 StringType 以支持可空值
+            nullable = true
+            defaultValue = null
+        },
+        navArgument("nickname") {
+            type = NavType.StringType
+            nullable = true
+            defaultValue = null
+        }
+    )
 }
 
 object MyComments : AppDestination {
@@ -210,6 +237,10 @@ object AccountProfileArgs {
             defaultValue = AppStore.XIAOQU_SPACE.name
         }
     )
+}
+
+object SignInSettings : AppDestination {
+    override val route = "signin_settings"
 }
 
 // --- 资源广场与应用 ---

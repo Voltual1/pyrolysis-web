@@ -65,6 +65,7 @@ import java.nio.charset.StandardCharsets
 import cc.bbq.xq.ui.animation.materialSharedAxisXIn
 import cc.bbq.xq.ui.animation.materialSharedAxisXOut
 import androidx.compose.ui.unit.dp
+import cc.bbq.xq.ui.settings.signin.SignInSettingsScreen
 import cc.bbq.xq.ui.animation.rememberSlideDistance
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cc.bbq.xq.ui.settings.update.UpdateSettingsScreen //导入更新屏幕
@@ -139,22 +140,38 @@ fun AppNavHost(
     )
 }
 
-        composable(route = Search.route) {
-            SearchScreen(
-                viewModel = searchViewModel,
-                onPostClick = { postId -> navController.navigate(PostDetail(postId).createRoute()) },
-                onLogClick = { navController.navigate(LogViewer.route) },
-                modifier = Modifier.fillMaxSize() // 添加 modifier
-            )
+// 修改 Search 路由处理
+composable(
+    route = Search.route, 
+    arguments = Search.arguments
+) { backStackEntry ->
+    // 因为 userId 改为 String 类型，需要转换
+    val userIdString = backStackEntry.arguments?.getString("userId")
+    val userId = userIdString?.toLongOrNull()
+    val nickname = backStackEntry.arguments?.getString("nickname")?.let {
+        URLDecoder.decode(it, StandardCharsets.UTF_8.toString())
+    }
+    
+    // 初始化 SearchViewModel 的用户筛选
+    LaunchedEffect(userId, nickname) {
+        if (userId != null && nickname != null) {
+            searchViewModel.initFromNavArgs(userId, nickname)
         }
-        // 新增：应用更新屏幕的导航项
-        composable(route = Update.route) {
-            UpdateScreen(
-                snackbarHostState = snackbarHostState, // 传递来自 AppNavHost 的 snackbarHostState
-                modifier = Modifier.fillMaxSize()
-                // viewModel 会通过 viewModel() 工厂自动注入
-            )
-        }
+    }
+    
+    SearchScreen(
+        viewModel = searchViewModel,
+        onPostClick = { postId -> navController.navigate(PostDetail(postId).createRoute()) },
+        onLogClick = { navController.navigate(LogViewer.route) },
+        modifier = Modifier.fillMaxSize()
+    )
+}
+        
+composable(route = SignInSettings.route ) {
+    SignInSettingsScreen(
+        snackbarHostState = remember { SnackbarHostState() }
+    )
+}
 
         composable(route = ThemeCustomize.route) {
             ThemeCustomizeScreen(
@@ -234,7 +251,7 @@ composable(route = CreateRefundPost(0, 0, "", 0).route, arguments = CreateRefund
         }
         
         composable(route = Download.route) {
-    DownloadScreen(modifier = Modifier.fillMaxSize())
+    DownloadScreen(modifier = Modifier.fillMaxSize(),snackbarHostState = snackbarHostState )
 }
 
 composable(route = MyComments.route) {
@@ -270,35 +287,47 @@ composable(route = UserDetail(0).route, arguments = UserDetail.arguments) { back
         }
     }
     
+    
     val userData by viewModel.userData.collectAsStateWithLifecycle()
-val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    
     UserDetailScreen(
-                userData = userData,
-                isLoading = isLoading,
-                snackbarHostState = snackbarHostState,
-                errorMessage = errorMessage,
-                onPostsClick = { navController.navigate(MyPosts(userId).createRoute()) },
-                onResourcesClick = { uid, store -> // 接收 store 参数
-    navController.navigate(ResourcePlaza(isMyResource = false, userId = uid, mode = "public", storeName = store.name).createRoute())
-},
-                onImagePreview = { imageUrl ->
-                    navController.navigate(ImagePreview(imageUrl).createRoute())
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-        composable(route = MyPosts(0).route, arguments = MyPosts.arguments) { backStackEntry ->
-    val userId = backStackEntry.arguments?.getLong(AppDestination.ARG_USER_ID) ?: -1L
-    MyPostsScreen(
-        viewModel = myPostsViewModel,
-        userId = userId,
-        navController = navController,
-        snackbarHostState = snackbarHostState // 添加这行
+        userData = userData,
+        isLoading = isLoading,
+        snackbarHostState = snackbarHostState,
+        errorMessage = errorMessage,
+        onPostsClick = { navController.navigate(MyPosts(userId).createRoute()) },
+        onResourcesClick = { uid, store ->
+            // 接收 store 参数
+            navController.navigate(ResourcePlaza(isMyResource = false, userId = uid, mode = "public", storeName = store.name).createRoute())
+        },
+        onImagePreview = { imageUrl ->
+            navController.navigate(ImagePreview(imageUrl).createRoute())
+        },
+        modifier = Modifier.fillMaxSize(),
+        navController = navController // 传递 navController
     )
 }
 
-        // 在 NavGraph.kt 中更新 UserListScreen 的调用
+// 更新 MyPosts 路由处理
+composable(
+    route = MyPosts(0).route, 
+    arguments = MyPosts.arguments
+) { backStackEntry ->
+    val userId = backStackEntry.arguments?.getLong(AppDestination.ARG_USER_ID) ?: -1L
+    val nickname = backStackEntry.arguments?.getString("nickname")?.let {
+        if (it.isNotEmpty()) URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) else null
+    }
+    
+    MyPostsScreen(
+        viewModel = myPostsViewModel,
+        userId = userId,
+        nickname = nickname,
+        navController = navController,
+        snackbarHostState = snackbarHostState
+    )
+}
 
         // 关注列表
 composable(route = FollowList.route) {
@@ -537,6 +566,9 @@ composable(FollowingPosts.route) { FollowingPostsScreen(navController, following
 
 
 // 在 NavGraph.kt 中修复社区屏幕的导航逻辑
+// /app/src/main/java/cc/bbq/xq/ui/NavGraph.kt
+// 修复所有列表屏幕中的 onNavigate 回调
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityScreen(navController: NavController, viewModel: CommunityViewModel,snackbarHostState: SnackbarHostState) {
@@ -573,10 +605,16 @@ fun CommunityScreen(navController: NavController, viewModel: CommunityViewModel,
                 route == "following_posts" -> navController.navigate(FollowingPosts.route)
                 route == "my_likes" -> navController.navigate(MyLikes.route)
                 route.startsWith("my_posts/") -> {
-                    // 处理我的帖子导航
-                    val userId = route.removePrefix("my_posts/").toLongOrNull()
-                    if (userId != null) {
-                        navController.navigate(MyPosts(userId).createRoute())
+                    // 修复：正确解析路由参数
+                    val parts = route.removePrefix("my_posts/").split("/")
+                    val userIdStr = parts.firstOrNull()
+                    val nickname = if (parts.size > 1) parts[1] else "我" // 提供默认昵称
+                    
+                    if (userIdStr != null) {
+                        val userId = userIdStr.toLongOrNull()
+                        if (userId != null) {
+                            navController.navigate(MyPosts(userId, nickname).createRoute())
+                        }
                     }
                 }
                 else -> {
@@ -625,10 +663,16 @@ fun MyLikesScreen(navController: NavController, viewModel: MyLikesViewModel,snac
                 route == "following_posts" -> navController.navigate(FollowingPosts.route)
                 route == "my_likes" -> navController.navigate(MyLikes.route)
                 route.startsWith("my_posts/") -> {
-                    // 处理我的帖子导航
-                    val userId = route.removePrefix("my_posts/").toLongOrNull()
-                    if (userId != null) {
-                        navController.navigate(MyPosts(userId).createRoute())
+                    // 修复：正确解析路由参数
+                    val parts = route.removePrefix("my_posts/").split("/")
+                    val userIdStr = parts.firstOrNull()
+                    val nickname = if (parts.size > 1) parts[1] else "我" // 提供默认昵称
+                    
+                    if (userIdStr != null) {
+                        val userId = userIdStr.toLongOrNull()
+                        if (userId != null) {
+                            navController.navigate(MyPosts(userId, nickname).createRoute())
+                        }
                     }
                 }
                 else -> {
@@ -677,10 +721,16 @@ fun HotPostsScreen(navController: NavController, viewModel: HotPostsViewModel,sn
                 route == "following_posts" -> navController.navigate(FollowingPosts.route)
                 route == "my_likes" -> navController.navigate(MyLikes.route)
                 route.startsWith("my_posts/") -> {
-                    // 处理我的帖子导航
-                    val userId = route.removePrefix("my_posts/").toLongOrNull()
-                    if (userId != null) {
-                        navController.navigate(MyPosts(userId).createRoute())
+                    // 修复：正确解析路由参数
+                    val parts = route.removePrefix("my_posts/").split("/")
+                    val userIdStr = parts.firstOrNull()
+                    val nickname = if (parts.size > 1) parts[1] else "我" // 提供默认昵称
+                    
+                    if (userIdStr != null) {
+                        val userId = userIdStr.toLongOrNull()
+                        if (userId != null) {
+                            navController.navigate(MyPosts(userId, nickname).createRoute())
+                        }
                     }
                 }
                 else -> {
@@ -729,10 +779,16 @@ fun FollowingPostsScreen(navController: NavController, viewModel: FollowingPosts
                 route == "following_posts" -> navController.navigate(FollowingPosts.route)
                 route == "my_likes" -> navController.navigate(MyLikes.route)
                 route.startsWith("my_posts/") -> {
-                    // 处理我的帖子导航
-                    val userId = route.removePrefix("my_posts/").toLongOrNull()
-                    if (userId != null) {
-                        navController.navigate(MyPosts(userId).createRoute())
+                    // 修复：正确解析路由参数
+                    val parts = route.removePrefix("my_posts/").split("/")
+                    val userIdStr = parts.firstOrNull()
+                    val nickname = if (parts.size > 1) parts[1] else "我" // 提供默认昵称
+                    
+                    if (userIdStr != null) {
+                        val userId = userIdStr.toLongOrNull()
+                        if (userId != null) {
+                            navController.navigate(MyPosts(userId, nickname).createRoute())
+                        }
                     }
                 }
                 else -> {

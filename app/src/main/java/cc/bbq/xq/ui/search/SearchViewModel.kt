@@ -5,7 +5,7 @@
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
 
 
 package cc.bbq.xq.ui.search
@@ -17,6 +17,7 @@ import cc.bbq.xq.KtorClient // 导入 KtorClient
 import kotlinx.coroutines.flow.*
 import org.koin.android.annotation.KoinViewModel
 import cc.bbq.xq.data.SearchHistoryDataStore
+import cc.bbq.xq.data.UserFilterDataStore
 import kotlinx.coroutines.launch
 
 enum class SearchMode {
@@ -33,7 +34,10 @@ sealed class SearchResultItem {
 }
 
 @KoinViewModel
-class SearchViewModel(private val searchHistoryDataStore: SearchHistoryDataStore) : ViewModel() {
+class SearchViewModel(
+    private val searchHistoryDataStore: SearchHistoryDataStore,
+    private val userFilterDataStore: UserFilterDataStore  // 新增依赖
+) : ViewModel() {
     private val browseHistoryDao = BBQApplication.instance.database.browseHistoryDao()
     private val logDao = BBQApplication.instance.database.logDao()
     //private val apiService = RetrofitClient.instance // 移除 RetrofitClient
@@ -58,6 +62,20 @@ class SearchViewModel(private val searchHistoryDataStore: SearchHistoryDataStore
     private val _totalPages = MutableStateFlow(1)
     val totalPages: StateFlow<Int> = _totalPages.asStateFlow()
     
+    // 新增状态：用户筛选信息（多个用户）
+    private val _allUserFilters = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val allUserFilters: StateFlow<Map<Long, String>> = _allUserFilters.asStateFlow()
+    
+    private val _activeUserId = MutableStateFlow<Long?>(null)
+    val activeUserId: StateFlow<Long?> = _activeUserId.asStateFlow()
+    
+    private val _activeNickname = MutableStateFlow<String?>(null)
+    val activeNickname: StateFlow<String?> = _activeNickname.asStateFlow()
+    
+    // 新增：是否处于用户筛选模式
+    private val _isUserFilterMode = MutableStateFlow(false)
+    val isUserFilterMode: StateFlow<Boolean> = _isUserFilterMode.asStateFlow()
+    
     private val _hasMoreData = MutableStateFlow(true)
     val hasMoreData: StateFlow<Boolean> = _hasMoreData.asStateFlow()
 
@@ -66,6 +84,83 @@ class SearchViewModel(private val searchHistoryDataStore: SearchHistoryDataStore
 
     fun onQueryChange(newQuery: String) {
         _query.value = newQuery
+    }
+    
+    init {
+        viewModelScope.launch {
+            // 监听所有用户筛选信息变化
+            userFilterDataStore.allUserFiltersFlow.collect { userMap ->
+                _allUserFilters.value = userMap
+                // 如果当前没有激活用户但有用户，设置第一个为激活用户
+                if (_activeUserId.value == null && userMap.isNotEmpty()) {
+                    val firstUser = userMap.entries.firstOrNull()
+                    firstUser?.let { (userId, nickname) ->
+                        _activeUserId.value = userId
+                        _activeNickname.value = nickname
+                        _isUserFilterMode.value = true
+                    }
+                }
+            }
+        }
+        
+        viewModelScope.launch {
+            // 监听激活用户变化
+            userFilterDataStore.activeUserIdFlow.collect { userId ->
+                _activeUserId.value = userId
+                if (userId != null) {
+                    // 从用户映射中获取昵称
+                    val nickname = _allUserFilters.value[userId]
+                    _activeNickname.value = nickname
+                    _isUserFilterMode.value = nickname != null
+                } else {
+                    _activeNickname.value = null
+                    _isUserFilterMode.value = false
+                }
+            }
+        }
+    }
+    
+    // 新增：设置激活的用户筛选
+    fun setActiveUserFilter(userId: Long?) {
+        viewModelScope.launch {
+            userFilterDataStore.setActiveUserFilter(userId)
+        }
+    }
+    
+    // 新增：移除用户筛选
+    fun removeUserFilter(userId: Long) {
+        viewModelScope.launch {
+            userFilterDataStore.removeUserFilter(userId)
+            // 如果移除的是当前激活用户，则设置另一个用户为激活
+            if (_activeUserId.value == userId) {
+                val nextUser = _allUserFilters.value.keys.firstOrNull { it != userId }
+                userFilterDataStore.setActiveUserFilter(nextUser)
+            }
+        }
+    }
+    
+    // 修改：清除用户筛选（清除激活状态）
+    fun clearUserFilter() {
+        viewModelScope.launch {
+            userFilterDataStore.setActiveUserFilter(null)
+        }
+    }
+    
+    // 新增：清除所有用户筛选
+    fun clearAllUserFilters() {
+        viewModelScope.launch {
+            userFilterDataStore.clearAllUserFilters()
+        }
+    }
+    
+    // 新增：从导航参数初始化用户筛选
+    fun initFromNavArgs(userId: Long?, nickname: String?) {
+        viewModelScope.launch {
+            if (userId != null && nickname != null) {
+                userFilterDataStore.addOrUpdateUserFilter(userId, nickname)
+                userFilterDataStore.setActiveUserFilter(userId)
+            }
+        }
     }
 
     fun onSearchModeChange(newMode: SearchMode) {
@@ -154,7 +249,8 @@ class SearchViewModel(private val searchHistoryDataStore: SearchHistoryDataStore
         val response = KtorClient.ApiServiceImpl.searchPosts(
             query = _query.value, 
             page = currentPage, 
-            limit = PAGE_SIZE
+            limit = PAGE_SIZE,
+            userId = if (_isUserFilterMode.value) _activeUserId.value else null  // 只在筛选模式下添加 userId
         )
         
         response.onSuccess { result ->

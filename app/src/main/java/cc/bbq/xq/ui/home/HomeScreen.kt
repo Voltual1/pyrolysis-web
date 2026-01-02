@@ -1,4 +1,3 @@
-// File: /app/src/main/java/cc/bbq/xq/ui/home/HomeScreen.kt
 //Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
@@ -732,6 +731,7 @@ data class HomeState(
     val likesCount: String = "0",
     // 添加签到相关状态
     val seriesDays: Int = 0,
+    val signToday: Boolean = false, // 添加今日签到状态
     val signStatusMessage: String? = null,
     val exp: Int = 0,
     val displayDaysDiff: Int = 0

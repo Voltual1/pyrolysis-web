@@ -98,6 +98,8 @@ import androidx.compose.material3.*
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import cc.bbq.xq.data.unified.UnifiedComment
+import androidx.navigation.NavController
+import cc.bbq.xq.ui.compose.LinkifyText
 
 // 基础按钮组件
 @Composable
@@ -748,6 +750,7 @@ fun AppGrid(
  * @param onReply 回复按钮点击回调
  * @param onLongClick 长按评论的回调
  * @param onUserClick 点击用户头像或用户名的回调
+ * @param navController 导航控制器，用于LinkifyText的链接跳转
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -755,7 +758,8 @@ fun UnifiedCommentItem(
     comment: UnifiedComment,
     onReply: () -> Unit,
     onLongClick: () -> Unit,
-    onUserClick: () -> Unit
+    onUserClick: () -> Unit,
+    navController: androidx.navigation.NavController // 新增参数
 ) {
     Card(
         modifier = Modifier
@@ -786,7 +790,14 @@ fun UnifiedCommentItem(
                 )
             }
             Spacer(Modifier.height(8.dp))
-            Text(comment.content, style = MaterialTheme.typography.bodyMedium)
+            if (comment.content.isNotEmpty()) {
+                LinkifyText(
+                    text = comment.content,
+                    navController = navController,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+                )
+            }
 
             if (comment.fatherReply != null) {
                 Surface(
@@ -794,11 +805,16 @@ fun UnifiedCommentItem(
                     shape = RoundedCornerShape(4.dp),
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 ) {
-                    Text(
-                        text = "回复 @${comment.fatherReply.sender.displayName}: ${comment.fatherReply.content}",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(8.dp)
-                    )
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        if (comment.fatherReply.content.isNotEmpty()) {
+                            LinkifyText(
+                                text = "回复 @${comment.fatherReply.sender.displayName}: ${comment.fatherReply.content}",
+                                navController = navController,
+                                modifier = Modifier.fillMaxWidth(),
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            )
+                        }
+                    }
                 }
             }
         }

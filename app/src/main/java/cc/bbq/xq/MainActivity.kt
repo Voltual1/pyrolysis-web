@@ -358,7 +358,7 @@ fun getTitleForDestination(backStackEntry: NavBackStackEntry?): String {
     val route = backStackEntry?.destination?.route
     val isMyResource = backStackEntry?.arguments?.getBoolean(AppDestination.ARG_IS_MY_RESOURCE) ?: false
     val userId = backStackEntry?.arguments?.getLong(AppDestination.ARG_USER_ID, -1L) ?: -1L
-    val mode = backStackEntry?.arguments?.getString("mode") ?: "public" // 获取模式参数
+    val mode = backStackEntry?.arguments?.getString("mode") ?: "public"
     val routeBase = route?.substringBefore("?")?.substringBefore("/")
     
     return when (routeBase) {
@@ -382,7 +382,7 @@ fun getTitleForDestination(backStackEntry: NavBackStackEntry?): String {
         BrowseHistory.route -> "浏览历史"
         Billing.route -> "账单"
         ThemeCustomize.route -> "主题设置"
-        Search.route -> "搜索"
+        "search" -> "搜索"  // 这里应该匹配"search"
         "post_detail" -> "帖子详情"
         "user_detail" -> "用户详情"
         "my_posts" -> "我的帖子"
@@ -391,7 +391,7 @@ fun getTitleForDestination(backStackEntry: NavBackStackEntry?): String {
         CreateAppRelease.route -> "发布应用"
         "app_release_update" -> "更新应用"
         LogViewer.route -> "日志"
-        "account_profile?store={store}" -> "账号资料"
+        "account_profile" -> "账号资料"  // 注意：这里也要修改
         FollowList.route -> "我的关注"
         FanList.route -> "我的粉丝"
         MyLikes.route -> "我喜欢的"
@@ -411,6 +411,7 @@ fun getTitleForDestination(backStackEntry: NavBackStackEntry?): String {
         Update.route -> "应用更新（未完工）"
         "my_comments" -> "我的评论"
         "my_reviews" -> "我的评价"
+        "signin_settings" -> "签到设置"
         else -> "BBQ"
     }
 }

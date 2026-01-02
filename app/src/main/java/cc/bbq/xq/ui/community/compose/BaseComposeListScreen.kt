@@ -9,10 +9,11 @@
 package cc.bbq.xq.ui.community.compose
 
 import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.Add
@@ -20,8 +21,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment // 添加这行导入
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -30,27 +30,23 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import cc.bbq.xq.R
 import cc.bbq.xq.KtorClient
-import cc.bbq.xq.ui.community.ListScreen
-import cc.bbq.xq.AuthManager // 添加 AuthManager 导入
-
-// 导入下拉刷新相关组件
+import cc.bbq.xq.AuthManager
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
-import kotlinx.coroutines.flow.first // 添加 first 导入
+import kotlinx.coroutines.flow.first
 
-// 在 BaseComposeListScreen.kt 中修复导航逻辑
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun BaseComposeListScreen(
     title: String = "",
-    posts: List<KtorClient.Post>, // 修改为 KtorClient.Post
+    posts: List<KtorClient.Post>,
     isLoading: Boolean,
     errorMessage: String,
-    onItemClick: (KtorClient.Post) -> Unit, // 修改为 KtorClient.Post
+    onItemClick: (KtorClient.Post) -> Unit,
     onLoadMore: () -> Unit,
     onRefresh: () -> Unit,
     onSearchClick: () -> Unit = {},
@@ -61,8 +57,7 @@ fun BaseComposeListScreen(
     onJumpToPage: (Int) -> Unit = {},
     onNavigate: (String) -> Unit,
     onBackClick: () -> Unit = {},
-    snackbarHostState: SnackbarHostState, // 添加 SnackbarHostState 参数
-    // 新增下拉刷新相关参数
+    snackbarHostState: SnackbarHostState,
     isRefreshing: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -70,7 +65,8 @@ fun BaseComposeListScreen(
     var inputPage by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val scope = rememberCoroutineScope() // 创建 CoroutineScope
+    val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
     
     // 添加下拉刷新状态
     val pullRefreshState = rememberPullRefreshState(
@@ -120,9 +116,9 @@ fun BaseComposeListScreen(
                     Text("取消")
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surfaceVariant, // 设置对话框背景色
-            titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant, // 设置标题文字颜色
-            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant // 设置文本内容颜色
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 
@@ -130,141 +126,188 @@ fun BaseComposeListScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Box {
-                        Button(
-                            onClick = { expanded = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.primary
-                            ),
-                            elevation = ButtonDefaults.buttonElevation(0.dp)
-                        ) {
-                            Text(text = title)
-                        }
-                        
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("社区") },
-                                onClick = {
-                                    expanded = false
-                                    onNavigate("community")
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("热点") },
-                                onClick = {
-                                    expanded = false
-                                    onNavigate("hot_posts")
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("关注的人") },
-                                onClick = {
-                                    expanded = false
-                                    onNavigate("following_posts")
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("我喜欢的") },
-                                onClick = {
-                                    expanded = false
-                                    onNavigate("my_likes")
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("我的帖子") },
-                                onClick = {
-                                    expanded = false
-                                    // 在协程中获取 currentUserId
-                                    scope.launch {
-                                        // 使用 first() 获取 Flow 的当前值
-                                        val currentUserId = AuthManager.getUserId(context).first()
-                                        //  fixed: remove unnecessary non-null check. The type of `currentUserId` is Long, so it can't be null.
-                                        //  Also, it's better to check if the user id is valid (e.g., greater than 0)
-                                        if (currentUserId > 0) {
-                                            onNavigate("my_posts/$currentUserId")
-                                        } else {
-                                             scope.launch {
+            // 自定义TopBar，使用可水平滚动的Row
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shadowElevation = 4.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 返回按钮
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
+                    // 标题区域 - 可水平滚动
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .horizontalScroll(scrollState),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 标题下拉菜单按钮
+                        Box {
+                            Button(
+                                onClick = { expanded = true },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(0.dp),
+                                modifier = Modifier.padding(end = 4.dp)
+                            ) {
+                                Text(
+                                    text = title,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                )
+                            }
+                            
+                            // 下拉菜单
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                                modifier = Modifier.width(200.dp)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("社区") },
+                                    onClick = {
+                                        expanded = false
+                                        onNavigate("community")
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("热点") },
+                                    onClick = {
+                                        expanded = false
+                                        onNavigate("hot_posts")
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("关注的人") },
+                                    onClick = {
+                                        expanded = false
+                                        onNavigate("following_posts")
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("我喜欢的") },
+                                    onClick = {
+                                        expanded = false
+                                        onNavigate("my_likes")
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("我的帖子") },
+                                    onClick = {
+                                        expanded = false
+                                        scope.launch {
+                                            val currentUserId = AuthManager.getUserId(context).first()
+                                            if (currentUserId > 0) {
+                                                onNavigate("my_posts/$currentUserId")
+                                            } else {
                                                 snackbarHostState.showSnackbar(
                                                     message = context.getString(R.string.login_first),
                                                     duration = SnackbarDuration.Short
                                                 )
                                             }
-                                            //android.widget.Toast.makeText(context, "请先登录", android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     }
-                                }
+                                )
+                            }
+                        }
+                    }
+                    
+                    // 操作按钮区域 - 固定宽度，使用可水平滚动的Row
+                    Row(
+                        modifier = Modifier
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        // 消息中心按钮
+                        IconButton(
+                            onClick = onMessageClick,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_menu_message),
+                                contentDescription = "消息中心",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        
+                        // 跳页按钮
+                        IconButton(
+                            onClick = { showJumpDialog = true; inputPage = "" },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.kakao_page),
+                                contentDescription = "跳页",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        
+                        // 搜索按钮
+                        IconButton(
+                            onClick = onSearchClick,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "搜索",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        
+                        // 发帖按钮
+                        IconButton(
+                            onClick = onCreateClick,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "发帖",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        
+                        // 历史记录按钮
+                        IconButton(
+                            onClick = historyClick,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "浏览历史",
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, // 确保使用正确的引用
-                            contentDescription = "返回",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onMessageClick) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_menu_message),
-                            contentDescription = "消息中心",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(onClick = { showJumpDialog = true; inputPage = "" }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.kakao_page),
-                            contentDescription = "跳页",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(onClick = onSearchClick) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "搜索",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(onClick = onCreateClick) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "发帖",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(onClick = historyClick) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = "浏览历史",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
-                colors = TopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    scrolledContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.primary,
-                    actionIconContentColor = MaterialTheme.colorScheme.primary,
-                    subtitleContentColor = MaterialTheme.colorScheme.primary // 新增必需的参数
-                )
-            )
+                }
+            }
         }
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .pullRefresh(pullRefreshState) // 添加下拉刷新修饰符
+                .pullRefresh(pullRefreshState)
         ) {
             if (errorMessage.isNotEmpty()) {
                 ErrorView(
@@ -299,13 +342,12 @@ fun BaseComposeListScreen(
                 )
             }
             
-            // 添加下拉刷新指示器
             PullRefreshIndicator(
                 refreshing = isRefreshing,
                 state = pullRefreshState,
                 modifier = Modifier.align(Alignment.TopCenter),
-                contentColor = MaterialTheme.colorScheme.primary, // 使用主题主色
-                backgroundColor = MaterialTheme.colorScheme.surface // 使用主题背景色
+                contentColor = MaterialTheme.colorScheme.primary,
+                backgroundColor = MaterialTheme.colorScheme.surface
             )
         }
     }

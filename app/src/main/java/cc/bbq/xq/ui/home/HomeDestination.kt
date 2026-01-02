@@ -110,16 +110,20 @@ fun HomeDestination(
             onMyLikesClick = { navController.navigate(MyLikes.route) },
             onFollowersClick = { navController.navigate(FollowList.route) },
             onFansClick = { navController.navigate(FanList.route) },
-            onPostsClick = {
-                coroutineScope.launch {
-                    val userId = userIdFlow.first()
-                    if (userId > 0) {
-                        navController.navigate(MyPosts(userId).createRoute())
-                    } else {
-                        viewModel.showSnackbar(context.getString(R.string.unable_to_get_userid))
-                    }
-                }
-            },
+onPostsClick = {
+    coroutineScope.launch {
+        val userId = userIdFlow.first()
+        if (userId > 0) {
+            // 获取用户昵称用于路由创建
+            val nickname = uiState.nickname ?: "用户"
+            // 确保传递 nickname 参数
+            val route = MyPosts(userId, nickname).createRoute()
+            navController.navigate(route)
+        } else {
+            viewModel.showSnackbar(context.getString(R.string.unable_to_get_userid))
+        }
+    }
+},
             onMyResourcesClick = {
                 coroutineScope.launch{
                     val userId = userIdFlow.first()
@@ -136,7 +140,7 @@ fun HomeDestination(
             onSettingsClick = { navController.navigate(ThemeCustomize.route) },
             onSignClick = { viewModel.signIn(context) },
             onAboutClick = { navController.navigate(About.route) },
-            onAccountProfileClick = { navController.navigate(AccountProfile.createRoute(AppStore.SIENE_SHOP)) },
+            onAccountProfileClick = { navController.navigate(AccountProfile.createRoute(AppStore.XIAOQU_SPACE)) },
             onRecalculateDays = { viewModel.recalculateDaysDiff() },
             onNavigateToUpdate = { navController.navigate(Update.route) }, // 传递导航回调
             onNavigateToMyReviews = { navController.navigate(MyReviews.route) }, // 新增：传递导航回调

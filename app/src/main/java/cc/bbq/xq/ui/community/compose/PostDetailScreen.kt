@@ -280,7 +280,7 @@ fun PostDetailScreen(
                                 Spacer(Modifier.height(8.dp))
 
                                 LinkifyText(
-                                    text = detail.content.replace("<br>", "\n"),
+                                    text = detail.content,
                                     navController = navController
                                 )
 

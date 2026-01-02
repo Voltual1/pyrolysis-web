@@ -118,46 +118,111 @@ class DownloadService : Service() {
     }
 
     /**
-     * 开始下载（主方法）
-     */
-    fun startDownload(url: String, fileName: String, customSavePath: String? = null) {
-        Log.d(TAG, "Starting download: $fileName from $url")
-        // 确保不会重复下载
-        if (downloader.status.value is DownloadStatus.Downloading || downloader.status.value is DownloadStatus.Pending) {
-            Log.w(TAG, "Download already in progress")
-            return
-        }
-
-        // 构建下载配置
-        val savePath = customSavePath ?: getDefaultDownloadPath()
-        val config = DownloadConfig(
-            url = url,
-            savePath = savePath,
-            fileName = fileName,
-            threadCount = determineThreadCount(url) // 根据文件类型决定线程数
-        )
-        currentDownloadConfig = config
-
-        // 将下载任务信息保存到数据库
-        serviceScope.launch {
-            val downloadTask = DownloadTask(
-                url = url,
-                fileName = fileName,
-                savePath = savePath,
-                totalBytes = -1L, // 初始值未知
-                downloadedBytes = 0L,
-                status = DownloadStatus.Pending::class.java.simpleName,
-                progress = 0f
-            )
-            downloadTaskDao.insert(downloadTask)
-        }
-
-        serviceScope.launch {
-            downloader.startDownload(config)
-        }
-        // 更新通知显示下载开始
-//        updateNotification(DownloadStatus.Pending, fileName)
+ * 开始下载（主方法）
+ */
+fun startDownload(url: String, fileName: String, customSavePath: String? = null) {
+    Log.d(TAG, "Starting download from URL: $url")
+    // 确保不会重复下载
+    if (downloader.status.value is DownloadStatus.Downloading || downloader.status.value is DownloadStatus.Pending) {
+        Log.w(TAG, "Download already in progress")
+        return
     }
+
+    // 从 URL 中提取文件名
+    val extractedFileName = extractFileNameFromUrl(url)
+    val finalFileName = if (extractedFileName.isNullOrEmpty()) {
+        Log.d(TAG, "Failed to extract filename from URL, using provided: $fileName")
+        fileName
+    } else {
+        Log.d(TAG, "Using extracted filename: $extractedFileName")
+        extractedFileName
+    }
+
+    // 构建下载配置
+    val savePath = customSavePath ?: getDefaultDownloadPath()
+    val config = DownloadConfig(
+        url = url,
+        savePath = savePath,
+        fileName = finalFileName,
+        threadCount = determineThreadCount(url) // 根据文件类型决定线程数
+    )
+    currentDownloadConfig = config
+
+    // 将下载任务信息保存到数据库
+    serviceScope.launch {
+        val downloadTask = DownloadTask(
+            url = url,
+            fileName = finalFileName,
+            savePath = savePath,
+            totalBytes = -1L, // 初始值未知
+            downloadedBytes = 0L,
+            status = DownloadStatus.Pending::class.java.simpleName,
+            progress = 0f
+        )
+        downloadTaskDao.insert(downloadTask)
+    }
+
+    serviceScope.launch {
+        downloader.startDownload(config)
+    }
+    // 更新通知显示下载开始
+//    updateNotification(DownloadStatus.Pending, finalFileName)
+}
+
+/**
+ * 从 URL 中提取文件名
+ */
+private fun extractFileNameFromUrl(url: String): String? {
+    return try {
+        // 方法1: 从URL路径中获取最后一个非空片段
+        val urlWithoutQuery = url.split('?').firstOrNull() ?: url
+        val pathSegments = urlWithoutQuery.split('/')
+        
+        // 查找最后一个非空的路径段
+        val fileNameWithExt = pathSegments.lastOrNull { it.isNotBlank() }
+        
+        // 如果没有找到合适的文件名，返回null
+        if (fileNameWithExt.isNullOrEmpty() || fileNameWithExt.contains('.').not()) {
+            null
+        } else {
+            // 清理文件名，移除一些特殊字符
+            cleanFileName(fileNameWithExt)
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Error extracting filename from URL: ${e.message}")
+        null
+    }
+}
+
+/**
+ * 清理文件名，移除不需要的字符
+ */
+private fun cleanFileName(fileName: String): String {
+    var cleaned = fileName
+    
+    // 移除URL参数（如果有）
+    cleaned = cleaned.split('?', '#').firstOrNull() ?: cleaned
+    
+    // 移除可能的安全文件名非法字符（但保留扩展名）
+    val illegalChars = Regex("[/\\\\:*?\"<>|]")
+    cleaned = cleaned.replace(illegalChars, "_")
+    
+    // 确保文件名不是太长
+    val maxLength = 255  // 文件系统限制
+    if (cleaned.length > maxLength) {
+        // 保留扩展名
+        val dotIndex = cleaned.lastIndexOf('.')
+        if (dotIndex > 0) {
+            val name = cleaned.substring(0, dotIndex)
+            val ext = cleaned.substring(dotIndex)
+            cleaned = name.take(maxLength - ext.length) + ext
+        } else {
+            cleaned = cleaned.take(maxLength)
+        }
+    }
+    
+    return cleaned.trim()
+}
 
     /**
      * 获取默认下载路径

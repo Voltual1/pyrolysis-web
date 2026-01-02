@@ -1,4 +1,4 @@
-//Copyright (C) 2025 Voltual
+// Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
@@ -71,12 +71,16 @@ fun LinkifyText(
     }
 
     val annotatedString = remember(text, linkColor) {
+        // 首先将 <br> 标签转换为换行符
+        val processedText = text.replace("<br>", "\n")
+        
         buildAnnotatedString {
-            append(text)
+            append(processedText)
 
             val matches = mutableListOf<LinkMatch>()
 
-            val postMatcher = INTERNAL_POST_LINK_PATTERN.matcher(text)
+            // 注意：这里使用处理后的文本进行匹配
+            val postMatcher = INTERNAL_POST_LINK_PATTERN.matcher(processedText)
             while (postMatcher.find()) {
                 postMatcher.group(1)?.let { postId ->
                     matches.add(
@@ -90,7 +94,7 @@ fun LinkifyText(
                 }
             }
             
-            val biliVideoMatcher = BILI_VIDEO_LINK_PATTERN.matcher(text)
+            val biliVideoMatcher = BILI_VIDEO_LINK_PATTERN.matcher(processedText)
             while (biliVideoMatcher.find()) {
                 biliVideoMatcher.group(1)?.let { bvid ->
                     matches.add(
@@ -104,7 +108,7 @@ fun LinkifyText(
                 }
             }
 
-            val urlMatcher = GENERAL_URL_PATTERN.matcher(text)
+            val urlMatcher = GENERAL_URL_PATTERN.matcher(processedText)
             while (urlMatcher.find()) {
                 val isAlreadyMatched = matches.any { it.start == urlMatcher.start() && it.end == urlMatcher.end() }
                 if (!isAlreadyMatched) {

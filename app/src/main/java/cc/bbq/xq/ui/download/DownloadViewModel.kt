@@ -13,32 +13,37 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.net.Uri
 import android.os.IBinder
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import cc.bbq.xq.data.db.AppDatabase
+import cc.bbq.xq.data.db.DownloadTaskRepository
 import cc.bbq.xq.service.download.DownloadService
 import cc.bbq.xq.service.download.DownloadStatus
+import cc.bbq.xq.service.download.DownloadTask
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
-import java.io.File
 
 @KoinViewModel
-class DownloadViewModel(application: Application) : AndroidViewModel(application) {
+class DownloadViewModel(
+    application: Application,
+    private val downloadTaskRepository: DownloadTaskRepository
+) : AndroidViewModel(application) {
     private val _downloadStatus = MutableStateFlow<DownloadStatus>(DownloadStatus.Idle)
     val downloadStatus: StateFlow<DownloadStatus> = _downloadStatus.asStateFlow()
 
     // 添加一个 StateFlow 来存储从数据库获取的所有下载任务
-    private val _downloadTasks = MutableStateFlow<List<cc.bbq.xq.service.download.DownloadTask>>(emptyList())
-    val downloadTasks: StateFlow<List<cc.bbq.xq.service.download.DownloadTask>> = _downloadTasks.asStateFlow()
+    private val _downloadTasks = MutableStateFlow<List<DownloadTask>>(emptyList())
+    val downloadTasks: StateFlow<List<DownloadTask>> = _downloadTasks.asStateFlow()
 
     private var downloadService: DownloadService? = null
     private var isBound = false
 
-    // 添加 AppDatabase 实例
-    private val appDatabase = AppDatabase.getDatabase(application)
-    private val downloadTaskDao = appDatabase.downloadTaskDao()
+    // 使用 DownloadTaskRepository
+
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -86,7 +91,7 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
      */
     private fun observeDownloadTasks() {
         viewModelScope.launch {
-            downloadTaskDao.getAllDownloadTasks().collect { tasks ->
+            downloadTaskRepository.getAllDownloadTasks().collect { tasks ->
                 _downloadTasks.value = tasks
             }
         }
@@ -95,7 +100,7 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
     /**
      * 根据 URL 获取特定的下载任务
      */
-    fun getDownloadTaskByUrl(url: String): cc.bbq.xq.service.download.DownloadTask? {
+    fun getDownloadTaskByUrl(url: String): DownloadTask? {
         return _downloadTasks.value.find { it.url == url }
     }
 
@@ -111,28 +116,11 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * 删除下载任务及其对应文件
-     * @param task 要删除的下载任务
+     * 删除下载任务
      */
-    fun deleteDownloadTask(task: cc.bbq.xq.service.download.DownloadTask) {
+    fun deleteDownloadTask(downloadTask: DownloadTask) {
         viewModelScope.launch {
-            try {
-                // 1. 从数据库中删除任务记录
-                downloadTaskDao.delete(task)
-                
-                // 2. 删除本地文件（如果存在）
-                val file = File(task.savePath, task.fileName)
-                if (file.exists()) {
-                    val deleted = file.delete()
-                    if (deleted) {
-                        // 文件删除成功
-                    } else {
-                        // 文件删除失败，可以记录日志
-                    }
-                }
-            } catch (e: Exception) {
-                // 处理删除过程中的异常
-            }
+            downloadTaskRepository.deleteDownloadTask(downloadTask)
         }
     }
 
@@ -141,6 +129,20 @@ class DownloadViewModel(application: Application) : AndroidViewModel(application
         if (isBound) {
             getApplication<Application>().unbindService(serviceConnection)
             isBound = false
+        }
+    }
+
+    /**
+     * 使用浏览器打开链接
+     */
+    fun openUrlInBrowser(url: String) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK // 确保在新的任务栈中打开
+        try {
+            ContextCompat.startActivity(getApplication(), intent, null)
+        } catch (e: Exception) {
+            // 处理无法打开链接的情况，例如没有浏览器应用
+            // 可以显示一个 Toast 提示用户
         }
     }
 }

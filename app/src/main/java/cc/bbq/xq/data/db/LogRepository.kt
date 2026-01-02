@@ -11,11 +11,13 @@
 package cc.bbq.xq.data.db
 
 import cc.bbq.xq.BBQApplication
+import org.koin.core.annotation.Single
 
 /**
  * 日志仓库，作为日志数据源的唯一入口。
  * 它封装了对 LogDao 的直接访问。
  */
+@Single
 class LogRepository {
 
     // 从 Application 单例中获取 DAO 实例

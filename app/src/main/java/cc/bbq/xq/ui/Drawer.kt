@@ -81,6 +81,7 @@ fun NavigationDrawerItems(
             DrawerItem("download", "下载管理", R.drawable.dsdownload, Download.route),
             DrawerItem("update_settings", "更新设置", R.drawable.asusupdate, UpdateSettings.route),
             DrawerItem("settings", "主题设置", R.drawable.ic_menu_settings, ThemeCustomize.route),
+            DrawerItem("signin_settings", "签到设置", R.drawable.sign_in,SignInSettings.route),
             DrawerItem("logout", "退出登录", R.drawable.ic_menu_logout, "logout") // 特殊处理
         )
     }
