@@ -1,4 +1,11 @@
-// 文件路径: cc/bbq/xq/data/db/AppDatabase.kt
+//Copyright (C) 2025 Voltual
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//（或任意更新的版本）的条款重新分发和/或修改它。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package cc.bbq.xq.data.db
 
 import android.content.Context
@@ -12,7 +19,7 @@ import cc.bbq.xq.ui.community.BrowseHistory
 
 @Database(
     entities = [LogEntry::class, BrowseHistory::class, NetworkCacheEntry::class, PostDraft::class, DownloadTask::class],
-    version = 5, // 增加数据库版本号
+    version = 6, // 增加数据库版本号到6
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -20,13 +27,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun browseHistoryDao(): BrowseHistoryDao
     abstract fun networkCacheDao(): NetworkCacheDao
     abstract fun postDraftDao(): PostDraftDao
-    abstract fun downloadTaskDao(): DownloadTaskDao // 添加 DownloadTaskDao 抽象方法
+    abstract fun downloadTaskDao(): DownloadTaskDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        // 修正参数名称以匹配父类
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -51,11 +57,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // 添加新的迁移脚本，用于创建 download_tasks 表
+        // 保留旧的迁移脚本
         private val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS `download_tasks` (`url` TEXT NOT NULL, `fileName` TEXT NOT NULL, `savePath` TEXT NOT NULL, `totalBytes` INTEGER NOT NULL, `downloadedBytes` INTEGER NOT NULL, `status` TEXT NOT NULL, `progress` REAL NOT NULL, PRIMARY KEY(`url`))"
+                )
+            }
+        }
+
+        // 新增迁移脚本：从版本5到版本6，添加speed和errorMessage字段
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 添加speed字段
+                db.execSQL(
+                    "ALTER TABLE `download_tasks` ADD COLUMN `speed` TEXT"
+                )
+                // 添加errorMessage字段
+                db.execSQL(
+                    "ALTER TABLE `download_tasks` ADD COLUMN `errorMessage` TEXT"
                 )
             }
         }
@@ -67,7 +87,14 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "qubot_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5) // 添加新的迁移脚本
+                    .addMigrations(
+                        MIGRATION_1_2, 
+                        MIGRATION_2_3, 
+                        MIGRATION_3_4, 
+                        MIGRATION_4_5,
+                        MIGRATION_5_6  // 添加新的迁移脚本
+                    )
+                    .fallbackToDestructiveMigration() // 添加这个以防万一，在开发阶段可以添加
                     .build()
                 INSTANCE = instance
                 instance
