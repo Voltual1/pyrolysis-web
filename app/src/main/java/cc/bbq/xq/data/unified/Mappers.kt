@@ -1,4 +1,11 @@
-                  // /app/src/main/java/cc/bbq/xq/data/unified/Mappers.kt
+//Copyright (C) 2025 Voltual
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//（或任意更新的版本）的条款重新分发和/或修改它。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package cc.bbq.xq.data.unified
 
 import cc.bbq.xq.AppStore
@@ -193,7 +200,16 @@ fun SineShopClient.SineShopUserInfo.toUnifiedUser(): UnifiedUser {
     )
 }
 
-// 修正 KtorClient (小趣空间) 映射中的类型错误
+/**
+ * 将小趣空间用户数据转换为统一用户详情
+ * 
+ * 注意：数据字段映射已修正（2026年1月9日18点）
+ * - followerscount → followersCount: 用户关注的人数（该用户关注了多少人）
+ * - fanscount → fansCount: 用户的粉丝数（有多少人关注了该用户）
+ * 
+ * 此前版本因映射错误导致UI显示相反，现已修复
+ */
+
 fun KtorClient.UserInformationData.toUnifiedUserDetail(): UnifiedUserDetail {
     return UnifiedUserDetail(
         id = this.id,
@@ -202,8 +218,8 @@ fun KtorClient.UserInformationData.toUnifiedUserDetail(): UnifiedUserDetail {
         avatarUrl = this.usertx,
         description = null, // 小趣空间无此字段
         hierarchy = this.hierarchy,
-        followersCount = this.fanscount,
-        fansCount = this.followerscount,
+        followersCount = this.followerscount,
+        fansCount = this.fanscount,
         postCount = this.postcount,
         likeCount = this.likecount,
         money = this.money, // Int 类型，正确
