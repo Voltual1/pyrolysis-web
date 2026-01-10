@@ -19,10 +19,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import cc.bbq.xq.ui.theme.BBQExposedDropdownMenuBox
 import cc.bbq.xq.ui.theme.BBQExposedDropdownMenu
-import androidx.compose.foundation.background
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import cc.bbq.xq.ui.UserDetail
@@ -46,8 +46,7 @@ fun RankingListScreen(
 Box(
     modifier = Modifier
         .fillMaxWidth()
-        .wrapContentHeight()
-        .padding(horizontal = 16.dp, vertical = 8.dp)
+        .padding(horizontal = 16.dp, vertical = 12.dp) // 增加垂直间距让视觉更平衡
 ) {
     BBQExposedDropdownMenuBox(
         expanded = expanded,
@@ -58,10 +57,18 @@ Box(
             onValueChange = {},
             readOnly = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, // 展开时的颜色
+                unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer, // 平时的颜色
+                disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, // 移除底部横线
+                unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
+            ),
+            shape = MaterialTheme.shapes.medium, // 让边角圆润一点，避免直角的生硬感
+            modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor( // 添加这行
-                    type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, // 使用正确的类型
+                .menuAnchor(
+                    type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
                     enabled = true
                 )
         )
