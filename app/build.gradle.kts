@@ -15,8 +15,8 @@ android {
         applicationId = "cc.bbq.xq"
         minSdk = 21
         targetSdk = 35
-        versionCode = 409
-        versionName = "16.1"
+        versionCode = 410
+        versionName = "16.2"
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         resourceConfigurations += listOf("zh")
@@ -64,6 +64,7 @@ android {
             // 排除protobuf相关目录
             excludes.add("/google/protobuf/**")
             excludes.add("/src/google/protobuf/**")
+            excludes.add("/java/core/java_features_proto-descriptor-set.proto.bin")            
             
             // 排除重复的LICENSE文件
             excludes.add("/META-INF/LICENSE*")
@@ -71,6 +72,8 @@ android {
             
             // 合并重复资源（可选）
             merges.add("/META-INF/services/**")
+            
+            excludes.add("/DebugProbesKt.bin")            
         }
     }
     
@@ -81,8 +84,7 @@ android {
 
 dependencies {
     // ===== 基础依赖 =====
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
-    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")   
     implementation("com.google.android.material:material:1.9.0")
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
     implementation("com.github.chrisbanes:PhotoView:2.3.0")
@@ -117,6 +119,11 @@ dependencies {
     implementation("androidx.room:room-ktx:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
     
+    //  ===== datastore =====
+    val datastore_version = "1.1.7"
+    implementation("androidx.datastore:datastore-preferences:$datastore_version")
+    implementation("androidx.datastore:datastore:$datastore_version")
+    
 // 添加 Koin Annotations 相关的依赖：
 val koin_version = "4.1.1"
 implementation("io.insert-koin:koin-androidx-compose:$koin_version")
@@ -137,10 +144,12 @@ ksp("io.insert-koin:koin-ksp-compiler:$koin_annotations_version") // 添加 KSP 
 
     // ===== kotlinx.serialization =====
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    //从androidx.security:security-crypto改成直接用Tink加密了
+    implementation("com.google.crypto.tink:tink-android:1.20.0")    
 
     // ===== protobuf 依赖 =====
     implementation("com.google.protobuf:protobuf-kotlin:4.32.1")//永远不要用lite!
-    implementation("androidx.security:security-crypto:1.1.0") // 加密库
+//    implementation("androidx.security:security-crypto:1.1.0") // 加密库，已经被弃用了！
     
     // ===== MarkDown 依赖 =====
     implementation("org.jetbrains:markdown:0.7.3")
