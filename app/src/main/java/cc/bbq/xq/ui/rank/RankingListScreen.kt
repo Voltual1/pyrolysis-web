@@ -17,6 +17,9 @@ import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import cc.bbq.xq.ui.theme.BBQExposedDropdownMenuBox
+import cc.bbq.xq.ui.theme.BBQExposedDropdownMenu
+import androidx.compose.foundation.background
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -46,7 +49,7 @@ Box(
         .wrapContentHeight()
         .padding(horizontal = 16.dp, vertical = 8.dp)
 ) {
-    ExposedDropdownMenuBox(
+    BBQExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded }
     ) {
@@ -55,7 +58,7 @@ Box(
             onValueChange = {},
             readOnly = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
+            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
                 .fillMaxWidth()
                 .menuAnchor( // 添加这行
                     type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, // 使用正确的类型
@@ -63,7 +66,7 @@ Box(
                 )
         )
 
-        ExposedDropdownMenu(
+        BBQExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {

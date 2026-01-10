@@ -35,6 +35,7 @@ import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
+import cc.bbq.xq.ui.theme.BBQDropdownMenu
 import cc.bbq.xq.ui.compose.LinkifyText
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
@@ -62,6 +63,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import cc.bbq.xq.ui.Download
+import androidx.compose.foundation.background
 import cc.bbq.xq.AppStore
 import cc.bbq.xq.util.formatTimestamp
 import androidx.compose.foundation.pager.HorizontalPager
@@ -396,7 +398,7 @@ var showMoreMenu by remember { mutableStateOf(false) }
     ) {
         // --- 应用头部信息 ---
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         AsyncImage(
@@ -425,7 +427,7 @@ var showMoreMenu by remember { mutableStateOf(false) }
                             }
                             
                             // 下拉菜单直接与按钮关联
-                            DropdownMenu(
+                            BBQDropdownMenu(
                                 expanded = showMoreMenu,
                                 onDismissRequest = { showMoreMenu = false },
                                 modifier = Modifier.width(180.dp)
@@ -522,7 +524,7 @@ var showMoreMenu by remember { mutableStateOf(false) }
         // --- 更新日志（弦应用商店） ---
         if (appDetail.store == AppStore.SIENE_SHOP && !appDetail.updateLog.isNullOrEmpty()) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("更新日志", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
@@ -541,7 +543,7 @@ if (appDetail.store == AppStore.XIAOQU_SPACE) {
     
     if (!appExplain.isNullOrEmpty()) {
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("适配说明", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
@@ -559,7 +561,7 @@ if (appDetail.store == AppStore.XIAOQU_SPACE) {
 
         // --- 应用信息卡片 ---
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("应用信息", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(12.dp))
@@ -701,7 +703,7 @@ if (appDetail.store == AppStore.XIAOQU_SPACE) {
 
         // --- 应用介绍 ---
 item {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("应用介绍", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
@@ -722,7 +724,7 @@ item {
         // --- 应用截图 ---
         if (!appDetail.previews.isNullOrEmpty()) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("应用截图", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
@@ -746,7 +748,7 @@ item {
 
         // --- 作者信息 ---
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("作者信息", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(12.dp))
