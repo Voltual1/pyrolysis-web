@@ -14,10 +14,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
+// 移除 MD2 的 ExperimentalMaterialApi 和 pullrefresh 导入
+// import androidx.compose.material.ExperimentalMaterialApi
+// import androidx.compose.material.pullrefresh.PullRefreshIndicator
+// import androidx.compose.material.pullrefresh.pullRefresh
+// import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,16 +36,20 @@ import cc.bbq.xq.ui.user.UserListViewModel
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import androidx.lifecycle.viewmodel.compose.viewModel
+// 添加 MD3 pullrefresh 导入
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+// 导入我们自定义的指示器
+import cc.bbq.xq.ui.theme.BBQPullRefreshIndicator
 
-@OptIn(ExperimentalMaterialApi::class)
+// 移除 @ExperimentalMaterialApi 注解
+// @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun UserListScreen(
     users: List<KtorClient.UserItem>,
     isLoading: Boolean,
-    errorMessage: String?,
-    //isEmpty: Boolean,
+    errorMessage: String?, 
     onLoadMore: () -> Unit,
-  //  onRefresh: () -> Unit, // 添加 onRefresh 参数
     onUserClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: UserListViewModel = viewModel()
@@ -55,52 +60,69 @@ fun UserListScreen(
     val safeErrorMessage by remember(errorMessage) { mutableStateOf(errorMessage) }
 
     // 下拉刷新状态
-    var refreshing by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullToRefreshState()
 
-    // 使用LaunchedEffect在viewModel.refresh()被调用时启动刷新
-    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = {
-        refreshing = true // 开始刷新
-        viewModel.refresh() // 调用 ViewModel 中的 refresh 函数
-        refreshing = false // 结束刷新
-    })
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .pullRefresh(pullRefreshState)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // 错误状态显示
-            safeErrorMessage?.takeIf { it.isNotEmpty() }?.let { message ->
-                ErrorState(message = message, onRetry = { viewModel.refresh() }) // 错误重试也调用 viewModel.refresh()
-                return
-            }
-
-            // 空状态显示
-            if (safeUsers.isEmpty() && !safeIsLoading && safeErrorMessage.isNullOrEmpty()) {
-                EmptyState()
-                return
-            }
-
-            // 使用更安全的 LazyColumn 实现
-            SafeLazyColumn(
-                users = safeUsers,
-                isLoading = safeIsLoading,
-                onLoadMore = onLoadMore,
-                onUserClick = onUserClick
-            )
+    // 监听 ViewModel 状态变化以结束刷新状态
+    LaunchedEffect(isLoading, errorMessage, users) {
+        if (!isLoading && (users.isNotEmpty() || !errorMessage.isNullOrEmpty()) && isRefreshing) {
+            isRefreshing = false
         }
-
-        PullRefreshIndicator(
-            refreshing = refreshing,
-            state = pullRefreshState,
-            modifier = Modifier.align(Alignment.TopCenter),
-            contentColor = MaterialTheme.colorScheme.primary,
-            backgroundColor = MaterialTheme.colorScheme.surface
-        )
     }
+
+    // 使用 MD3 的 PullToRefreshBox
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            isRefreshing = true
+            viewModel.refresh()
+            // 结束刷新状态的逻辑由 LaunchedEffect 处理
+        },
+        state = pullRefreshState,
+        // 使用我们自定义的指示器
+        indicator = {
+            BBQPullRefreshIndicator(
+                state = pullRefreshState,
+                isRefreshing = isRefreshing,
+                modifier = Modifier.align(Alignment.TopCenter)
+                // 颜色和形状将使用我们在 Components.kt 中定义的默认值（语义颜色）
+            )
+        },
+        modifier = modifier.fillMaxSize()
+    ) {
+        // 主内容区域
+        Box(modifier = Modifier.fillMaxSize()) {
+            // 使用 when 语句来处理不同的状态，避免在 Column 内部使用 return
+            when {
+                // 错误状态显示 - 优先级最高
+                !safeErrorMessage.isNullOrEmpty() -> {
+                    ErrorState(
+                        message = safeErrorMessage ?: "未知错误",
+                        onRetry = { viewModel.refresh() } // 错误重试也调用 viewModel.refresh()
+                    )
+                }
+                // 空状态显示 - 在没有错误且没有数据时显示
+                safeUsers.isEmpty() && !safeIsLoading -> {
+                    EmptyState()
+                }
+                // 加载中且没有数据时显示加载指示器
+                safeIsLoading && safeUsers.isEmpty() -> {
+                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                         CircularProgressIndicator()
+                     }
+                }
+                // 有数据时显示列表
+                else -> {
+                    SafeLazyColumn(
+                        users = safeUsers,
+                        isLoading = safeIsLoading,
+                        onLoadMore = onLoadMore,
+                        onUserClick = onUserClick
+                    )
+                }
+            }
+        }
+    } // End PullToRefreshBox
 }
 
 @Composable
@@ -123,10 +145,9 @@ private fun SafeLazyColumn(
 
             if (visibleItems.isNotEmpty() && totalItems > 0) {
                 val lastVisibleIndex = visibleItems.last().index
+
                 // 只有当滚动到接近底部且不是正在加载时才触发
-                if (lastVisibleIndex >= totalItems - 2 &&
-                    lastVisibleIndex != lastLoadMoreIndex &&
-                    !isLoading) {
+                if (lastVisibleIndex >= totalItems - 2 && lastVisibleIndex != lastLoadMoreIndex && !isLoading) {
                     lastLoadMoreIndex = lastVisibleIndex
                     onLoadMore()
                 }
@@ -145,6 +166,7 @@ private fun SafeLazyColumn(
         ) { index, user ->
             // fixed: remove unnecessary elvis operator
             StableUserListItem(user = user, onClick = { onUserClick(user.id) })
+
             if (index < users.size - 1) {
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             }
@@ -189,7 +211,7 @@ private fun StableUserListItem(
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(avatarUrl)
-//                    .crossfade(true)
+                    // .crossfade(true)
                     .build(),
                 placeholder = painterResource(R.drawable.ic_menu_profile),
                 contentDescription = "用户头像",
@@ -237,24 +259,25 @@ private fun EmptyState() {
 
 @Composable
 private fun ErrorState(message: String, onRetry: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+    Box(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-            textAlign = TextAlign.Center
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Button(onClick = onRetry) {
-            Text(stringResource(R.string.retry))
+            Button(onClick = onRetry) {
+                Text(stringResource(R.string.retry))
+            }
         }
     }
 }

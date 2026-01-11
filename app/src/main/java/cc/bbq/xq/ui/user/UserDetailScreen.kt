@@ -6,7 +6,7 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-    
+
 package cc.bbq.xq.ui.user
 
 import android.content.ClipData
@@ -39,10 +39,11 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
+// 移除 MD2 的 ExperimentalMaterialApi 和 pullrefresh 导入
+// import androidx.compose.material.ExperimentalMaterialApi
+// import androidx.compose.material.pullrefresh.PullRefreshIndicator
+// import androidx.compose.material.pullrefresh.pullRefresh
+// import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -61,8 +62,15 @@ import kotlinx.coroutines.flow.first
 import cc.bbq.xq.data.unified.UnifiedUserDetail  // 导入 UnifiedUserDetail
 import cc.bbq.xq.data.unified.FollowStatus // 添加导入
 import cc.bbq.xq.AppStore
+// 添加 MD3 pullrefresh 导入
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+// 导入我们自定义的指示器
+import cc.bbq.xq.ui.theme.BBQPullRefreshIndicator
+import androidx.compose.ui.ExperimentalComposeUiApi
 
-@OptIn(ExperimentalMaterialApi::class)
+// 移除 @ExperimentalMaterialApi 注解
+// @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun UserDetailScreen(
     viewModel: UserDetailViewModel,
@@ -77,24 +85,46 @@ fun UserDetailScreen(
     val userData by viewModel.userData.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
-    
+
     // 下拉刷新状态
-    var refreshing by remember { mutableStateOf(false) }
-    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = {
-        refreshing = true
-        viewModel.refresh()
-        refreshing = false
-    })
-    
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .pullRefresh(pullRefreshState)
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullToRefreshState()
+
+    // 监听 ViewModel 状态变化以结束刷新状态
+    // 优化 LaunchedEffect 条件
+    LaunchedEffect(isLoading, errorMessage, userData) {
+        // 当内容加载完成（无论成功还是失败）且正在刷新时，结束刷新状态
+        if (!isLoading && isRefreshing) {
+             isRefreshing = false
+        }
+    }
+
+    // 使用 MD3 的 PullToRefreshBox
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            isRefreshing = true
+            viewModel.refresh()
+            // 结束刷新状态的逻辑由 LaunchedEffect 处理
+        },
+        state = pullRefreshState,
+        // 使用我们自定义的指示器
+        indicator = {
+            BBQPullRefreshIndicator(
+                state = pullRefreshState,
+                isRefreshing = isRefreshing,
+                modifier = Modifier.align(Alignment.TopCenter)
+                // 颜色和形状将使用我们在 Components.kt 中定义的默认值（语义颜色）
+            )
+        },
+        modifier = modifier.fillMaxSize()
     ) {
         ScreenContent(
             modifier = Modifier.fillMaxSize(),
             userData = userData,
+            // 关键修改：将 isLoading 和 isRefreshing 传入 ScreenContent
             isLoading = isLoading,
+            isRefreshing = isRefreshing, // <<<--- 新增参数
             errorMessage = errorMessage,
             onPostsClick = onPostsClick,
             onResourcesClick = onResourcesClick,
@@ -103,22 +133,16 @@ fun UserDetailScreen(
             navController = navController,
             viewModel = viewModel
         )
-        
-        PullRefreshIndicator(
-            refreshing = refreshing,
-            state = pullRefreshState,
-            modifier = Modifier.align(Alignment.TopCenter),
-            contentColor = MaterialTheme.colorScheme.primary,
-            backgroundColor = MaterialTheme.colorScheme.surface
-        )
-    }
+    } // End PullToRefreshBox
 }
 
 @Composable
 private fun ScreenContent(
     modifier: Modifier = Modifier,
     userData: UnifiedUserDetail?,
-    isLoading: Boolean,
+    // 关键修改：接收 isLoading 和 isRefreshing
+    isLoading: Boolean,       // <<<--- 新增参数
+    isRefreshing: Boolean,     // <<<--- 新增参数
     errorMessage: String?,
     onPostsClick: () -> Unit,
     onResourcesClick: (Long, AppStore) -> Unit,
@@ -132,11 +156,14 @@ private fun ScreenContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
     ) {
+        // 关键修改：更新 when 条件，将 isLoading 和 isRefreshing 结合
         when {
-            isLoading -> LoadingState(Modifier.align(Alignment.Center))
+            // 显示加载指示器 - 仅在非刷新状态下且正在加载时显示
+            isLoading && !isRefreshing -> LoadingState(Modifier.align(Alignment.Center)) // <<<--- 修改条件
             !errorMessage.isNullOrEmpty() -> ErrorState(message = errorMessage, modifier = Modifier.align(Alignment.Center))
             userData == null -> EmptyState(modifier = Modifier.align(Alignment.Center))
             else -> {
+                BBQSnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))
                 // 根据 store 选择不同的 UI
                 when (userData.store) {
                     AppStore.XIAOQU_SPACE -> XiaoQuProfileContent(
@@ -146,7 +173,9 @@ private fun ScreenContent(
                         onImagePreview = onImagePreview,
                         snackbarHostState = snackbarHostState,
                         navController = navController,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        // 传递 isRefreshing 参数
+                        isRefreshing = isRefreshing // <<<--- 传递参数
                     )
                     AppStore.SIENE_SHOP -> SieneShopProfileContent(
                         userData = userData,
@@ -169,7 +198,9 @@ private fun XiaoQuProfileContent(
     onImagePreview: (String) -> Unit,
     snackbarHostState: SnackbarHostState,
     navController: NavController,
-    viewModel: UserDetailViewModel
+    viewModel: UserDetailViewModel,
+    // 添加 isRefreshing 参数
+    isRefreshing: Boolean // <<<--- 新增参数
 ) {
     Column(
         modifier = Modifier
@@ -186,22 +217,21 @@ private fun XiaoQuProfileContent(
                 }
             }
         )
-        
         ActionButtonsRow(
             userData = userData,
             onResourcesClick = { userId ->
                 onResourcesClick(userId, userData.store)
             },
             snackbarHostState = snackbarHostState,
-            viewModel = viewModel
+            viewModel = viewModel,
+            // 传递 isRefreshing 参数
+            isRefreshing = isRefreshing // <<<--- 传递参数
         )
-        
         StatsCard(
             userData = userData,
             onPostsClick = onPostsClick,
             navController = navController
         )
-        
         DetailsCard(userData = userData)
     }
 }
@@ -292,7 +322,7 @@ private fun SieneShopProfileContent(
                 InfoItem(label = "评论数量:", value = userData.replyCount?.toString() ?: "0")
                 InfoItem(label = "加入时间:", value = userData.joinTime?.let { formatTimestamp(it) } ?: "无")
                 InfoItem(label = "上次登录设备:", value = userData.lastLoginDevice ?: "无")
-                InfoItem(label = "上次在线:", value = userData.lastOnlineTime?.let { formatTimestamp(it) } ?: "无")                                
+                InfoItem(label = "上次在线:", value = userData.lastOnlineTime?.let { formatTimestamp(it) } ?: "无")
                 InfoItem(label = "绑定QQ:", value = userData.bindQq?.toString() ?: "无")
             }
         }
@@ -309,8 +339,9 @@ private fun SieneShopProfileContent(
 private fun HeaderCard(
     userData: UnifiedUserDetail,
     onAvatarClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    BBQCard {
+    BBQCard(modifier = modifier) {
         Box(modifier = Modifier.fillMaxWidth()) {
             ProfileBackground()
             Column(modifier = Modifier.padding(16.dp)) {
@@ -351,7 +382,10 @@ private fun UserAvatar(
     modifier: Modifier = Modifier
 ) {
     AsyncImage(
-        model = avatarUrl,
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(avatarUrl)
+            .diskCachePolicy(CachePolicy.DISABLED)
+            .build(),
         contentDescription = "用户头像",
         contentScale = ContentScale.Crop,
         placeholder = painterResource(R.drawable.ic_menu_profile),
@@ -401,14 +435,17 @@ private fun ActionButtonsRow(
     userData: UnifiedUserDetail,
     onResourcesClick: (Long) -> Unit,
     snackbarHostState: SnackbarHostState,
-    viewModel: UserDetailViewModel
+    viewModel: UserDetailViewModel,
+    // 添加 isRefreshing 参数
+    isRefreshing: Boolean // <<<--- 新增参数
 ) {
     val coroutineScope = rememberCoroutineScope()
-    
+
     // 根据关注状态显示不同的按钮
     val followStatus = userData.followStatus
-    val isProcessing = viewModel.isLoading.collectAsState().value
-    
+    // 注意：这里仍然使用 ViewModel 的 isLoading 状态来判断关注操作本身是否在进行
+    val isProcessingFollowAction by viewModel.isLoading.collectAsState() 
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -419,18 +456,22 @@ private fun ActionButtonsRow(
                 FollowStatus.NotFollowed -> {
                     BBQButton(
                         onClick = {
-                            coroutineScope.launch {
-                            snackbarHostState.showSnackbar(
-                                    message = "已关注 ${userData.displayName}，稍后将会刷新数据",
+                             // 检查是否是关注操作导致的加载，而不是页面刷新
+                             if (!isRefreshing) { // 只有在非刷新状态下才允许点击
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "已关注 ${userData.displayName}，稍后将会刷新数据",
 //                                    actionLabel = "确定",
-                                    duration = SnackbarDuration.Short
-                                )
-                                viewModel.followUser(userData.id)                                
-                            }
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    viewModel.followUser(userData.id)
+                                }
+                             }
                         },
                         modifier = Modifier.weight(1f),
-                        text = { 
-                            if (isProcessing) {
+                        text = {
+                            // 修改条件：只有在非刷新状态下且关注操作正在进行时才显示加载指示器
+                            if (!isRefreshing && isProcessingFollowAction) { // <<<--- 修改条件
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
                                     strokeWidth = 2.dp
@@ -439,25 +480,29 @@ private fun ActionButtonsRow(
                                 Text("关注")
                             }
                         },
-                        enabled = !isProcessing
+                        // 修改 enabled 状态：在刷新时也禁用按钮，避免混淆
+                        enabled = !isRefreshing && !isProcessingFollowAction // <<<--- 修改 enabled
                     )
                 }
-                
+
                 FollowStatus.YouFollowed -> {
                     BBQOutlinedButton(
                         onClick = {
-                            coroutineScope.launch {
-                            snackbarHostState.showSnackbar(
-                                    message = "已取消关注 ${userData.displayName}，稍后将会刷新数据",
+                             if (!isRefreshing) { // 只有在非刷新状态下才允许点击
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "已取消关注 ${userData.displayName}，稍后将会刷新数据",
 //                                    actionLabel = "确定",
-                                    duration = SnackbarDuration.Short
-                                )
-                                viewModel.unfollowUser(userData.id)                                
-                            }
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    viewModel.unfollowUser(userData.id)
+                                }
+                             }
                         },
                         modifier = Modifier.weight(1f),
-                        text = { 
-                            if (isProcessing) {
+                        text = {
+                            // 修改条件：只有在非刷新状态下且取消关注操作正在进行时才显示加载指示器
+                            if (!isRefreshing && isProcessingFollowAction) { // <<<--- 修改条件
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
                                     strokeWidth = 2.dp
@@ -466,25 +511,29 @@ private fun ActionButtonsRow(
                                 Text("已关注")
                             }
                         },
-                        enabled = !isProcessing
+                        // 修改 enabled 状态：在刷新时也禁用按钮，避免混淆
+                        enabled = !isRefreshing && !isProcessingFollowAction // <<<--- 修改 enabled
                     )
                 }
-                
+
                 FollowStatus.FollowedYou -> {
                     BBQButton(
                         onClick = {
-                            coroutineScope.launch {
-                            snackbarHostState.showSnackbar(
-                                    message = "已回关 ${userData.displayName}，稍后将会刷新数据",
+                             if (!isRefreshing) { // 只有在非刷新状态下才允许点击
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "已回关 ${userData.displayName}，稍后将会刷新数据",
 //                                    actionLabel = "确定",
-                                    duration = SnackbarDuration.Short
-                                )
-                                viewModel.followUser(userData.id)                                
-                            }
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    viewModel.followUser(userData.id)
+                                }
+                             }
                         },
                         modifier = Modifier.weight(1f),
-                        text = { 
-                            if (isProcessing) {
+                        text = {
+                            // 修改条件：只有在非刷新状态下且回关操作正在进行时才显示加载指示器
+                            if (!isRefreshing && isProcessingFollowAction) { // <<<--- 修改条件
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
                                     strokeWidth = 2.dp
@@ -493,26 +542,30 @@ private fun ActionButtonsRow(
                                 Text("回关")
                             }
                         },
-                        enabled = !isProcessing
+                        // 修改 enabled 状态：在刷新时也禁用按钮，避免混淆
+                        enabled = !isRefreshing && !isProcessingFollowAction // <<<--- 修改 enabled
                     )
                 }
-                
+
                 FollowStatus.MutualFollow -> {
                     BBQOutlinedButton(
                         onClick = {
-                            coroutineScope.launch {
-                                                            snackbarHostState.showSnackbar(
-                                    message = "已取消关注 ${userData.displayName}，稍后将会刷新数据",
+                             if (!isRefreshing) { // 只有在非刷新状态下才允许点击
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "已取消关注 ${userData.displayName}，稍后将会刷新数据",
 //                                    actionLabel = "确定",
-                                    duration = SnackbarDuration.Short
-                                )
+                                        duration = SnackbarDuration.Short
+                                    )
 
-                                viewModel.unfollowUser(userData.id)
-                            }
+                                    viewModel.unfollowUser(userData.id)
+                                }
+                             }
                         },
                         modifier = Modifier.weight(1f),
-                        text = { 
-                            if (isProcessing) {
+                        text = {
+                            // 修改条件：只有在非刷新状态下且取消互关操作正在进行时才显示加载指示器
+                            if (!isRefreshing && isProcessingFollowAction) { // <<<--- 修改条件
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
                                     strokeWidth = 2.dp
@@ -521,7 +574,8 @@ private fun ActionButtonsRow(
                                 Text("互相关注")
                             }
                         },
-                        enabled = !isProcessing
+                        // 修改 enabled 状态：在刷新时也禁用按钮，避免混淆
+                        enabled = !isRefreshing && !isProcessingFollowAction // <<<--- 修改 enabled
                     )
                 }
             }

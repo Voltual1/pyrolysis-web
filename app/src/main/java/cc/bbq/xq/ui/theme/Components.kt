@@ -65,7 +65,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,8 +73,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
+//import androidx.compose.ui.graphics.Color
+//import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -99,8 +98,14 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
-import androidx.compose.ui.Modifier
+//import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 
 // 基础按钮组件
 @Composable
@@ -884,5 +889,39 @@ fun BBQExposedDropdownMenuBox(
         onExpandedChange = onExpandedChange,
         modifier = modifier,
         content = content
+    )
+}
+
+/**
+ * 自定义的下拉刷新指示器，使用 MaterialTheme 语义颜色。
+ * 兼容 Compose Material 3 1.4.0 及以上版本。
+ *
+ * @param state [PullToRefreshState] 状态对象。
+ * @param isRefreshing Boolean，指示是否正在进行刷新。
+ * @param modifier Modifier 应用于此指示器的修饰符。
+ * @param backgroundColor 指示器容器的背景色，默认使用 [MaterialTheme.colorScheme.surface]。
+ * @param contentColor 指示器的颜色，默认使用 [MaterialTheme.colorScheme.primary]。
+ * @param containerShape 指示器容器的形状，默认使用 [PullToRefreshDefaults.indicatorShape]。
+ */
+@Composable
+fun BBQPullRefreshIndicator(
+    state: PullToRefreshState,
+    isRefreshing: Boolean,
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface, // 使用语义颜色
+    contentColor: Color = MaterialTheme.colorScheme.primary,   // 使用语义颜色
+    containerShape: Shape = PullToRefreshDefaults.indicatorShape, // 使用默认形状
+) {
+    // 使用 PullToRefreshDefaults.Indicator，它在 1.2.0+ 可用
+    PullToRefreshDefaults.Indicator(
+        state = state,
+        isRefreshing = isRefreshing,
+        modifier = modifier,
+        containerColor = backgroundColor, // 映射到 containerColor
+        color = contentColor,             // 映射到 color
+        // shape 参数在 PullToRefreshDefaults.Indicator 中不可直接设置
+        // Indicator 使用 PullToRefreshDefaults.indicatorShape 作为默认形状
+        // 如果需要自定义形状包裹，可以考虑使用 IndicatorBox，但这会更复杂。
+        // 对于当前需求，使用 Indicator 并设置颜色通常足够。
     )
 }

@@ -12,24 +12,21 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import cc.bbq.xq.KtorClient
+// 导入我们自定义的指示器
+import cc.bbq.xq.ui.theme.BBQPullRefreshIndicator // <<<--- 新增导入
 import cc.bbq.xq.ui.compose.MessageItem
 import cc.bbq.xq.ui.compose.PageJumpDialog
 import cc.bbq.xq.ui.compose.PaginationControls
 
 // 在 MessageCenterScreen.kt 中修复 UI 显示问题
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun MessageCenterScreen(
     viewModel: MessageViewModel,
@@ -41,32 +38,48 @@ fun MessageCenterScreen(
     val dialogShape = remember { RoundedCornerShape(4.dp) }
 
     // 下拉刷新状态
-    var refreshing by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(false) }
 
     // 修复：只在真正需要时初始化，不强制重置
     LaunchedEffect(Unit) {
         viewModel.initializeIfNeeded()
     }
 
-    val pullRefreshState = rememberPullRefreshState(refreshing, onRefresh = {
-        refreshing = true
-        viewModel.reset()
-        refreshing = false
-    })
+    val pullRefreshState = rememberPullToRefreshState()
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .pullRefresh(pullRefreshState)
+    // 使用 MD3 的 PullToRefreshBox
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            isRefreshing = true
+            // 触发 ViewModel 重置和加载第一页
+            viewModel.reset()
+            // 结束刷新状态的逻辑由 LaunchedEffect 处理
+        },
+        state = pullRefreshState, // 显式传递 state
+        // 使用我们自定义的指示器
+        indicator = {
+            BBQPullRefreshIndicator(
+                state = pullRefreshState,
+                isRefreshing = isRefreshing,
+                modifier = Modifier.align(Alignment.TopCenter)
+                // 颜色和形状将使用我们在 Components.kt 中定义的默认值（语义颜色）
+                // 你也可以在这里覆盖它们，例如：
+                // backgroundColor = MaterialTheme.colorScheme.inverseOnSurface,
+                // contentColor = MaterialTheme.colorScheme.inversePrimary,
+            )
+        },
+        modifier = modifier.fillMaxSize()
     ) {
+        // 内容区域
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
             // 消息列表
             Box(modifier = Modifier.weight(1f)) {
                 when {
-                    // 修复：显示加载指示条
-                    state.isLoading && state.messages.isEmpty() -> {
+                    // 显示加载指示条 - 仅在非刷新状态下且没有消息时显示
+                    state.isLoading && state.messages.isEmpty() && !isRefreshing -> {
                         Column(
                             modifier = Modifier.align(Alignment.Center),
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -82,8 +95,9 @@ fun MessageCenterScreen(
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
-                    state.messages.isEmpty() -> {
-                        Text(
+                    // 处理初始化但尚未加载的情况
+                    state.messages.isEmpty() && !state.isInitialized && !isRefreshing -> {
+                         Text(
                             text = "加载中...",
                             modifier = Modifier.align(Alignment.Center)
                         )
@@ -101,8 +115,8 @@ fun MessageCenterScreen(
                                 )
                             }
 
-                            // 修复：分页加载时显示底部加载指示
-                            if (state.isLoading && state.messages.isNotEmpty()) {
+                            // 分页加载时显示底部加载指示 - 仅在非刷新状态下显示
+                            if (state.isLoading && state.messages.isNotEmpty() && !isRefreshing) {
                                 item {
                                     Box(
                                         modifier = Modifier
@@ -118,7 +132,7 @@ fun MessageCenterScreen(
                     }
                 }
 
-                // 显示错误信息
+                // 显示错误信息 - 通常不在刷新时显示
                 state.error?.let { error ->
                     if (state.messages.isEmpty()) {
                         Column(
@@ -130,16 +144,20 @@ fun MessageCenterScreen(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Button(onClick = { viewModel.reset() }) {
+                            Button(onClick = {
+                                viewModel.reset()
+                            }) {
                                 Text("重试")
                             }
                         }
                     }
+                    // 如果有消息且加载出错，可以考虑用 Snackbar 显示错误
                 }
             }
 
             // 分页控制栏 - 只在有数据且不是加载中时显示
-            if (state.messages.isNotEmpty() && !state.isLoading) {
+            // (可选) 不在刷新时显示分页控件
+            if (state.messages.isNotEmpty() && !state.isLoading /* && !isRefreshing */) {
                 PaginationControls(
                     currentPage = state.currentPage,
                     totalPages = state.totalPages,
@@ -151,14 +169,7 @@ fun MessageCenterScreen(
                 )
             }
         }
-        PullRefreshIndicator(
-            refreshing = refreshing,
-            state = pullRefreshState,
-            modifier = Modifier.align(Alignment.TopCenter),
-            contentColor = MaterialTheme.colorScheme.primary,
-            backgroundColor = MaterialTheme.colorScheme.surface
-        )
-    }
+    } // End of PullToRefreshBox content
 
     // 分页跳转对话框
     if (showPageDialog) {
@@ -172,5 +183,22 @@ fun MessageCenterScreen(
             },
             shape = dialogShape
         )
+    }
+
+    // 监听 ViewModel 状态变化以结束刷新状态
+    // 注意：这个 LaunchedEffect 放在 PullToRefreshBox 之外，与 PullToRefreshBox 同级
+    LaunchedEffect(state.isLoading, state.isInitialized, state.error) {
+        // 当加载完成（isLoading 变为 false）且初始化完成（isInitialized 为 true）时，结束刷新
+        if (!state.isLoading && state.isInitialized && isRefreshing) {
+            isRefreshing = false
+        }
+        // 如果加载失败并且正在刷新，也应该结束刷新状态
+        if (state.error != null && isRefreshing) {
+             isRefreshing = false
+        }
+        // 额外检查：如果 ViewModel 的状态已经是初始化完成且非加载状态，但 UI 仍认为在刷新，也应结束
+        if (state.isInitialized && !state.isLoading && isRefreshing) {
+             isRefreshing = false
+        }
     }
 }
