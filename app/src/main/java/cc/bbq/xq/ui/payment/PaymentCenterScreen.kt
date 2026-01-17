@@ -669,12 +669,15 @@ fun PaymentResultDialog(
  */
 private fun startInternalDownload(context: Context, downloadUrl: String, fileName: String) {
     val intent = Intent(context, DownloadService::class.java).apply {
-        action = DownloadService.ACTION_START_DOWNLOAD
+        action = DownloadService.ACTION_START_DOWNLOAD 
+        
+        // 使用我们在 Service 里定义的常量名
         putExtra(DownloadService.EXTRA_URL, downloadUrl)
         putExtra(DownloadService.EXTRA_FILE_NAME, fileName)
-        // 可以根据需要添加保存路径
         putExtra(DownloadService.EXTRA_SAVE_PATH, getDefaultDownloadPath(context))
     }
+    
+    // 启动服务
     context.startService(intent)
 }
 
