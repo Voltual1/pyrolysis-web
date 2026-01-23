@@ -9,6 +9,7 @@ import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.utils.io.streams.asInput
 import kotlinx.coroutines.flow.first
+import cc.bbq.xq.AppStore
 import io.ktor.client.call.*
 import java.io.File
 import org.koin.core.annotation.Single
@@ -22,6 +23,106 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     // 辅助方法：获取 Token
     private suspend fun getToken(): String {
         return AuthManager.getCredentials(BBQApplication.instance).first()?.token ?: ""
+    }
+    
+    // 新增：获取当前用户详情
+    override suspend fun getCurrentUserDetail(): Result<UnifiedUserDetail> {
+        return try {
+            val token = getToken()
+            if (token.isEmpty()) {
+                return Result.failure(Exception("未登录"))
+            }
+            
+            val result = apiClient.getUserInfo(token = token)
+            result.map { response ->
+                if (response.code == 1) {
+                    // 将 UserData 转换为 UnifiedUserDetail
+                    UnifiedUserDetail(
+                        id = response.data.id,
+                        username = response.data.username,
+                        displayName = response.data.nickname,
+                        avatarUrl = response.data.usertx,
+                        hierarchy = response.data.hierarchy,
+                        money = response.data.money,
+                        followersCount = response.data.followerscount,
+                        fansCount = response.data.fanscount,
+                        postCount = response.data.postcount,
+                        likeCount = response.data.likecount,
+                        store = AppStore.XIAOQU_SPACE,
+                        raw = response.data
+                    )
+                } else {
+                    throw Exception("获取用户信息失败: ${response.msg}")
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    // 新增：更新用户资料
+    override suspend fun updateUserProfile(params: UpdateUserProfileParams): Result<Unit> {
+        return try {
+            val token = getToken()
+            if (token.isEmpty()) {
+                return Result.failure(Exception("未登录"))
+            }
+            
+            // 更新昵称
+            if (!params.nickname.isNullOrEmpty()) {
+                val nicknameResult = apiClient.modifyUserInfo(
+                    token = token,
+                    nickname = params.nickname,
+                    qq = null
+                )
+                if (nicknameResult.isSuccess && nicknameResult.getOrNull()?.code != 1) {
+                    return Result.failure(Exception("昵称修改失败"))
+                }
+            }
+            
+            // 更新QQ号
+            if (!params.qqNumber.isNullOrEmpty()) {
+                val qqResult = apiClient.modifyUserInfo(
+                    token = token,
+                    nickname = null,
+                    qq = params.qqNumber
+                )
+                if (qqResult.isSuccess && qqResult.getOrNull()?.code != 1) {
+                    return Result.failure(Exception("QQ号修改失败"))
+                }
+            }
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    // 新增：上传头像
+    override suspend fun uploadAvatar(imageBytes: ByteArray, filename: String): Result<String> {
+        return try {
+            val token = getToken()
+            if (token.isEmpty()) {
+                return Result.failure(Exception("未登录"))
+            }
+            
+            val result = apiClient.uploadAvatar(
+                appid = 1,
+                token = token,
+                file = imageBytes,
+                filename = filename
+            )
+            
+            result.map { response ->
+                if (response.code == 1) {
+                    "上传成功"
+                } else {
+                    throw Exception("头像上传失败: ${response.msg}")
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun getCategories(): Result<List<UnifiedCategory>> {
@@ -361,7 +462,12 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
 
 override suspend fun getMyReviews(page: Int): Result<Pair<List<UnifiedComment>, Int>> {
         return Result.failure(Exception("小趣空间暂不支持获取我的评价功能。"))
-    }
+    }    
+
+override suspend fun deleteComment(appId: String, commentId: String): Result<Unit> {
+    // 对于小趣空间，appId 参数不是必需的，但为了接口一致性，我们实现它
+    return deleteComment(commentId)
+}
     
     // 添加 getMyComments 方法
 override suspend fun getMyComments(page: Int): Result<Pair<List<UnifiedComment>, Int>> {

@@ -23,6 +23,7 @@ import cc.bbq.xq.SineShopClient.SineShopAppDetail
 import cc.bbq.xq.SineShopClient.AppTag
 import cc.bbq.xq.SineShopClient.SineShopDownloadSource
 import cc.bbq.xq.SineShopClient.SineShopUserInfo
+import cc.bbq.xq.LingMarketClient
 
 // --- KtorClient (小趣空间) Mappers ---
 
@@ -277,4 +278,118 @@ fun SineShopClient.SineShopReview.toUnifiedReview(): UnifiedComment {
         rating = this.rating,
         isCountedInRating = this.isCountedInRating
     )
+}
+
+// --- LingMarketClient (灵应用商店) Mappers ---
+
+// 辅助函数：构建完整的图标URL
+private fun buildFullIconUrl(iconKey: String): String {
+    val baseUrl = LingMarketClient.ICON_BASE_URL.removeSuffix("/")
+    val cleanIconKey = iconKey.removePrefix("/")
+    
+    // 始终拼接，无论输入是什么
+    return "$baseUrl/$cleanIconKey"
+}
+
+fun LingMarketClient.LingMarketUploader.toUnifiedUser(): UnifiedUser {
+    return UnifiedUser(
+        id = this.id,
+        displayName = this.nickname ?: this.username ?: "未知用户", // 确保非空
+        avatarUrl = null
+    )
+}
+
+fun LingMarketClient.LingMarketCategory.toUnifiedCategory(): UnifiedCategory {
+    return UnifiedCategory(
+        id = this.name,           // 使用 name 字段作为 id因为弦和灵的id含义不同
+        name = this.displayName,  // 使用 displayName 作为显示名称
+        icon = this.icon
+    )
+}
+
+fun LingMarketClient.LingMarketUser.toUnifiedUser(): UnifiedUser {
+    return UnifiedUser(
+        id = this.id,
+        displayName = this.nickname ?: this.username ?: "未知用户", // 确保非空
+        avatarUrl = this.avatarUrl
+    )
+}
+
+fun LingMarketClient.LingMarketUserLite.toUnifiedUser(): UnifiedUser {
+    return UnifiedUser(
+        id = this.id,
+        displayName = this.nickname ?: this.username ?: "未知用户", // 确保非空
+        avatarUrl = this.avatarUrl
+    )
+}
+
+fun LingMarketClient.LingMarketAppMinimal.toUnifiedAppItem(): UnifiedAppItem {
+    return UnifiedAppItem(
+        uniqueId = "${AppStore.LING_MARKET}-${this.id}-${this.versionCode}",
+        navigationId = this.id,
+        navigationVersionId = this.versionCode.toLong(),
+        store = AppStore.LING_MARKET,
+        name = this.name,
+        iconUrl = buildFullIconUrl(this.iconKey),
+        versionName = this.versionName
+    )
+}
+
+fun LingMarketClient.LingMarketApp.toUnifiedAppDetail(): UnifiedAppDetail {
+    // 格式化大小
+    val formattedSize = if (this.size > 0) {
+        when {
+            this.size >= 1024 * 1024 -> String.format("%.1f MB", this.size / (1024.0 * 1024.0))
+            this.size >= 1024 -> String.format("%.1f KB", this.size / 1024.0)
+            else -> "${this.size} B"
+        }
+    } else {
+        null
+    }
+
+    return UnifiedAppDetail(
+        id = this.id,
+        store = AppStore.LING_MARKET,
+        packageName = this.packageName,
+        name = this.name,
+        versionCode = this.versionCode.toLong(),
+        versionName = this.versionName,
+        iconUrl = buildFullIconUrl(this.iconKey),
+        type = this.category,
+        previews = this.screenshotKeys,
+        description = this.description,
+        updateLog = this.changelog ?: "", // 使用可选值
+        developer = null, // 灵应用商店没有单独的开发者字段
+        size = formattedSize, // 使用格式化后的字符串
+        uploadTime = this.createdAt.toLongOrNull() ?: 0L,
+        user = this.uploader.toUnifiedUser(),
+        tags = this.tags,
+        downloadCount = this.downloads,
+        isFavorite = false,
+        favoriteCount = 0,
+        reviewCount = this.ratingCount,
+        downloadUrl = null, // 留空，由 ViewModel 处理下载
+        raw = this
+    )
+}
+
+fun LingMarketClient.LingMarketUser.toUnifiedUserDetail(): UnifiedUserDetail {
+    return UnifiedUserDetail(
+        id = this.id.toLongOrNull() ?: 0L,
+        username = this.username,
+        displayName = this.nickname,
+        avatarUrl = this.avatarUrl,
+        description = this.bio,
+        store = AppStore.LING_MARKET,
+        raw = this
+    )
+}
+
+// 添加辅助函数：格式化文件大小
+private fun formatSize(bytes: Int): String {
+    return when {
+        bytes >= 1024 * 1024 -> String.format("%.2f MB", bytes / (1024.0 * 1024.0))
+        bytes >= 1024 -> String.format("%.2f KB", bytes / 1024.0)
+        else -> "$bytes B"
+    }
 }

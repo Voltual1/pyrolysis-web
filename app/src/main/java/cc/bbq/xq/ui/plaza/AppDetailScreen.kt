@@ -75,6 +75,7 @@ import cc.bbq.xq.util.formatTimestamp
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import cc.bbq.xq.ui.theme.UnifiedCommentItem
+import cc.bbq.xq.LingMarketClient
 
 // 移除 @ExperimentalMaterialApi 注解
 // @OptIn(ExperimentalMaterialApi::class)
@@ -233,6 +234,11 @@ fun AppDetailScreen(
                         snackbarHostState.showSnackbar("暂不支持该商店的分享功能")
                     }
                 }
+                AppStore.LING_MARKET -> {
+                                        coroutineScope.launch {
+                        snackbarHostState.showSnackbar("暂不支持该商店的分享功能")
+                                    }
+                                    }
                 AppStore.LOCAL -> {
                     // 本地商店：暂不支持分享
                     coroutineScope.launch {
@@ -528,6 +534,9 @@ var showMoreMenu by remember { mutableStateOf(false) }
                                     AppStore.LOCAL -> {
                                         // 本地商店：无特殊选项
                                     }
+                                    AppStore.LING_MARKET -> {
+                                        // 灵应用商店：无特殊选项
+                                    }
                                 }
                             }
                         }
@@ -559,18 +568,32 @@ var showMoreMenu by remember { mutableStateOf(false) }
         }
     }
         
-        // --- 更新日志（弦应用商店） ---
-        if (appDetail.store == AppStore.SIENE_SHOP && !appDetail.updateLog.isNullOrEmpty()) {
-            item {
-                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("更新日志", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(8.dp))
-                        Text(appDetail.updateLog!!)
-                    }
-                }
+// 更新日志（弦应用商店和灵应用商店）---
+val updateLog = when (appDetail.store) {
+    AppStore.SIENE_SHOP -> appDetail.updateLog
+    AppStore.LING_MARKET -> {
+        // 直接从 UnifiedAppDetail 的 updateLog 字段获取
+        appDetail.updateLog
+    }
+    else -> null
+}
+
+if (!updateLog.isNullOrEmpty()) {
+    item {
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("更新日志", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                LinkifyText(
+                    text = updateLog,
+                    navController = navController,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface)
+                )
             }
         }
+    }
+}
 
         // --- 适配说明（小趣空间） ---
 if (appDetail.store == AppStore.XIAOQU_SPACE) {
@@ -734,10 +757,112 @@ if (appDetail.store == AppStore.XIAOQU_SPACE) {
                                 )
                             }
                         }
-                    }
+// 修改 AppDetailContent 函数中的灵应用商店信息显示部分
+AppStore.LING_MARKET -> {
+    val raw = appDetail.raw as? LingMarketClient.LingMarketApp
+    
+    // SDK 信息
+    val minSdk = raw?.minSdk
+    val targetSdk = raw?.targetSdk
+    if (minSdk != null && targetSdk != null) {
+        InfoRow(
+            label = "SDK",
+            value = "Min $minSdk / Target $targetSdk"
+        )
+    } else if (minSdk != null) {
+        InfoRow(
+            label = "SDK",
+            value = "Min $minSdk"
+        )
+    }
+    
+    // 架构信息 - 检查字段名是否正确
+    val architectures = raw?.architectures
+    val archText = architectures?.joinToString(", ") ?: "未知"
+    InfoRow(
+        label = "Arch",
+        value = archText
+    )
+    
+    // 下载量 - 检查字段名
+    InfoRow(
+        label = "下载量",
+        value = "${appDetail.downloadCount ?: 0}"
+    )
+    
+    // 创建时间 - 检查字段名
+    val createdAt = raw?.createdAt
+    createdAt?.let {
+        // 尝试格式化日期 (2026-01-14T12:54:00.499Z -> 2026-01-14)
+        val formattedDate = try {
+            it.substring(0, 10)
+        } catch (e: Exception) {
+            it
+        }
+        InfoRow(
+            label = "创建于",
+            value = formattedDate
+        )
+    }
+    
+    // 包名 - 检查字段名
+    val packageName = raw?.packageName
+    InfoRow(
+        label = "包名",
+        value = packageName ?: "未知"
+    )
+    
+    // 应用类型
+    InfoRow(
+        label = "应用类型",
+        value = appDetail.type
+    )
+    
+    // 安装包大小
+    if (appDetail.size != null) {
+        InfoRow(
+            label = "安装包大小",
+            value = appDetail.size
+        )
+    }
+    
+    // 支持设备类型 - 检查字段名
+    val supportedDevices = raw?.supportedDevices
+    val devicesText = supportedDevices?.joinToString(", ") ?: "未知"
+    if (devicesText.isNotEmpty() && devicesText != "未知") {
+        InfoRow(
+            label = "支持设备",
+            value = devicesText
+        )
+    }
+    
+    // 支持的屏幕密度 - 检查字段名
+    val supportedDensities = raw?.supportedDensities
+    supportedDensities?.takeIf { it.isNotEmpty() }?.let { densities ->
+        InfoRow(
+            label = "屏幕密度",
+            value = densities.joinToString(", ")
+        )
+    }
+    
+    // 最后更新时间 - 检查字段名
+    val updatedAt = raw?.updatedAt
+    updatedAt?.let {
+        val formattedDate = try {
+            it.substring(0, 10)
+        } catch (e: Exception) {
+            it
+        }
+        InfoRow(
+            label = "最后更新",
+            value = formattedDate
+        )
+    }
+}
+}      }
                 }
             }
-        }
+        
 
         // --- 应用介绍 ---
 item {
@@ -906,6 +1031,30 @@ item {
                         }
                         AppStore.LOCAL -> {
                             // 本地商店只显示上传者
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                                    .clickable {
+                                        val userId = appDetail.user.id.toLongOrNull()
+                                        if (userId != null) {
+                                            navController.navigate(UserDetail(userId, appDetail.store).createRoute())
+                                        }
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AsyncImage(
+                                    model = appDetail.user.avatarUrl,
+                                    contentDescription = "上传者头像",
+                                    modifier = Modifier.size(40.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(Modifier.width(16.dp))
+                                Text(appDetail.user.displayName, style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
+                        AppStore.LING_MARKET -> {
+                            // 暂时这么处理
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()

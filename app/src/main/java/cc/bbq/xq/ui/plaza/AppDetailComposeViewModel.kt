@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
+import cc.bbq.xq.LingMarketClient
 import cc.bbq.xq.service.download.DownloadService
 
 @KoinViewModel
@@ -237,14 +238,30 @@ class AppDetailComposeViewModel(
     }
 
     fun handleDownloadClick() {
-        viewModelScope.launch {
-            val paymentInfo = checkPurchaseNeeded()
-            if (paymentInfo != null) {
-                // 需要购买，触发支付事件
-                _navigateToPaymentEvent.emit(paymentInfo)
+    viewModelScope.launch {
+        val paymentInfo = checkPurchaseNeeded()
+        if (paymentInfo != null) {
+            // 需要购买，触发支付事件
+            _navigateToPaymentEvent.emit(paymentInfo)
+        } else {
+            // 不需要购买，继续原有下载逻辑
+            _isLoading.value = true
+            
+            // 获取当前应用详情
+            val detail = _appDetail.value
+            
+            // 检查是否为灵应用商店且是否有直接下载URL
+            if (detail != null && detail.store == AppStore.LING_MARKET) {
+                // 对于灵应用商店，我们已经在 getAppDetail 中尝试获取了直接URL
+                if (detail.downloadUrl != null) {
+                    // 有直接下载URL，直接使用
+                    startDownload(detail.downloadUrl!!)
+                } else {
+                    // 如果没有直接下载URL，尝试从原始数据获取apkKey并请求下载URL
+                    handleLingMarketDownload(detail)
+                }
             } else {
-                // 不需要购买，继续原有下载逻辑
-                _isLoading.value = true
+                // 其他商店，使用原有逻辑
                 val result = repository.getAppDownloadSources(currentAppId, currentVersionId)
                 _isLoading.value = false
 
@@ -266,6 +283,35 @@ class AppDetailComposeViewModel(
             }
         }
     }
+}
+
+/**
+ * 处理灵应用商店的下载逻辑
+ */
+private suspend fun handleLingMarketDownload(detail: UnifiedAppDetail) {
+    try {
+        // 从原始数据获取apkKey
+        val raw = detail.raw as? LingMarketClient.LingMarketApp
+        if (raw != null && raw.apkKey.isNotEmpty()) {
+            // 获取直接下载URL
+            val result = LingMarketClient.getFileDownloadUrl(raw.apkKey)
+            _isLoading.value = false
+            
+            if (result.isSuccess) {
+                val downloadUrl = result.getOrThrow().url
+                startDownload(downloadUrl)
+            } else {
+                _errorMessage.value = "获取下载链接失败: ${result.exceptionOrNull()?.message}"
+            }
+        } else {
+            _isLoading.value = false
+            _errorMessage.value = "未找到应用文件信息"
+        }
+    } catch (e: Exception) {
+        _isLoading.value = false
+        _errorMessage.value = "处理下载时出错: ${e.message}"
+    }
+}
 
     fun closeDownloadDrawer() {
         _showDownloadDrawer.value = false
@@ -336,30 +382,35 @@ class AppDetailComposeViewModel(
     }
 
     fun submitComment(content: String) {
-        viewModelScope.launch {
-            val parentId = _currentReplyComment.value?.id
-            // 修正：传递 currentVersionId
-            val result = repository.postComment(currentAppId, currentVersionId, content, parentId, null)
+    viewModelScope.launch {
+        val parentId = _currentReplyComment.value?.id
+        val result = repository.postComment(currentAppId, currentVersionId, content, parentId, null)
 
-            if (result.isSuccess) {
-                loadComments()
-                if (parentId == null) closeCommentDialog() else closeReplyDialog()
-            } else {
-                _errorMessage.value = "提交失败: ${result.exceptionOrNull()?.message}"
-            }
+        if (result.isSuccess) {
+            loadComments()
+            if (parentId == null) closeCommentDialog() else closeReplyDialog()
+        } else {
+            _errorMessage.value = "提交失败: ${result.exceptionOrNull()?.message}"
         }
     }
+}
 
     fun deleteComment(commentId: String) {
-        viewModelScope.launch {
-            val result = repository.deleteComment(commentId)
-            if (result.isSuccess) {
-                loadComments()
-            } else {
-                _errorMessage.value = "删除失败: ${result.exceptionOrNull()?.message}"
-            }
+    viewModelScope.launch {
+        // 判断是否为灵应用商店，如果是则使用新方法
+        val result = if (currentStore == AppStore.LING_MARKET) {
+            repository.deleteComment(currentAppId, commentId)
+        } else {
+            repository.deleteComment(commentId)
+        }
+        
+        if (result.isSuccess) {
+            loadComments()
+        } else {
+            _errorMessage.value = "删除失败: ${result.exceptionOrNull()?.message}"
         }
     }
+}
 
     // 删除应用（无需鉴权，服务器会处理）
     fun deleteApp(onSuccess: () -> Unit) {

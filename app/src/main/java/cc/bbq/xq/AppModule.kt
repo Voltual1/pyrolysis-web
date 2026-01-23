@@ -9,16 +9,20 @@
 package cc.bbq.xq
 
 import cc.bbq.xq.data.db.AppDatabase
-import cc.bbq.xq.data.db.DownloadTaskDao  // 新增导入
+import cc.bbq.xq.data.db.DownloadTaskDao  
 import cc.bbq.xq.data.repository.IAppStoreRepository
 import cc.bbq.xq.data.repository.SineShopRepository
 import cc.bbq.xq.data.repository.XiaoQuRepository
+import cc.bbq.xq.data.repository.SineOpenMarketRepository // 添加这个导入
 import cc.bbq.xq.data.db.DownloadTaskRepository
 import cc.bbq.xq.ui.auth.LoginViewModel
 import cc.bbq.xq.ui.billing.BillingViewModel
+import org.koin.android.ext.koin.androidContext
 import cc.bbq.xq.ui.community.CommunityViewModel
 import cc.bbq.xq.ui.community.FollowingPostsViewModel
 import cc.bbq.xq.ui.community.HotPostsViewModel
+import cc.bbq.xq.data.DeviceNameDataStore
+import cc.bbq.xq.ui.user.UserProfileViewModel
 import cc.bbq.xq.ui.community.MyLikesViewModel
 import cc.bbq.xq.ui.payment.PaymentViewModel
 import cc.bbq.xq.ui.user.MyReviewsViewModel
@@ -49,6 +53,7 @@ import cc.bbq.xq.ui.home.HomeViewModel
 import cc.bbq.xq.ui.plaza.VersionListViewModel
 import cc.bbq.xq.data.UserFilterDataStore
 import cc.bbq.xq.ui.user.MyCommentsViewModel
+import cc.bbq.xq.data.repository.LingMarketRepository //新增灵应用商店仓库
 
 val appModule = module {
     // ViewModel definitions
@@ -100,21 +105,32 @@ val appModule = module {
     single { get<AppDatabase>().logDao() }  // 如果需要的话
     single { get<AppDatabase>().browseHistoryDao() }  // 如果需要的话
     single { get<AppDatabase>().networkCacheDao() }  // 如果需要的话
-    single { get<AppDatabase>().postDraftDao() }  // 如果需要的话
+    single { get<AppDatabase>().postDraftDao() }  
     single { get<AppDatabase>().downloadTaskDao() }  // 关键：添加 DownloadTaskDao 的定义
     
     single { SearchHistoryDataStore(androidApplication()) }
     single { StorageSettingsDataStore(androidApplication()) }
+    // 新增 UserProfileViewModel
+    viewModel { UserProfileViewModel(get(), get()) }
+    
+    // 新增 DeviceNameDataStore
+    single { DeviceNameDataStore(androidContext()) }
 
     // Repositories - 修改 DownloadTaskRepository 的定义
     single { XiaoQuRepository(KtorClient.ApiServiceImpl) }
     single { SineShopRepository() }
+    single { SineOpenMarketRepository() } // 添加 SINE_OPEN_MARKET 的仓库
     single { DownloadTaskRepository(get()) }  // 这里会自动使用上面定义的 DownloadTaskDao
     
+    single { LingMarketRepository() } // 新增灵应用商店
+    
+    // 修正：显式指定 Map 的类型参数
     single<Map<AppStore, IAppStoreRepository>> {
-        mapOf(
-            AppStore.XIAOQU_SPACE to get<XiaoQuRepository>(),
-            AppStore.SIENE_SHOP to get<SineShopRepository>()
-        )
+        val map = mutableMapOf<AppStore, IAppStoreRepository>()
+        map[AppStore.XIAOQU_SPACE] = get<XiaoQuRepository>()
+        map[AppStore.SIENE_SHOP] = get<SineShopRepository>()
+        map[AppStore.SINE_OPEN_MARKET] = get<SineOpenMarketRepository>()
+        map[AppStore.LING_MARKET] = get<LingMarketRepository>()
+        map
     }
 }

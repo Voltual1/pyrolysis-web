@@ -49,6 +49,7 @@ import cc.bbq.xq.ui.message.MessageCenterScreen
 import cc.bbq.xq.ui.message.MessageViewModel
 import cc.bbq.xq.ui.payment.PaymentCenterScreen
 import cc.bbq.xq.ui.payment.PaymentType
+import cc.bbq.xq.ui.user.UserProfileViewModel
 import cc.bbq.xq.ui.payment.PaymentViewModel
 import cc.bbq.xq.ui.player.PlayerScreen
 import cc.bbq.xq.ui.player.PlayerViewModel
@@ -99,6 +100,8 @@ fun AppNavHost(
 //    val userDetailViewModel: UserDetailViewModel = org.koin.androidx.compose.koinViewModel()
     val myPostsViewModel: MyPostsViewModel = org.koin.androidx.compose.koinViewModel()
     val appDetailViewModel: AppDetailComposeViewModel = org.koin.androidx.compose.koinViewModel()
+    val userProfileViewModel: UserProfileViewModel = koinViewModel()
+   
 
     NavHost(
         navController = navController,
@@ -385,11 +388,12 @@ composable(route = AccountProfile.route, arguments = AccountProfileArgs.argument
         AppStore.valueOf(storeName)
     } catch (e: IllegalArgumentException) {
         AppStore.XIAOQU_SPACE
-    }
+    }    
     
     AccountProfileScreen(
         modifier = Modifier.fillMaxSize(),
         snackbarHostState = snackbarHostState,
+        viewModel = userProfileViewModel,//新增viewmodel
         store = store // 传递 store 参数
     )
 }

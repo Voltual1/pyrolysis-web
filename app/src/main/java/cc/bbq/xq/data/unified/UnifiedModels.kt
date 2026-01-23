@@ -32,8 +32,25 @@ data class UnifiedComment(
 )
 
 /**
+ * 统一的更新用户资料参数
+ */
+data class UpdateUserProfileParams(
+    // 小趣空间字段
+    val nickname: String? = null,
+    val qqNumber: String? = null,
+    
+    // 弦应用商店字段
+    val displayName: String? = null,
+    val description: String? = null,
+    
+    // 设备名称（本地存储）
+    val deviceName: String? = null
+)
+
+/**
  * 统一的应用详情模型
  */
+
 data class UnifiedAppDetail(
     val id: String,
     val store: AppStore,
@@ -55,7 +72,7 @@ data class UnifiedAppDetail(
     val isFavorite: Boolean,
     val favoriteCount: Int,
     val reviewCount: Int,
-    val downloadUrl: String?,
+    val downloadUrl: String?, // 直接可用的下载URL
     val raw: Any
 )
 
@@ -98,7 +115,7 @@ data class UnifiedUserDetail(
     val username: String,
     val displayName: String,
     val avatarUrl: String?,
-    val description: String?,
+    val description: String? = null,
     
     // 小趣空间特有字段
     val hierarchy: String? = null,  // 等级
