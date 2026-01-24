@@ -91,13 +91,15 @@ class MainActivity : ComponentActivity() {
             val xiaoquUserAgreementAccepted by userAgreementDataStore.xiaoquUserAgreementFlow.collectAsState(initial = false)
             val sineUserAgreementAccepted by userAgreementDataStore.sineUserAgreementFlow.collectAsState(initial = false)
             val sinePrivacyPolicyAccepted by userAgreementDataStore.sinePrivacyPolicyFlow.collectAsState(initial = false)
+            val wysappmarketPrivacyPolicyAccepted by userAgreementDataStore.wysappmarketPrivacyPolicyFlow.collectAsState(initial = false)
+            val wysappmarketUserAgreementAccepted by userAgreementDataStore.wysappmarketUserAgreementFlow.collectAsState(initial = false)
 
             // 修复：在 LaunchedEffect 中标记数据已加载
             LaunchedEffect(Unit) {
                 // 等待一小段时间确保 DataStore 状态已加载
                 delay(100)
                 isAgreementDataLoaded = true
-            }
+            }            
 
             // 计算是否显示协议对话框
             val showAgreementDialog = remember(
@@ -105,6 +107,8 @@ class MainActivity : ComponentActivity() {
                 xiaoquUserAgreementAccepted, 
                 sineUserAgreementAccepted, 
                 sinePrivacyPolicyAccepted,
+                wysappmarketUserAgreementAccepted,
+                wysappmarketPrivacyPolicyAccepted,
                 isAgreementDataLoaded
             ) {
                 // 只有在数据加载完成后才决定是否显示对话框
@@ -114,7 +118,10 @@ class MainActivity : ComponentActivity() {
                     !(userAgreementAccepted && 
                       xiaoquUserAgreementAccepted && 
                       sineUserAgreementAccepted && 
-                      sinePrivacyPolicyAccepted)
+                      sinePrivacyPolicyAccepted&&
+                      wysappmarketUserAgreementAccepted&&
+                      wysappmarketPrivacyPolicyAccepted)
+
                 }
             }
 
@@ -562,7 +569,6 @@ fun MainComposeApp(snackbarHostState: SnackbarHostState) {
                     )
                 }
             },
-            // 将 SnackbarHost 替换为 BBQSnackbarHost
             snackbarHost = { BBQSnackbarHost(hostState = snackbarHostState) },
 
             content = { innerPadding ->

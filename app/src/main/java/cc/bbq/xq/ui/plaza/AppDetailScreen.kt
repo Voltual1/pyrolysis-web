@@ -228,19 +228,17 @@ fun AppDetailScreen(
                         snackbarHostState.showSnackbar("已复制分享链接: $shareUrl")
                     }
                 }
-                AppStore.SINE_OPEN_MARKET -> {
-                    // 弦开放市场：暂不支持分享
+                AppStore.WYSAPPMARKET -> {
+val shareUrl = "https://apk.wysteam.cn/app/?id=${detail.id}"
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val clip = ClipData.newPlainText("应用链接", shareUrl)
+                    clipboard.setPrimaryClip(clip)
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar("暂不支持该商店的分享功能")
-                    }
-                }
-                AppStore.LING_MARKET -> {
-                                        coroutineScope.launch {
-                        snackbarHostState.showSnackbar("暂不支持该商店的分享功能")
-                                    }
-                                    }
-                AppStore.LOCAL -> {
-                    // 本地商店：暂不支持分享
+                        snackbarHostState.showSnackbar("已复制分享链接: $shareUrl")
+                    }                                    }
+                                    
+                else -> {
+                    // 暂不支持分享
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar("暂不支持该商店的分享功能")
                     }
@@ -525,17 +523,8 @@ var showMoreMenu by remember { mutableStateOf(false) }
                                             }
                                         )
                                     }
-                                    AppStore.SIENE_SHOP -> {
-                                        // 弦应用商店：暂不显示特殊选项
-                                    }
-                                    AppStore.SINE_OPEN_MARKET -> {
-                                        // 弦开放市场：无特殊选项
-                                    }
-                                    AppStore.LOCAL -> {
+                                    else -> {
                                         // 本地商店：无特殊选项
-                                    }
-                                    AppStore.LING_MARKET -> {
-                                        // 灵应用商店：无特殊选项
                                     }
                                 }
                             }
@@ -743,20 +732,7 @@ if (appDetail.store == AppStore.XIAOQU_SPACE) {
                                 label = "下载次数",
                                 value = "${appDetail.downloadCount} 次"
                             )
-                        }
-                        AppStore.LOCAL -> {
-                            // 本地商店信息
-                            InfoRow(
-                                label = "应用类型",
-                                value = appDetail.type
-                            )
-                            if (appDetail.size != null) {
-                                InfoRow(
-                                    label = "安装包大小",
-                                    value = appDetail.size
-                                )
-                            }
-                        }
+                        }                        
 // 修改 AppDetailContent 函数中的灵应用商店信息显示部分
 AppStore.LING_MARKET -> {
     val raw = appDetail.raw as? LingMarketClient.LingMarketApp
@@ -859,9 +835,65 @@ AppStore.LING_MARKET -> {
         )
     }
 }
+AppStore.WYSAPPMARKET -> {
+    // 直接使用 UnifiedAppDetail 中转换好的字段
+    InfoRow(
+        label = "包名",
+        value = appDetail.packageName
+    )
+    InfoRow(
+        label = "版本类型",
+        value = appDetail.versionTypeDisplay
+    )
+    InfoRow(
+        label = "最低版本",
+        value = appDetail.minsdkDisplay
+    )
+    InfoRow(
+        label = "目标版本",
+        value = appDetail.targetsdkDisplay
+    )
+    InfoRow(
+        label = "CPU架构",
+        value = appDetail.cpuArchDisplay
+    )
+    InfoRow(
+        label = "系统兼容",
+        value = appDetail.osCompatibilityDisplay
+    )
+    InfoRow(
+        label = "屏幕兼容",
+        value = appDetail.displayCompatibilityDisplay
+    )
+    InfoRow(
+        label = "浏览次数",
+        value = "${appDetail.watchCount ?: 0}"
+    )
+    InfoRow(
+        label = "下载次数",
+        value = "${appDetail.downloadCount}"
+    )
+    InfoRow(
+        label = "上传时间",
+        value = if (appDetail.uploadTime > 0) formatTimestamp(appDetail.uploadTime) else "未知"
+    )
+    InfoRow(
+        label = "上传留言",
+        value = appDetail.upnote ?: "无"
+    )
+}
+else -> {
+Text(
+                    text = "⚠️什么都没有(||๐_๐)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error//,
+//                    fontSize = 12.sp,
+//                    lineHeight = 14.sp
+                )                        }
 }      }
                 }
             }
+        
         
 
         // --- 应用介绍 ---
@@ -1028,33 +1060,8 @@ item {
                                 Spacer(Modifier.width(16.dp))
                                 Text(appDetail.user.displayName, style = MaterialTheme.typography.titleMedium)
                             }
-                        }
-                        AppStore.LOCAL -> {
-                            // 本地商店只显示上传者
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                                    .clickable {
-                                        val userId = appDetail.user.id.toLongOrNull()
-                                        if (userId != null) {
-                                            navController.navigate(UserDetail(userId, appDetail.store).createRoute())
-                                        }
-                                    },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                AsyncImage(
-                                    model = appDetail.user.avatarUrl,
-                                    contentDescription = "上传者头像",
-                                    modifier = Modifier.size(40.dp).clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                                Spacer(Modifier.width(16.dp))
-                                Text(appDetail.user.displayName, style = MaterialTheme.typography.titleMedium)
-                            }
-                        }
+                        }                        
                         AppStore.LING_MARKET -> {
-                            // 暂时这么处理
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1076,6 +1083,35 @@ item {
                                 Spacer(Modifier.width(16.dp))
                                 Text(appDetail.user.displayName, style = MaterialTheme.typography.titleMedium)
                             }
+                        }
+                        AppStore.WYSAPPMARKET -> {
+    // 微思应用商店显示上传者信息
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clickable {
+                val userId = appDetail.user.id.toLongOrNull()
+                if (userId != null) {
+                    navController.navigate(UserDetail(userId, appDetail.store).createRoute())
+                }
+            },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(appDetail.user.displayName, style = MaterialTheme.typography.titleMedium)
+            Text("上传者", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+                        else -> {
+                            Text(
+                    text = "⚠什么都没有!﹁_﹂",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error//,
+//                    fontSize = 12.sp,
+//                    lineHeight = 14.sp
+                )
                         }
                     }
                 }

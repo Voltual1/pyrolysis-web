@@ -179,38 +179,7 @@ class AppDetailComposeViewModel(
                 _snackbarEvent.tryEmit("该商店不支持更新功能")
             }
         }
-    }
-
-    
-    // 分享链接
-    fun generateShareLink(): String? {
-        val detail = _appDetail.value ?: return null
-        
-        return when (detail.store) {
-            AppStore.XIAOQU_SPACE -> {
-                // 小趣空间分享链接从 raw 数据获取
-                val raw = detail.raw as? cc.bbq.xq.KtorClient.AppDetail
-                raw?.posturl
-            }
-            AppStore.SIENE_SHOP -> {
-                // 弦应用商店分享链接格式：sinemarket://app/{appId}
-                "sinemarket://app/${detail.id}"
-            }
-            else -> null
-        }
-    }
-    
-    // 复制分享链接到剪贴板
-    fun copyShareLink(context: Context): Boolean {
-        val link = generateShareLink()
-        return if (!link.isNullOrBlank()) {
-            _snackbarEvent.tryEmit("已复制分享链接")
-            true
-        } else {
-            _snackbarEvent.tryEmit("无法生成分享链接")
-            false
-        }
-    }
+    }        
 
     fun refresh() {
         loadData()

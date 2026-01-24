@@ -75,8 +75,8 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
                     nickname = params.nickname,
                     qq = null
                 )
-                if (nicknameResult.isSuccess && nicknameResult.getOrNull()?.code != 1) {
-                    return Result.failure(Exception("昵称修改失败"))
+                nicknameResult.getOrThrow().let { res ->
+                    if (res.code != 1) throw Exception("昵称修改失败")
                 }
             }
             
@@ -87,8 +87,8 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
                     nickname = null,
                     qq = params.qqNumber
                 )
-                if (qqResult.isSuccess && qqResult.getOrNull()?.code != 1) {
-                    return Result.failure(Exception("QQ号修改失败"))
+                qqResult.getOrThrow().let { res ->
+                    if (res.code != 1) throw Exception("QQ号修改失败")
                 }
             }
             
@@ -207,7 +207,7 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
         return try {
             val token = getToken()
             val result = apiClient.getAppsInformation(
-                token = token, 
+                token = token,
                 appsId = appId.toLong(),
                 appsVersionId = versionId
             )
@@ -227,7 +227,7 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
         return try {
             val result = apiClient.getAppsCommentList(
                 appsId = appId.toLong(),
-                appsVersionId = versionId, 
+                appsVersionId = versionId,
                 limit = 20,
                 page = page,
                 sortOrder = "desc"
@@ -251,9 +251,9 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
             val token = getToken()
             // 修正：如果 parentCommentId 为 null，则传 0 (根评论)
             val parentId = parentCommentId?.toLongOrNull() ?: 0L
-            
+
             val result = apiClient.postAppComment(
-                token = token, 
+                token = token,
                 content = content,
                 appsId = appId.toLong(),
                 appsVersionId = versionId, // 修正：使用传入的 versionId

@@ -24,6 +24,14 @@ import cc.bbq.xq.SineShopClient.AppTag
 import cc.bbq.xq.SineShopClient.SineShopDownloadSource
 import cc.bbq.xq.SineShopClient.SineShopUserInfo
 import cc.bbq.xq.LingMarketClient
+import cc.bbq.xq.WysAppMarketClient
+// 新增导入
+import cc.bbq.xq.AppVersionType
+import cc.bbq.xq.CpuArch
+import cc.bbq.xq.OsCompatibility
+import cc.bbq.xq.DisplayCompatibility
+import cc.bbq.xq.AndroidSdkVersion
+import cc.bbq.xq.AppFamily
 
 // --- KtorClient (小趣空间) Mappers ---
 
@@ -282,15 +290,12 @@ fun SineShopClient.SineShopReview.toUnifiedReview(): UnifiedComment {
 
 // --- LingMarketClient (灵应用商店) Mappers ---
 
-// 辅助函数：构建完整的图标URL
-private fun buildFullIconUrl(iconKey: String): String {
-    val baseUrl = LingMarketClient.ICON_BASE_URL.removeSuffix("/")
+private fun buildLingMarketIconUrl(iconKey: String): String {
+    // 专门为灵应用商店构建图标URL
+    val baseUrl = LingMarketClient.LINGMARKET_ICON_BASE_URL.removeSuffix("/")
     val cleanIconKey = iconKey.removePrefix("/")
-    
-    // 始终拼接，无论输入是什么
     return "$baseUrl/$cleanIconKey"
 }
-
 fun LingMarketClient.LingMarketUploader.toUnifiedUser(): UnifiedUser {
     return UnifiedUser(
         id = this.id,
@@ -330,7 +335,7 @@ fun LingMarketClient.LingMarketAppMinimal.toUnifiedAppItem(): UnifiedAppItem {
         navigationVersionId = this.versionCode.toLong(),
         store = AppStore.LING_MARKET,
         name = this.name,
-        iconUrl = buildFullIconUrl(this.iconKey),
+        iconUrl = buildLingMarketIconUrl(this.iconKey),
         versionName = this.versionName
     )
 }
@@ -354,7 +359,7 @@ fun LingMarketClient.LingMarketApp.toUnifiedAppDetail(): UnifiedAppDetail {
         name = this.name,
         versionCode = this.versionCode.toLong(),
         versionName = this.versionName,
-        iconUrl = buildFullIconUrl(this.iconKey),
+        iconUrl = buildLingMarketIconUrl(this.iconKey),
         type = this.category,
         previews = this.screenshotKeys,
         description = this.description,
@@ -385,11 +390,117 @@ fun LingMarketClient.LingMarketUser.toUnifiedUserDetail(): UnifiedUserDetail {
     )
 }
 
-// 添加辅助函数：格式化文件大小
-private fun formatSize(bytes: Int): String {
-    return when {
-        bytes >= 1024 * 1024 -> String.format("%.2f MB", bytes / (1024.0 * 1024.0))
-        bytes >= 1024 -> String.format("%.2f KB", bytes / 1024.0)
-        else -> "$bytes B"
+// --- WysAppMarketClient (微思应用商店) Mappers ---
+
+private fun buildWysAppMarketIconUrl(logo: String): String {
+    // 专门为微思应用商店构建图标URL
+    val baseUrl = WysAppMarketClient.WYSAPPMARKET_ICON_BASE_URL.removeSuffix("/")
+    val cleanIconKey = logo.removePrefix("/")
+    return "$baseUrl/$cleanIconKey"
+}
+
+/**
+ * 微思应用商店应用列表项转统一应用项
+ */
+fun WysAppMarketClient.WysAppListItem.toUnifiedAppItem(): UnifiedAppItem {
+    return UnifiedAppItem(
+        uniqueId = "${AppStore.WYSAPPMARKET}-${this.id}-${this.verid}",
+        navigationId = this.id.toString(),
+        navigationVersionId = this.verid.toLong(),
+        store = AppStore.WYSAPPMARKET,
+        name = this.name,
+        iconUrl = buildWysAppMarketIconUrl(this.logo),
+        versionName = this.version
+    )
+}
+
+/**
+ * 微思应用商店应用详情转统一应用详情
+ * 将魔法数字转换为枚举的显示名称并存储在统一模型中
+ */
+fun WysAppMarketClient.WysAppDetail.toUnifiedAppDetail(): UnifiedAppDetail {
+    // 格式化文件大小
+    val formattedSize = if (this.size > 0) {
+        when {
+            this.size >= 1024 * 1024 * 1024 -> String.format("%.2f GB", this.size / (1024.0 * 1024.0 * 1024.0))
+            this.size >= 1024 * 1024 -> String.format("%.2f MB", this.size / (1024.0 * 1024.0))
+            this.size >= 1024 -> String.format("%.2f KB", this.size / 1024.0)
+            else -> "${this.size} B"
+        }
+    } else {
+        "未知大小"
     }
+
+    // 转换更新时间戳
+    val uploadTime = try {
+        // 尝试解析时间字符串，如果失败则使用当前时间
+        this.uptime.toLongOrNull() ?: 0L
+    } catch (e: Exception) {
+        0L
+    }
+
+    // 构建应用标签/分类
+    val tags = mutableListOf<String>()
+    if (this.family.isNotEmpty()) tags.add(this.family)
+    this.keywords.split(",").forEach { keyword ->
+        if (keyword.isNotEmpty()) tags.add(keyword.trim())
+    }
+
+    // 构建预览图URL列表
+    val previewsList = this.image?.map { buildWysAppMarketIconUrl(it) }
+
+    // 使用枚举转换魔法数字
+    val versionType = AppVersionType.fromValue(this.type)
+    val cpuArch = CpuArch.fromValue(this.cpuArch)
+    val osCompatibility = OsCompatibility.fromValue(this.osCompatibility)
+    val displayCompatibility = DisplayCompatibility.fromValue(this.displayCompatibility)
+    val minSdkVersion = AndroidSdkVersion.fromApiLevel(this.minSdk)
+    val targetSdkVersion = AndroidSdkVersion.fromApiLevel(this.targetSdk)
+    val appFamily = AppFamily.fromDisplayName(this.family)
+
+    return UnifiedAppDetail(
+        id = this.id.toString(),
+        store = AppStore.WYSAPPMARKET,
+        packageName = this.pack,
+        name = this.name,
+        versionCode = this.verid.toLong(),
+        versionName = this.version,
+        iconUrl = buildWysAppMarketIconUrl(this.logo),
+        type = appFamily.displayName, // 使用转换后的分类显示名称
+        previews = previewsList,
+        description = this.content,
+        updateLog = this.uplog,
+        developer = this.developer,
+        size = formattedSize,
+        uploadTime = uploadTime,
+        user = UnifiedUser(
+            id = this.userId.toString(),
+            displayName = this.username ?: "未知用户",
+            avatarUrl = null
+        ),
+        tags = tags,
+        downloadCount = this.downloadCount,
+        isFavorite = false,
+        favoriteCount = 0,
+        reviewCount = 0,
+        downloadUrl = this.link,
+        raw = this,
+        // 新增的微思应用商店专用字段
+        minsdkDisplay = minSdkVersion.displayName,
+        targetsdkDisplay = targetSdkVersion.displayName,
+        cpuArchDisplay = cpuArch.displayName,
+        osCompatibilityDisplay = osCompatibility.displayName,
+        displayCompatibilityDisplay = displayCompatibility.displayName,
+        watchCount = this.watch,
+        upnote = this.upnote,
+        versionTypeDisplay = versionType.displayName
+    )
+}
+
+fun WysAppMarketClient.DownloadSource.toUnifiedDownloadSource(): UnifiedDownloadSource {
+    return UnifiedDownloadSource(
+        name = this.name,
+        url = this.url,
+        isOfficial = this.type == 0
+    )
 }

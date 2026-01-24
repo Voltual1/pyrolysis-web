@@ -30,6 +30,8 @@ class UserAgreementDataStore(context: Context) {
         val xiaoquUserAgreementKey = booleanPreferencesKey("xiaoqu_user_agreement")
         val sineUserAgreementKey = booleanPreferencesKey("sine_user_agreement")
         val sinePrivacyPolicyKey = booleanPreferencesKey("sine_privacy_policy")
+        val wysappmarketUserAgreementKey= booleanPreferencesKey("wysappmarket_user_agreement")
+        val wysappmarketPrivacyPolicyKey= booleanPreferencesKey("wysappmarket_privacy_policy")
     }
 
     val userAgreementFlow: Flow<Boolean> = agreementDataStore.data
@@ -51,6 +53,15 @@ class UserAgreementDataStore(context: Context) {
         .map { preferences ->
             preferences[PreferencesKeys.sinePrivacyPolicyKey] ?: false
         }
+        
+    val wysappmarketUserAgreementFlow: Flow<Boolean> = agreementDataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.wysappmarketUserAgreementKey] ?: false
+        }
+    val wysappmarketPrivacyPolicyFlow: Flow<Boolean> = agreementDataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.wysappmarketPrivacyPolicyKey] ?: false
+        }
 
     suspend fun setUserAgreementAccepted(accepted: Boolean) {
         agreementDataStore.edit { preferences ->
@@ -67,6 +78,18 @@ class UserAgreementDataStore(context: Context) {
     suspend fun setSineUserAgreementAccepted(accepted: Boolean) {
         agreementDataStore.edit { preferences ->
             preferences[PreferencesKeys.sineUserAgreementKey] = accepted
+        }
+    }
+    
+    suspend fun setWysAppMarketUserAgreementAccepted(accepted: Boolean) {
+        agreementDataStore.edit { preferences ->
+            preferences[PreferencesKeys.wysappmarketUserAgreementKey] = accepted
+        }
+    }
+    
+    suspend fun setWysAppMarketPrivacyPolicyAccepted(accepted: Boolean) {
+        agreementDataStore.edit { preferences ->
+            preferences[PreferencesKeys.wysappmarketPrivacyPolicyKey] = accepted
         }
     }
 
