@@ -349,14 +349,14 @@ data class SineShopReview(
     }
 
     /** 获取个人信息：该请求通常需要携带 Token */
-    suspend fun getUserInfo(token: String? = null): Result<SineShopUserInfo> {
+    suspend fun getUserInfo(token: String): Result<SineShopUserInfo> {
         return get<BaseResponse<SineShopUserInfo>>("/user/info", token = token).map {
             if (it.code == 0) it.data ?: throw IOException("Data is null") else throw IOException(it.msg)
         }
     }
 
-    /** 修改个人信息：该请求通常需要携带 Token */
-    suspend fun editUserInfo(displayName: String, describe: String, token: String? = null): Result<Boolean> {
+    /** 修改个人信息：该请求需要携带 Token */
+    suspend fun editUserInfo(displayName: String, describe: String, token: String): Result<Boolean> {
         val parameters = Parameters.build {
             append("displayname", displayName)
             append("describe", describe)
