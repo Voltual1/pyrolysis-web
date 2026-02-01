@@ -1,101 +1,65 @@
-    //Copyright (C) 2025 Voltual
-// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
-//（或任意更新的版本）的条款重新分发和/或修改它。
-//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
-//
-// 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package cc.bbq.xq.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
 
-private val Context.userAgreementDataStore: DataStore<Preferences> by preferencesDataStore(name = "user_agreement")
+// 定义当前的协议版本号
+object AgreementVersions {
+    const val USER_AGREEMENT = 1
+    const val XIAOQU_AGREEMENT = 1 
+    const val SINE_PRIVACY = 1
+    const val SINE_AGREEMENT = 1
+    const val WYSMARKET_PRIVACY = 1
+    const val LING_AGREEMENT = 1 // 新增：灵应用商店协议版本
+}
+
+private val Context.userAgreementDataStore: DataStore<Preferences> by preferencesDataStore(name = "user_agreement_prefs")
 
 @Single
 class UserAgreementDataStore(context: Context) {
 
-    private val agreementDataStore = context.userAgreementDataStore
+    private val dataStore = context.userAgreementDataStore
 
-    private object PreferencesKeys {
-        val userAgreementKey = booleanPreferencesKey("user_agreement")
-        val xiaoquUserAgreementKey = booleanPreferencesKey("xiaoqu_user_agreement")
-        val sineUserAgreementKey = booleanPreferencesKey("sine_user_agreement")
-        val sinePrivacyPolicyKey = booleanPreferencesKey("sine_privacy_policy")
-        val wysappmarketUserAgreementKey= booleanPreferencesKey("wysappmarket_user_agreement")
-        val wysappmarketPrivacyPolicyKey= booleanPreferencesKey("wysappmarket_privacy_policy")
+    private object Keys {
+        val USER_AGREEMENT_VER = intPreferencesKey("user_agreement_ver")
+        val XIAOQU_AGREEMENT_VER = intPreferencesKey("xiaoqu_user_agreement_ver")
+        val SINE_AGREEMENT_VER = intPreferencesKey("sine_user_agreement_ver")
+        val SINE_PRIVACY_VER = intPreferencesKey("sine_privacy_policy_ver")
+        val WYSMARKET_AGREEMENT_VER = intPreferencesKey("wysappmarket_user_agreement_ver")
+        val WYSMARKET_PRIVACY_VER = intPreferencesKey("wysappmarket_privacy_policy_ver")
+        val LING_AGREEMENT_VER = intPreferencesKey("ling_user_agreement_ver") // 新增 Key
     }
 
-    val userAgreementFlow: Flow<Boolean> = agreementDataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.userAgreementKey] ?: false
+    // --- 通用判断逻辑 ---
+    private fun isAccepted(key: Preferences.Key<Int>, currentVersion: Int): Flow<Boolean> =
+        dataStore.data.map { prefs ->
+            (prefs[key] ?: 0) >= currentVersion
         }
 
-    val xiaoquUserAgreementFlow: Flow<Boolean> = agreementDataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.xiaoquUserAgreementKey] ?: false
-        }
+    // --- 对外暴露的 Flow ---
+    val isUserAgreementAccepted = isAccepted(Keys.USER_AGREEMENT_VER, AgreementVersions.USER_AGREEMENT)
+    val isXiaoquAccepted = isAccepted(Keys.XIAOQU_AGREEMENT_VER, AgreementVersions.XIAOQU_AGREEMENT)
+    val isSineAgreementAccepted = isAccepted(Keys.SINE_AGREEMENT_VER, AgreementVersions.SINE_AGREEMENT)
+    val isSinePrivacyAccepted = isAccepted(Keys.SINE_PRIVACY_VER, AgreementVersions.SINE_PRIVACY)
+    val isWysMarketAgreementAccepted = isAccepted(Keys.WYSMARKET_AGREEMENT_VER, AgreementVersions.WYSMARKET_PRIVACY)
+    val isWysMarketPrivacyAccepted = isAccepted(Keys.WYSMARKET_PRIVACY_VER, AgreementVersions.WYSMARKET_PRIVACY)
+    val isLingAgreementAccepted = isAccepted(Keys.LING_AGREEMENT_VER, AgreementVersions.LING_AGREEMENT) // 新增监听
 
-    val sineUserAgreementFlow: Flow<Boolean> = agreementDataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.sineUserAgreementKey] ?: false
-        }
+    // --- 写入方法 ---
+    suspend fun acceptUserAgreement() = saveVersion(Keys.USER_AGREEMENT_VER, AgreementVersions.USER_AGREEMENT)
+    suspend fun acceptXiaoquAgreement() = saveVersion(Keys.XIAOQU_AGREEMENT_VER, AgreementVersions.XIAOQU_AGREEMENT)
+    suspend fun acceptSineAgreement() = saveVersion(Keys.SINE_AGREEMENT_VER, AgreementVersions.SINE_AGREEMENT)
+    suspend fun acceptSinePrivacy() = saveVersion(Keys.SINE_PRIVACY_VER, AgreementVersions.SINE_PRIVACY)
+    suspend fun acceptWysMarketAgreement() = saveVersion(Keys.WYSMARKET_AGREEMENT_VER, AgreementVersions.WYSMARKET_PRIVACY)
+    suspend fun acceptWysMarketPrivacy() = saveVersion(Keys.WYSMARKET_PRIVACY_VER, AgreementVersions.WYSMARKET_PRIVACY)
+    suspend fun acceptLingAgreement() = saveVersion(Keys.LING_AGREEMENT_VER, AgreementVersions.LING_AGREEMENT) // 新增保存方法
 
-    val sinePrivacyPolicyFlow: Flow<Boolean> = agreementDataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.sinePrivacyPolicyKey] ?: false
-        }
-        
-    val wysappmarketUserAgreementFlow: Flow<Boolean> = agreementDataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.wysappmarketUserAgreementKey] ?: false
-        }
-    val wysappmarketPrivacyPolicyFlow: Flow<Boolean> = agreementDataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.wysappmarketPrivacyPolicyKey] ?: false
-        }
-
-    suspend fun setUserAgreementAccepted(accepted: Boolean) {
-        agreementDataStore.edit { preferences ->
-            preferences[PreferencesKeys.userAgreementKey] = accepted
-        }
-    }
-
-    suspend fun setXiaoquUserAgreementAccepted(accepted: Boolean) {
-        agreementDataStore.edit { preferences ->
-            preferences[PreferencesKeys.xiaoquUserAgreementKey] = accepted
-        }
-    }
-
-    suspend fun setSineUserAgreementAccepted(accepted: Boolean) {
-        agreementDataStore.edit { preferences ->
-            preferences[PreferencesKeys.sineUserAgreementKey] = accepted
-        }
-    }
-    
-    suspend fun setWysAppMarketUserAgreementAccepted(accepted: Boolean) {
-        agreementDataStore.edit { preferences ->
-            preferences[PreferencesKeys.wysappmarketUserAgreementKey] = accepted
-        }
-    }
-    
-    suspend fun setWysAppMarketPrivacyPolicyAccepted(accepted: Boolean) {
-        agreementDataStore.edit { preferences ->
-            preferences[PreferencesKeys.wysappmarketPrivacyPolicyKey] = accepted
-        }
-    }
-
-    suspend fun setSinePrivacyPolicyAccepted(accepted: Boolean) {
-        agreementDataStore.edit { preferences ->
-            preferences[PreferencesKeys.sinePrivacyPolicyKey] = accepted
-        }
+    private suspend fun saveVersion(key: Preferences.Key<Int>, version: Int) {
+        dataStore.edit { it[key] = version }
     }
 }

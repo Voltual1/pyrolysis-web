@@ -8,140 +8,131 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package cc.bbq.xq.ui.payment
 
-import android.content.Context
-import android.content.Intent
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import coil3.compose.AsyncImage
-import androidx.navigation.NavController
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import android.app.Activity
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Download // 修改这里
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.material3.Button
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import cc.bbq.xq.service.download.DownloadService
-import cc.bbq.xq.ui.theme.AppShapes
-import cc.bbq.xq.ui.theme.BBQButton
-import cc.bbq.xq.ui.theme.BBQCard
-import cc.bbq.xq.ui.theme.BBQOutlinedButton
+import androidx.navigation.NavController
+import cc.bbq.xq.ui.Download
+import cc.bbq.xq.ui.theme.*
+import cc.bbq.xq.util.DownloadManager
+import coil3.compose.AsyncImage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.collectLatest // 必须导入这个才能使用 collectLatest
 import kotlinx.coroutines.launch
 
 @Composable
 fun PaymentCenterScreen(
     viewModel: PaymentViewModel,
-    navController: NavController? = null, // 添加 NavController 参数
-    modifier: Modifier = Modifier // 新增：接收外部 modifier
+    navController: NavController? = null,
+    modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    
     val isLoadingBalance by viewModel.isLoadingBalance.collectAsState()
     val paymentInfo by viewModel.paymentInfo.collectAsState()
     val coinsBalance by viewModel.coinsBalance.collectAsState()
     val paymentStatus by viewModel.paymentStatus.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
-    val context = LocalContext.current
-/*
-    // 支付成功后自动触发下载
-    LaunchedEffect(paymentStatus) {
-        if (paymentStatus == PaymentStatus.SUCCESS) {
-            val downloadUrl = viewModel.getDownloadUrl()
-            if (!downloadUrl.isNullOrEmpty()) {
-                // 使用内部下载服务
-                val fileName = viewModel.getDownloadFileName() ?: "download_file.apk"
-                startInternalDownload(context, downloadUrl, fileName)
-                
-                // 导航到下载屏幕 - 使用字符串路由
-                navController?.navigate("download") // 改为字符串路由
+    
+    val downloadUrl by remember(paymentStatus) {
+        derivedStateOf {
+            if (paymentStatus == PaymentStatus.SUCCESS) viewModel.getDownloadUrl() else null
+        }
+    }
+    
+    val downloadFileName by remember(paymentStatus) {
+        derivedStateOf {
+            if (paymentStatus == PaymentStatus.SUCCESS) viewModel.getDownloadFileName() else null
+        }
+    }
+    
+    fun startDownload(url: String, fileName: String) {
+        val activity = context as? Activity
+        activity?.let {
+            DownloadManager.download(it, url, fileName, null)
+        }
+    }
+    
+    LaunchedEffect(Unit) {
+        viewModel.downloadEvent.collectLatest { event ->
+            val activity = context as? Activity
+            activity?.let {
+                DownloadManager.download(
+                    activity = it,
+                    url = event.url,
+                    fileName = event.fileName
+                )
+
+                coroutineScope.launch {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "任务已发送至 1DM: ${event.fileName}",
+                        actionLabel = "管理下载",
+                        withDismissAction = true,
+                        duration = SnackbarDuration.Indefinite
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        navController?.navigate(Download.route)
+                    }
+                }
             }
         }
     }
-    */
 
+    // 根据状态渲染 UI
     when (paymentStatus) {
         PaymentStatus.SUCCESS -> {
             PaymentResultDialog(
                 success = true,
                 onDismiss = { 
                     viewModel.resetPaymentStatus()
-                    // 完成后可以返回上一页
                     navController?.popBackStack()
                 },
                 onDownload = {
-                    val downloadUrl = viewModel.getDownloadUrl()
-                    val fileName = viewModel.getDownloadFileName()
-                    if (!downloadUrl.isNullOrEmpty() && !fileName.isNullOrEmpty()) {
-                        startInternalDownload(context, downloadUrl, fileName)
-                        // 导航到下载屏幕 - 使用字符串路由
-                        navController?.navigate("download") // 改为字符串路由
+                    downloadUrl?.let { url ->
+                        downloadFileName?.let { fileName -> startDownload(url, fileName) }
                     }
                 },
-                showDownloadButton = paymentInfo?.type == PaymentType.APP_PURCHASE
+                showDownloadButton = paymentInfo?.type == PaymentType.APP_PURCHASE && !downloadUrl.isNullOrEmpty(),
+                snackbarHostState = snackbarHostState,
+                coroutineScope = coroutineScope,
+                navController = navController,
+                fileName = downloadFileName,
+                viewModel = viewModel
             )
         }
         PaymentStatus.FAILED -> {
             PaymentResultDialog(
                 success = false,
                 error = errorMessage,
-                onDismiss = { 
-                    viewModel.resetPaymentStatus()
-                },
-                showDownloadButton = false
+                onDismiss = { viewModel.resetPaymentStatus() },
+                showDownloadButton = false,
+                viewModel = viewModel
             )
         }
         else -> {
+            // 这里是之前报错最严重的地方，确保参数全部正确传递
             PaymentContent(
                 paymentInfo = paymentInfo,
                 coinsBalance = coinsBalance,
@@ -150,8 +141,9 @@ fun PaymentCenterScreen(
                 onFetchBalance = { viewModel.fetchCoinsBalance() },
                 onPay = { amount -> viewModel.executePayment(amount) },
                 viewModel = viewModel,
-                isPaymentProcessing = paymentStatus == PaymentStatus.PROCESSING, // 根据状态判断是否正在处理
-                modifier = modifier // 传递 modifier
+                isPaymentProcessing = paymentStatus == PaymentStatus.PROCESSING,
+                modifier = modifier,
+                snackbarHostState = snackbarHostState
             )
         }
     }
@@ -166,421 +158,130 @@ fun PaymentContent(
     onFetchBalance: () -> Unit,
     onPay: (Int) -> Unit,
     viewModel: PaymentViewModel,
-    isPaymentProcessing: Boolean = false, // 添加一个参数来表示是否正在支付处理中
-    modifier: Modifier = Modifier // 新增：接收外部 modifier
+    isPaymentProcessing: Boolean,
+    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-
-    var amount by remember { mutableStateOf(paymentInfo?.price?.toString() ?: "") }
-
+    // 这里的 remember 最好加上 key，防止 info 变化时 amount 不更新
+    var amount by remember(paymentInfo) { mutableStateOf(paymentInfo?.price?.toString() ?: "") }
     var postIdInput by remember { mutableStateOf("") }
-    val isAdvancedMode = paymentInfo?.type == PaymentType.POST_REWARD && paymentInfo.postId == 0L
+    val isAdvancedMode = paymentInfo?.type == PaymentType.POST_REWARD && (paymentInfo.postId ?: 0L) == 0L
 
-    // 移除 Scaffold 包装，直接使用 Column
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        if (isAdvancedMode) {
-            // 高级模式界面
-            BBQCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = AppShapes.medium
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        "高级支付模式",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    OutlinedTextField(
-                        value = postIdInput,
-                        onValueChange = { postIdInput = it },
-                        label = { Text("输入帖子ID") },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Button(
-                        onClick = {
-                            val postId = postIdInput.toLongOrNull()
-                            if (postId != null && postId > 0) {
-                                viewModel.loadPostInfo(postId)
-                            } else {
-                                coroutineScope.launch {
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            if (isAdvancedMode) {
+                BBQCard(modifier = Modifier.fillMaxWidth()) {
+                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text("高级支付模式", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = postIdInput,
+                            onValueChange = { postIdInput = it },
+                            label = { Text("输入帖子ID") },
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
+                        )
+                        Button(
+                            onClick = {
+                                postIdInput.toLongOrNull()?.let { viewModel.loadPostInfo(it) } ?: coroutineScope.launch {
                                     snackbarHostState.showSnackbar("请输入有效的帖子ID")
                                 }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("加载帖子")
-                    }
-                }
-            }
-        } else {
-            // ==================== 打赏/购买对象信息卡片 ====================
-            BBQCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = AppShapes.medium
-            ) {
-                when (paymentInfo?.type) {
-                    PaymentType.APP_PURCHASE -> {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            // 应用图标和名称
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                // 显示应用图标
-                                AsyncImage(
-                                    model = paymentInfo.iconUrl,
-                                    contentDescription = "应用图标",
-                                    modifier = Modifier
-                                        .size(64.dp)
-                                        .clip(RoundedCornerShape(16.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
-
-                                Spacer(Modifier.width(16.dp))
-
-                                Column {
-                                    Text(
-                                        paymentInfo.appName,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        "版本: ${paymentInfo.versionId}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-
-                            // 显示预览内容
-                            Text(
-                                text = paymentInfo.previewContent,
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            // 价格信息
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    "价格",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                Text(
-                                    "${paymentInfo.price} 硬币",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
-
-                    PaymentType.POST_REWARD -> {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            // 帖子标题
-                            Text(
-                                paymentInfo.postTitle,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            // 显示预览内容
-                            Text(
-                                text = paymentInfo.previewContent,
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 3,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            // 作者信息
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                AsyncImage(
-                                    model = paymentInfo.authorAvatar,
-                                    contentDescription = "作者头像",
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-
-                                Spacer(Modifier.width(12.dp))
-
-                                Column {
-                                    Text(
-                                        paymentInfo.authorName,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        "发布于 ${paymentInfo.postTime}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    else -> {
-                        // 默认布局
-                        Text(
-                            "支付信息",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                }
-            }
-
-            // ==================== 支付金额区域 ====================
-            if (paymentInfo?.type == PaymentType.POST_REWARD) {
-                BBQCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AppShapes.medium
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text(
-                            "打赏金额",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        // 金额选择器
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            listOf(5, 10, 20, 50, 100).forEach { coinAmount ->
-                                CoinAmountChip(
-                                    amount = coinAmount,
-                                    selected = amount == coinAmount.toString(),
-                                    onClick = { amount = coinAmount.toString() }
-                                )
-                            }
-                        }
-
-                        // 自定义金额输入
-                        OutlinedTextField(
-                            value = amount,
-                            onValueChange = {
-                                if (it.isEmpty() || it.toIntOrNull() != null) {
-                                    amount = it
-                                }
                             },
-                            label = { Text("自定义金额") },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Number,
-                                imeAction = ImeAction.Done
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                            ),
-                            trailingIcon = {
-                                Text("硬币", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("加载帖子") }
+                    }
+                }
+            } else {
+                BBQCard(modifier = Modifier.fillMaxWidth()) {
+                    paymentInfo?.let { info ->
+                        when (info.type) {
+                            PaymentType.APP_PURCHASE -> {
+                                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        AsyncImage(
+                                            model = info.iconUrl,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        Spacer(Modifier.width(16.dp))
+                                        Column {
+                                            Text(info.appName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                            Text("版本: ${info.versionId}", style = MaterialTheme.typography.bodyMedium)
+                                        }
+                                    }
+                                    Text(info.previewContent, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("价格")
+                                        Text("${info.price} 硬币", color = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
                             }
-                        )
-                    }
-                }
-            }
-        }
-
-        // ==================== 硬币余额区域 ====================
-        BBQCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = AppShapes.medium
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "我的硬币",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    BBQOutlinedButton(
-                        onClick = onFetchBalance,
-                        modifier = Modifier.width(120.dp),
-                        contentPadding = PaddingValues(vertical = 6.dp),
-                        enabled = !isLoadingBalance,
-                        text = {
-                            if (isLoadingBalance) Text("查询中...")
-                            else if (coinsBalance == null) Text("查询余额")
-                            else Text("刷新余额")
-                        }
-                    )
-                }
-
-                // 余额显示区域
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "当前余额:",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    // 显示余额或加载状态
-                    when {
-                        isLoadingBalance -> CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp
-                        )
-                        coinsBalance == null -> Text("--", style = MaterialTheme.typography.bodyLarge)
-                        else -> {
-                            Text(
-                                coinsBalance.toString(),
-                                style = MaterialTheme.typography.headlineSmall.copy(
-                                    color = MaterialTheme.colorScheme.primary
-                                ),
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text("硬币", style = MaterialTheme.typography.bodyMedium)
+                            PaymentType.POST_REWARD -> { 
+                                // 帖子打赏布局
+                                Text("帖子打赏: ${info.appName}", modifier = Modifier.padding(16.dp))
+                            }
+//                            else -> { Text("支付信息", modifier = Modifier.padding(16.dp)) }
                         }
                     }
                 }
             }
-        }
 
-        // ==================== 支付按钮区域 ====================
-        val payAmount = amount.toIntOrNull() ?: 0
-        BBQCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-            shape = AppShapes.medium
-        ) {
+            // 余额区域
+            BBQCard(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("我的硬币", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                        BBQOutlinedButton(
+                            onClick = onFetchBalance,
+                            enabled = !isLoadingBalance,
+                            text = { Text(if (isLoadingBalance) "查询中..." else "刷新余额") }
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("当前余额:", modifier = Modifier.weight(1f))
+                        if (isLoadingBalance) {
+                            CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("${coinsBalance ?: "--"} 硬币", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            // 支付按钮逻辑
+            val payAmount = amount.toIntOrNull() ?: 0
             BBQButton(
                 onClick = {
                     if (payAmount > 0) {
                         if (coinsBalance != null && payAmount > coinsBalance) {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar("硬币余额不足，请充值")
-                            }
-                        } else {
-                            onPay(payAmount)
-                        }
-                    } else {
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("请输入有效的支付金额")
-                        }
+                            coroutineScope.launch { snackbarHostState.showSnackbar("硬币余额不足") }
+                        } else onPay(payAmount)
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = payAmount > 0 && (coinsBalance == null || payAmount <= coinsBalance) && !isPaymentProcessing, // 禁用条件
-                contentPadding = PaddingValues(vertical = 16.dp),
+                enabled = payAmount > 0 && !isPaymentProcessing,
                 text = {
-                    if (isPaymentProcessing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text(
-                            text = when {
-                                paymentInfo?.type == PaymentType.APP_PURCHASE ->
-                                    "确认支付 ${paymentInfo.price} 硬币购买应用"
-
-                                paymentInfo?.type == PaymentType.POST_REWARD ->
-                                    "打赏 $payAmount 硬币"
-
-                                else -> "确认支付 $payAmount 硬币"
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    if (isPaymentProcessing) CircularProgressIndicator(Modifier.size(24.dp))
+                    else Text("确认支付")
                 }
             )
         }
-    }
 
-    // 错误消息处理
-    errorMessage?.let { msg ->
-        LaunchedEffect(msg) {
-            snackbarHostState.showSnackbar(msg)
-        }
-    }
-}
-
-@Composable
-private fun CoinAmountChip(
-    amount: Int,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val backgroundColor = if (selected) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
-
-    val borderColor = if (selected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.outline
-    }
-
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .background(backgroundColor)
-            .border(
-                width = 1.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "$amount",
-            style = MaterialTheme.typography.titleMedium,
-            color = if (selected) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurface
+        BBQSnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
+    }
+
+    errorMessage?.let { msg ->
+        LaunchedEffect(msg) { snackbarHostState.showSnackbar(msg) }
     }
 }
 
@@ -590,64 +291,45 @@ fun PaymentResultDialog(
     error: String? = null,
     onDismiss: () -> Unit,
     onDownload: (() -> Unit)? = null,
-    showDownloadButton: Boolean = false
+    showDownloadButton: Boolean = false,
+    snackbarHostState: SnackbarHostState? = null,
+    coroutineScope: CoroutineScope? = null,
+    navController: NavController? = null,
+    fileName: String? = null,
+    viewModel: PaymentViewModel
 ) {
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false)
     ) {
-        BBQCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            shape = AppShapes.large
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (success) {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = "支付成功",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(72.dp)
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Filled.Error,
-                        contentDescription = "支付失败",
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(72.dp)
-                    )
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                Text(
-                    text = if (success) "支付成功！" else "支付失败",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = if (success) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.error
+        BBQCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+            Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = if (success) Icons.Filled.CheckCircle else Icons.Filled.Error,
+                    contentDescription = null,
+                    tint = if (success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(72.dp)
                 )
-
+                Spacer(Modifier.height(24.dp))
+                Text(if (success) "支付成功！" else "支付失败", style = MaterialTheme.typography.headlineMedium)
+                
                 if (!success && !error.isNullOrEmpty()) {
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
+                    Text(error, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 16.dp))
                 }
 
                 Spacer(Modifier.height(32.dp))
 
                 if (success && showDownloadButton) {
                     BBQButton(
-                        onClick = { onDownload?.invoke() },
+                        onClick = {
+                            val url = viewModel.getDownloadUrl()
+                            val name = viewModel.getDownloadFileName()
+                            if (url != null) {
+                                viewModel.startDownload(url, name)
+                            }
+                            onDismiss() 
+                        },
                         modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(vertical = 14.dp),
                         text = { Text("下载应用") }
                     )
                     Spacer(Modifier.height(12.dp))
@@ -656,34 +338,9 @@ fun PaymentResultDialog(
                 BBQOutlinedButton(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(vertical = 14.dp),
                     text = { Text(if (success) "完成" else "重试") }
                 )
             }
         }
     }
-}
-
-/**
- * 启动内部下载服务
- */
-private fun startInternalDownload(context: Context, downloadUrl: String, fileName: String) {
-    val intent = Intent(context, DownloadService::class.java).apply {
-        action = DownloadService.ACTION_START_DOWNLOAD 
-        
-        // 使用我们在 Service 里定义的常量名
-        putExtra(DownloadService.EXTRA_URL, downloadUrl)
-        putExtra(DownloadService.EXTRA_FILE_NAME, fileName)
-        putExtra(DownloadService.EXTRA_SAVE_PATH, getDefaultDownloadPath(context))
-    }
-    
-    // 启动服务
-    context.startService(intent)
-}
-
-/**
- * 获取默认下载路径
- */
-private fun getDefaultDownloadPath(context: Context): String {
-    return context.getExternalFilesDir(null)?.absolutePath ?: context.filesDir.absolutePath + "/downloads"
 }

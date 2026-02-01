@@ -47,8 +47,8 @@ object WysAppMarketClient {
     internal const val WYSAPPMARKET_ICON_BASE_URL = "https://image.apk.wysteam.cn/"
 
 
-    private const val DEFAULT_DEVICE_MODEL = "浊燃"
-    private const val DEFAULT_BUILD_NUMBER = "2131558406"
+//    private const val DEFAULT_DEVICE_MODEL = "浊燃"
+    private const val DEFAULT_BUILD_NUMBER = "3210"
     
     // Ktor HttpClient 实例
     val httpClient = HttpClient(OkHttp) {
@@ -217,7 +217,7 @@ object SmartListSerializer : KSerializer<List<String>> {
     data class DownloadSourceResponse(
         val code: Int,
         val id: String,
-        val sha256: String,
+        val sha256: String? = null,
         val data: List<DownloadSource>
     ) {
         val isSuccess: Boolean get() = code == ApiResponseCode.SUCCESS.code
@@ -344,12 +344,12 @@ object SmartListSerializer : KSerializer<List<String>> {
     // ===== 下载相关 API 方法 =====
     
     /**
-     * 获取 StartKey（参考Python原型的 get_startkey 方法）
-     * @param deviceModel 设备型号，默认为 V2072A
-     * @param buildNumber 构建号，默认为 2131558406
+     * 获取 StartKey
+     * @param deviceModel 设备型号
+     * @param buildNumber 构建号
      */
     suspend fun getStartKey(
-        deviceModel: String = DEFAULT_DEVICE_MODEL,
+        deviceModel: String, // 改为强制要求，由调用方保证传入
         buildNumber: String = DEFAULT_BUILD_NUMBER
     ): Result<String> {
         val timestamp = getCurrentTimestamp()
@@ -396,7 +396,7 @@ object SmartListSerializer : KSerializer<List<String>> {
     suspend fun getDownloadSources(
         appId: Int,
         startKey: String? = null,
-        deviceModel: String = DEFAULT_DEVICE_MODEL
+        deviceModel: String // 改为强制要求，由调用方保证传入
     ): Result<DownloadSourceResponse> {
         // 获取或使用提供的StartKey
         val finalStartKey = if (startKey != null) {
@@ -450,30 +450,7 @@ object SmartListSerializer : KSerializer<List<String>> {
                 throw IOException("获取下载源失败，code: ${response.code}")
             }
         }
-    }
-    
-    /**
-     * 快速获取下载链接（简化版）
-     * @param appId 应用ID
-     * @param lineIndex 线路索引，默认为0（极速线路）
-     */
-    suspend fun getDownloadUrl(
-        appId: Int,
-        lineIndex: Int = 0
-    ): Result<String> {
-        return getDownloadSources(appId).map { response ->
-            val sources = response.data
-            if (sources.isEmpty()) {
-                throw IOException("没有可用的下载源")
-            }
-            
-            if (lineIndex >= 0 && lineIndex < sources.size) {
-                sources[lineIndex].url
-            } else {
-                sources.first().url
-            }
-        }
-    }
+    }    
 
     // ===== 原有的 API 方法 =====
     

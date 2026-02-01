@@ -2,17 +2,28 @@ package cc.bbq.xq.data.repository
 
 import cc.bbq.xq.WysAppMarketClient
 import cc.bbq.xq.WysAppMarketClient.WysAppListItem
+import cc.bbq.xq.data.DeviceNameDataStore
 import cc.bbq.xq.data.unified.*
 import java.io.File
 import kotlin.math.ceil
+import kotlinx.coroutines.flow.first 
 import org.koin.core.annotation.Single
 
 @Single
-class WysAppMarketRepository : IAppStoreRepository {
+class WysAppMarketRepository(
+    private val deviceDataStore: DeviceNameDataStore // 1. 构造函数注入
+) : IAppStoreRepository {
 
     private companion object {
         const val PAGE_SIZE = 20
     }
+    
+    // 2. 提取一个私有辅助方法，用于获取当前机型名
+    private suspend fun getCurrentDeviceModel(): String {
+    // 依靠 DataStore 的默认值 "Android Device" 或 "默认机型"
+    // 但使用 ifBlank 确保不会把空字符串发给 API
+    return deviceDataStore.currentConfigFlow.first().model.takeIf { it.isNotBlank() } ?: "Android"
+}
 
     // ==========================================================
     // 核心功能：微思商店是一个只读源，仅保留查询逻辑
@@ -66,24 +77,33 @@ class WysAppMarketRepository : IAppStoreRepository {
     } catch (e: Exception) { Result.failure(e) }
 
     override suspend fun getAppDownloadSources(appId: String, versionId: Long): Result<List<UnifiedDownloadSource>> = try {
-        // 将字符串类型的 appId 转换为 Int
-        val appIdInt = appId.toIntOrNull() ?: return Result.failure(IllegalArgumentException("无效的应用ID: $appId"))
-        
-        // 调用 WysAppMarketClient 的 getDownloadSources 方法获取真正的下载源
-        WysAppMarketClient.getDownloadSources(appIdInt).map { response ->
-            // 将每个下载源转换为 UnifiedDownloadSource
-            response.data.map { downloadSource ->
-                UnifiedDownloadSource(
-                    name = downloadSource.name,
-                    url = downloadSource.url,
-                    // 根据类型判断是否为官方线路，type=0 是官方线路
-                    isOfficial = downloadSource.type == 0
-                )
+    val appIdInt = appId.toIntOrNull() ?: return Result.failure(IllegalArgumentException("ID错误"))
+    
+    val currentModel = getCurrentDeviceModel()
+    val startKeyResult = WysAppMarketClient.getStartKey(deviceModel = currentModel)
+    val startKey = startKeyResult.getOrThrow()
+
+    WysAppMarketClient.getDownloadSources(
+        appId = appIdInt,
+        startKey = startKey,
+        deviceModel = currentModel
+    ).map { response ->
+        val sources = response.data        
+        if (sources.size == 1) {
+            val firstSource = sources[0]
+            val isSlowIp = firstSource.url.contains("111.229.138.199")
+            val isFakeFastName = firstSource.name.contains("极速")
+            
+            if (isSlowIp && isFakeFastName) {
+            deviceDataStore.applyEmergencyRandomModel()
+                throw IllegalStateException("检测到由于机型名【$currentModel】被服务器拉入黑名单，服务器故意把备用线路当作极速路线返回给客户端导致限速。已自动更改机型请再试一下。")                
             }
         }
-    } catch (e: Exception) {
-        Result.failure(e)
+        sources.map { it.toUnifiedDownloadSource() }
     }
+} catch (e: Exception) {
+    Result.failure(e)
+}
 
     // ==========================================================
     // 辅助工具：处理微思特有的客户端分页

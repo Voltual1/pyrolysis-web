@@ -7,33 +7,44 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>。
 package cc.bbq.xq.ui
 
+// Android & Lifecycle
 import android.app.Activity
 import android.app.Application
-import androidx.compose.animation.*
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.foundation.layout.fillMaxSize
-import org.koin.androidx.compose.koinViewModel
-import androidx.compose.foundation.layout.padding
-import cc.bbq.xq.ui.download.DownloadScreen // 导入 DownloadScreen
-import cc.bbq.xq.ui.update.UpdateScreen // 新增导入
-import cc.bbq.xq.ui.settings.storage.StoreManagerScreen
-import org.koin.core.parameter.parametersOf
+import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+
+// Compose Core
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import cc.bbq.xq.AppStore
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SnackbarHostState
+
+// Navigation
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+
+// Koin
+import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
+
+// Project UI - Screens & ViewModels
 import cc.bbq.xq.AuthManager
 import cc.bbq.xq.KtorClient
+import cc.bbq.xq.AppStore
 import cc.bbq.xq.ui.auth.LoginScreen
 import cc.bbq.xq.ui.auth.LoginViewModel
 import cc.bbq.xq.ui.billing.BillingScreen
@@ -49,7 +60,6 @@ import cc.bbq.xq.ui.message.MessageCenterScreen
 import cc.bbq.xq.ui.message.MessageViewModel
 import cc.bbq.xq.ui.payment.PaymentCenterScreen
 import cc.bbq.xq.ui.payment.PaymentType
-import cc.bbq.xq.ui.user.UserProfileViewModel
 import cc.bbq.xq.ui.payment.PaymentViewModel
 import cc.bbq.xq.ui.player.PlayerScreen
 import cc.bbq.xq.ui.player.PlayerViewModel
@@ -60,17 +70,20 @@ import cc.bbq.xq.ui.search.SearchViewModel
 import cc.bbq.xq.ui.theme.ThemeCustomizeScreen
 import cc.bbq.xq.ui.user.*
 import cc.bbq.xq.ui.user.compose.UserListScreen
+import cc.bbq.xq.ui.update.UpdateScreen
+import cc.bbq.xq.ui.settings.storage.StoreManagerScreen
+import cc.bbq.xq.ui.settings.signin.SignInSettingsScreen
+import cc.bbq.xq.ui.settings.update.UpdateSettingsScreen
+import cc.bbq.xq.ui.compose.IDMTransferDialog
+
+// Animations & Utils
+import cc.bbq.xq.ui.animation.materialSharedAxisXIn
+import cc.bbq.xq.ui.animation.materialSharedAxisXOut
+import cc.bbq.xq.ui.animation.rememberSlideDistance
+import cc.bbq.xq.util.getPackageInfoCompat
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
-import cc.bbq.xq.ui.animation.materialSharedAxisXIn
-import cc.bbq.xq.ui.animation.materialSharedAxisXOut
-import androidx.compose.ui.unit.dp
-import cc.bbq.xq.ui.settings.signin.SignInSettingsScreen
-import cc.bbq.xq.ui.animation.rememberSlideDistance
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import cc.bbq.xq.ui.settings.update.UpdateSettingsScreen //导入更新屏幕
-import androidx.compose.material3.SnackbarHostState // 确保 SnackbarHostState 被正确导入
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +110,6 @@ fun AppNavHost(
     val myLikesViewModel: MyLikesViewModel = org.koin.androidx.compose.koinViewModel()
     val hotPostsViewModel: HotPostsViewModel = org.koin.androidx.compose.koinViewModel()
     val followingPostsViewModel: FollowingPostsViewModel = org.koin.androidx.compose.koinViewModel()
-//    val userDetailViewModel: UserDetailViewModel = org.koin.androidx.compose.koinViewModel()
     val myPostsViewModel: MyPostsViewModel = org.koin.androidx.compose.koinViewModel()
     val appDetailViewModel: AppDetailComposeViewModel = org.koin.androidx.compose.koinViewModel()
     val userProfileViewModel: UserProfileViewModel = koinViewModel()
@@ -253,10 +265,57 @@ composable(route = CreateRefundPost(0, 0, "", 0).route, arguments = CreateRefund
             )
         }
         
-        composable(route = Download.route) {
+/*        composable(route = Download.route) {
     DownloadScreen(modifier = Modifier.fillMaxSize(),snackbarHostState = snackbarHostState )
-}
+}*/
 
+composable(
+    route = Download.route,
+    // 关键优化：给该路由设置 0 毫秒的转场动画，避免跳转时的“白屏闪烁”
+    enterTransition = { EnterTransition.None },
+    exitTransition = { ExitTransition.None }
+) {
+    val context = LocalContext.current
+    var showInstallDialog by remember { mutableStateOf(false) }
+
+    val idmPackages = listOf(
+        "idm.internet.download.manager.plus",
+        "idm.internet.download.manager",
+        "idm.internet.download.manager.adm.lite"
+    )
+
+    LaunchedEffect(Unit) {
+        val pm = context.packageManager
+        var targetIntent: Intent? = null
+
+        for (pkg in idmPackages) {
+            targetIntent = pm.getLaunchIntentForPackage(pkg)
+            if (targetIntent != null) break
+        }
+
+        if (targetIntent != null) {
+            targetIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                context.startActivity(targetIntent)
+            } catch (e: Exception) {
+                // 异常处理
+            }
+            // 重点：立刻回退，用户几乎感知不到进入了这个路由
+            navController.popBackStack()
+        } else {
+            showInstallDialog = true
+        }
+    }
+
+    if (showInstallDialog) {
+        IDMTransferDialog(
+            onDismiss = {
+                showInstallDialog = false
+                navController.popBackStack()
+            }
+        )
+    }
+}
 composable(route = MyComments.route) {
     MyCommentsScreen(
         navController = navController,

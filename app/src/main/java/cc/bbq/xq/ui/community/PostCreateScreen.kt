@@ -14,6 +14,7 @@ import cc.bbq.xq.data.DeviceNameDataStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.navigation.NavController
+import cc.bbq.xq.ui.theme.AppShapes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -131,14 +132,18 @@ fun PostCreateScreen(
         if (isRefundMode) {
             viewModel.onTitleChange("$refundAppName  【应用退币申请】")
         }
-        val storedDeviceName = deviceNameDataStore.deviceNameFlow.first()
-        tempDeviceName = storedDeviceName
+        
+        // 从 DataStore 获取当前选中的设备别名 ---
+        val currentConfig = deviceNameDataStore.currentConfigFlow.first()
+        tempDeviceName = currentConfig.alias
+        // ----------------------------------------------
     }
 
     // 草稿恢复对话框
     if (showRestoreDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.onRestoreDialogDismiss() },
+            shape = AppShapes.medium,
             title = { Text("恢复草稿") },
             text = { Text("检测到未完成的草稿，是否恢复？") },
             confirmButton = {
