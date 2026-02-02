@@ -28,7 +28,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 import cc.bbq.xq.LingMarketClient
-//import cc.bbq.xq.service.download.DownloadService
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 @KoinViewModel
 class AppDetailComposeViewModel(
@@ -217,6 +218,50 @@ class AppDetailComposeViewModel(
         }
         return null
     }
+    
+/**
+ * 切换收藏状态
+ */
+fun toggleFavorite() {
+    val currentDetail = _appDetail.value ?: return
+    val targetState = currentDetail.isFavorite 
+
+    viewModelScope.launch {
+        // 调用仓库执行 收藏/取消收藏 操作
+        val result = repository.toggleFavorite(currentAppId, currentDetail.isFavorite)
+
+        if (result.isSuccess) {
+            // 获取操作后的实际状态
+            val finalFavoriteState = result.getOrNull() ?: targetState
+            
+            // 计算新的收藏数
+            val newFavoriteCount = if (currentDetail.store == AppStore.LING_MARKET) {
+                // 如果是灵应用商店，保持原样，不手动增减
+                currentDetail.favoriteCount
+            } else {
+                // 其他商店，手动计算增减
+                if (finalFavoriteState) {
+                    (currentDetail.favoriteCount ?: 0) + 1
+                } else {
+                    maxOf(0, (currentDetail.favoriteCount ?: 1) - 1)
+                }
+            }
+
+            // 更新本地 StateFlow 以立即刷新 UI
+            _appDetail.value = currentDetail.copy(
+                isFavorite = finalFavoriteState,
+                favoriteCount = newFavoriteCount
+            )
+            
+            // 发送 Snackbar 提示
+            val message = if (finalFavoriteState) "已添加到收藏" else "已取消收藏"
+            _snackbarEvent.emit(message)
+        } else {
+            val error = result.exceptionOrNull()?.message ?: "操作失败"
+            _snackbarEvent.emit("收藏失败: $error")
+        }
+    }
+}
 
     fun handleDownloadClick() {
     viewModelScope.launch {
@@ -282,7 +327,7 @@ private suspend fun handleLingMarketDownload(detail: UnifiedAppDetail) {
                 val downloadUrl = result.getOrThrow().url
                 startDownload(downloadUrl)
             } else {
-                _errorMessage.value = "获取下载链接失败: ${result.exceptionOrNull()?.message}"
+                _errorMessage.value = "获取下载链接失败: ${result.exceptionOrNull()?.message}你可能没有登录灵应用商店哦"
             }
         } else {
             _isLoading.value = false
@@ -299,39 +344,43 @@ private suspend fun handleLingMarketDownload(detail: UnifiedAppDetail) {
     }
 
     private fun loadData() {
-        _isLoading.value = true
-        _errorMessage.value = ""
+    _isLoading.value = true
+    _errorMessage.value = ""
 
-        viewModelScope.launch {
-            try {
-                val detailResult = repository.getAppDetail(currentAppId, currentVersionId)
+    viewModelScope.launch {
+        try {
+            // 使用 coroutineScope 确保内部的 async 能正常工作
+            coroutineScope {
+                // 并行发起请求
+                val detailDeferred = async { repository.getAppDetail(currentAppId, currentVersionId) }
+                val favoriteDeferred = async { repository.getFavoriteState(currentAppId) }
+
+                // 等待结果
+                val detailResult = detailDeferred.await()
+                val favoriteResult = favoriteDeferred.await()
 
                 if (detailResult.isSuccess) {
-                    var detail = detailResult.getOrThrow()
+                    // 明确指定类型，避免编译器的类型推断错误
+                    var detail: UnifiedAppDetail = detailResult.getOrThrow()
                     
-                    // 如果是弦应用商店，需要在 raw 数据中添加设备SDK信息
-                    if (currentStore == AppStore.SIENE_SHOP && detail.raw is cc.bbq.xq.SineShopClient.SineShopAppDetail) {
-                        val raw = detail.raw as cc.bbq.xq.SineShopClient.SineShopAppDetail
-                        // 这里我们不需要修改 raw 对象，因为在 Composable 中会动态计算
+                    // 获取收藏状态并更新
+                    favoriteResult.onSuccess { state ->
+                        detail = detail.copy(isFavorite = state.isFavorite)
                     }
-                    
+
                     _appDetail.value = detail
                     loadComments()
-                    
-                    // 移除：不再在此处加载版本列表
-                    //if (currentStore == AppStore.SIENE_SHOP) {
-                    //    loadVersionList()
-                    //}
                 } else {
                     _errorMessage.value = "加载详情失败: ${detailResult.exceptionOrNull()?.message}"
                 }
-            } catch (e: Exception) {
-                _errorMessage.value = "网络错误: ${e.message}"
-            } finally {
-                _isLoading.value = false
             }
+        } catch (e: Exception) {
+            _errorMessage.value = "网络错误: ${e.message}"
+        } finally {
+            _isLoading.value = false
         }
     }
+}
 
     private fun loadComments() {
         viewModelScope.launch {

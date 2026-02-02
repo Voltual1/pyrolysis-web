@@ -64,8 +64,7 @@ import kotlinx.coroutines.launch
 // Project Specific (App Logic & UI)
 import cc.bbq.xq.AppStore
 import cc.bbq.xq.LingMarketClient
-import cc.bbq.xq.data.unified.UnifiedAppDetail
-import cc.bbq.xq.data.unified.UnifiedComment
+import cc.bbq.xq.data.unified.*
 import cc.bbq.xq.ui.*
 import cc.bbq.xq.ui.community.compose.CommentDialog
 import cc.bbq.xq.ui.community.compose.CommentItem
@@ -337,7 +336,8 @@ val shareUrl = "https://apk.wysteam.cn/app/?id=${detail.id}"
                                 navController.navigate(ImagePreview(url).createRoute())
                             },
                             onRefundClick = { viewModel.requestRefund() },
-                            onUpdateClick = { viewModel.requestUpdate() }
+                            onUpdateClick = { viewModel.requestUpdate() },
+                            onFavoriteToggle = { viewModel.toggleFavorite() }
                         )
                     }
                     1 -> {
@@ -470,7 +470,8 @@ fun AppDetailContent(
      onMoreMenuClick: () -> Unit, // 这个可能不再需要，因为逻辑移到了 Header 组件里
     onImagePreview: (String) -> Unit,
     onRefundClick: () -> Unit,
-    onUpdateClick: () -> Unit
+    onUpdateClick: () -> Unit,
+    onFavoriteToggle: () -> Unit // 新增参数
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -508,6 +509,20 @@ fun AppDetailContent(
                 }
             }
         }
+        
+        if (appDetail.store == AppStore.SIENE_SHOP || appDetail.store == AppStore.LING_MARKET) {
+    item {
+        val favoriteState = UnifiedFavoriteState(
+            isFavorite = appDetail.isFavorite,
+            favoriteCount = appDetail.favoriteCount
+        )
+        
+        AppFavoriteCard(
+            state = favoriteState,
+            onToggle = { onFavoriteToggle() }
+        )
+    }
+}
 
         // --- 更新日志 ---
 // 判断是否显示
