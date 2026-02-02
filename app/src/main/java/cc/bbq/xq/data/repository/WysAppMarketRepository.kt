@@ -71,6 +71,13 @@ class WysAppMarketRepository(
             processClientPagination(apps, page)
         }
     } catch (e: Exception) { Result.failure(e) }
+    
+    override suspend fun getAppVersionsByPackageName(packageName: String): Result<List<UnifiedAppItem>> = try {
+    WysAppMarketClient.getAppVersionsByPackage(packageName = packageName).map { apps ->
+        // 这里没有 page 参数，微思通常是一次性返回全部，所以直接转 list 即可
+        apps.map { it.toUnifiedAppItem() }
+    }
+} catch (e: Exception) { Result.failure(e) }
 
     override suspend fun getAppDetail(appId: String, versionId: Long): Result<UnifiedAppDetail> = try {
         WysAppMarketClient.getAppInfo(appId.toInt()).map { it.toUnifiedAppDetail() }

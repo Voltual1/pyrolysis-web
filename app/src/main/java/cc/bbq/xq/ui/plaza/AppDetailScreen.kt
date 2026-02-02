@@ -9,76 +9,70 @@
 
 package cc.bbq.xq.ui.plaza
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.app.Activity
 import android.net.Uri
-import cc.bbq.xq.util.DownloadManager
-// 移除 MD2 的 ExperimentalMaterialApi 和 pullrefresh 导入
-// import androidx.compose.material.ExperimentalMaterialApi
-// import androidx.compose.material.pullrefresh.PullRefreshIndicator
-// import androidx.compose.material.pullrefresh.pullRefresh
-// import androidx.compose.material.pullrefresh.rememberPullRefreshState
+
+// Compose Foundation
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import cc.bbq.xq.ui.theme.AppShapes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-// 添加 MD3 pullrefresh 导入
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import coil3.request.ImageRequest
-import coil3.request.CachePolicy
-import androidx.compose.ui.platform.LocalContext
+
+// Compose Material 3
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Comment
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
-import cc.bbq.xq.ui.theme.BBQDropdownMenu
-import cc.bbq.xq.ui.compose.LinkifyText
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+
+// Compose Runtime & UI
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import cc.bbq.xq.data.unified.UnifiedAppDetail
-import cc.bbq.xq.data.unified.UnifiedComment
-import cc.bbq.xq.ui.ImagePreview
-import cc.bbq.xq.ui.UserDetail
-import cc.bbq.xq.ui.PaymentForApp
-import cc.bbq.xq.ui.community.compose.CommentDialog
-import cc.bbq.xq.ui.CreateRefundPost
-import cc.bbq.xq.ui.UpdateAppRelease
-import cc.bbq.xq.ui.community.compose.CommentItem
-import cc.bbq.xq.ui.theme.BBQSnackbarHost
-import cc.bbq.xq.ui.theme.DownloadSourceDrawer
-// 导入我们自定义的指示器
-import cc.bbq.xq.ui.theme.BBQPullRefreshIndicator // <<<--- 新增导入
+
+// Image Loading (Coil 3)
 import coil3.compose.AsyncImage
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+
+// Dependency Injection (Koin)
+import org.koin.androidx.compose.koinViewModel
+
+// Coroutines
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import org.koin.androidx.compose.koinViewModel
-import cc.bbq.xq.ui.Download
-import androidx.compose.foundation.background
+
+// Project Specific (App Logic & UI)
 import cc.bbq.xq.AppStore
-import cc.bbq.xq.util.formatTimestamp
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import cc.bbq.xq.ui.theme.UnifiedCommentItem
 import cc.bbq.xq.LingMarketClient
+import cc.bbq.xq.data.unified.UnifiedAppDetail
+import cc.bbq.xq.data.unified.UnifiedComment
+import cc.bbq.xq.ui.*
+import cc.bbq.xq.ui.community.compose.CommentDialog
+import cc.bbq.xq.ui.community.compose.CommentItem
+import cc.bbq.xq.ui.compose.LinkifyText
+import cc.bbq.xq.ui.theme.*
+import cc.bbq.xq.util.DownloadManager
+import cc.bbq.xq.util.formatTimestamp
 
 // 移除 @ExperimentalMaterialApi 注解
 // @OptIn(ExperimentalMaterialApi::class)
@@ -307,29 +301,39 @@ val shareUrl = "https://apk.wysteam.cn/app/?id=${detail.id}"
         },
         modifier = modifier.fillMaxSize()
     ) {
-        // Box(modifier = modifier.fillMaxSize().pullRefresh(pullRefreshState)) { // 移除旧的 Box 包裹
-        if (isLoading && appDetail == null) { // 仅在初始加载且无数据时显示
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-        } else if (appDetail != null) {
-            val pageCount = if (appDetail!!.store == AppStore.SIENE_SHOP) 2 else 1
-            val pagerState = rememberPagerState(pageCount = { pageCount })
-            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+    if (isLoading && appDetail == null) {
+        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+    } else if (appDetail != null) {
+        val detail = appDetail!! // 建议在这里先解包，避免后面到处用 !!
+        val pageCount = when (detail.store) {
+            AppStore.SIENE_SHOP, AppStore.WYSAPPMARKET -> 2
+            else -> 1
+        }
+        val pagerState = rememberPagerState(pageCount = { pageCount })
+
+        // 关键点：使用 Column 或 Box 包裹 Pager，确保布局正确
+        Column(modifier = Modifier.fillMaxSize()) {
+            HorizontalPager(
+                state = pagerState,
+                // 注意：weight(1f) 后面不要跟 ()
+                modifier = Modifier.weight(1f) 
+            ) { page ->
                 when (page) {
                     0 -> {
                         AppDetailContent(
                             navController = navController,
-                            appDetail = appDetail!!,
+                            appDetail = detail,
                             comments = comments,
-                            onCommentReply = { viewModel.openReplyDialog(it) },
+                            onCommentReply = { comment -> viewModel.openReplyDialog(comment) },
                             onDownloadClick = { viewModel.handleDownloadClick() },
-                            onCommentLongClick = { commentId ->
-                                commentToDeleteId = commentId
+                            onCommentLongClick = { id: String -> // 明确指定类型
+                                commentToDeleteId = id
                                 showDeleteCommentDialog = true
                             },
                             onDeleteAppClick = { showDeleteAppDialog = true },
                             onShareClick = { handleShare() },
-                            onMoreMenuClick = { showMoreMenu = true },
-                            onImagePreview = { url ->
+                            onMoreMenuClick = { },
+                            onImagePreview = { url: String -> // 明确指定类型
                                 navController.navigate(ImagePreview(url).createRoute())
                             },
                             onRefundClick = { viewModel.requestRefund() },
@@ -337,22 +341,25 @@ val shareUrl = "https://apk.wysteam.cn/app/?id=${detail.id}"
                         )
                     }
                     1 -> {
-                        if (appDetail!!.store == AppStore.SIENE_SHOP) {
-                            // 版本列表页面
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("版本列表功能？还没做完呢")
-                            }
+                        val packageName = detail.packageName
+                        if (packageName.isNotEmpty()) {
+                            VersionListScreen(
+                                packageName = packageName,
+                                storeName = detail.store.name,
+                                navController = navController,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         } else {
-                            Text("版本列表仅在弦应用商店提供")
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("该应用无包名，无法获取版本列表")
+                            }
                         }
                     }
                 }
             }
         }
-        // 浮动评论按钮
+        
+        // FAB 需要放在这里，因为它相对于 Box 布局对齐
         FloatingActionButton(
             onClick = { viewModel.openCommentDialog() },
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
@@ -361,17 +368,10 @@ val shareUrl = "https://apk.wysteam.cn/app/?id=${detail.id}"
         ) {
             Icon(Icons.AutoMirrored.Filled.Comment, "评论")
         }
-        // 移除旧的 PullRefreshIndicator
-        // PullRefreshIndicator(
-        //     refreshing,
-        //     pullRefreshState,
-        //     Modifier.align(Alignment.TopCenter),
-        //     backgroundColor = MaterialTheme.colorScheme.surface,
-        //     contentColor = MaterialTheme.colorScheme.primary
-        // )
+        
         BBQSnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter))
-        // } // End of old Box
-    } // End of PullToRefreshBox
+    }
+}
 
     // 删除应用确认对话框
     if (showDeleteAppDialog) {

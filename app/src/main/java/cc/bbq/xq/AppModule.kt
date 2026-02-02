@@ -20,6 +20,7 @@ import cc.bbq.xq.ui.billing.BillingViewModel
 import org.koin.android.ext.koin.androidContext
 import cc.bbq.xq.data.repository.WysAppMarketRepository
 import cc.bbq.xq.ui.community.CommunityViewModel
+import cc.bbq.xq.ui.plaza.VersionListViewModel // 新增导入
 import cc.bbq.xq.ui.community.FollowingPostsViewModel
 import cc.bbq.xq.ui.community.HotPostsViewModel
 import cc.bbq.xq.data.DeviceNameDataStore
@@ -51,7 +52,7 @@ import cc.bbq.xq.ui.rank.RankingListViewModel
 import cc.bbq.xq.ui.settings.update.UpdateSettingsViewModel
 //import cc.bbq.xq.ui.download.DownloadViewModel
 import cc.bbq.xq.ui.home.HomeViewModel
-import cc.bbq.xq.ui.plaza.VersionListViewModel
+//import cc.bbq.xq.ui.plaza.VersionListViewModel
 import cc.bbq.xq.data.UserFilterDataStore
 import cc.bbq.xq.data.UserAgreementDataStore
 import cc.bbq.xq.ui.user.MyCommentsViewModel
@@ -83,6 +84,7 @@ val appModule = module {
     viewModel { PostCreateViewModel(androidApplication()) }
     viewModel { MyPostsViewModel(get()) }
     viewModel { PaymentViewModel(androidApplication()) }
+    viewModel { VersionListViewModel(androidApplication(), get()) } // 注册 ViewModel
     viewModel { UserDetailViewModel(androidApplication()) }
     viewModel { StoreManagerViewModel(androidApplication()) }
     
@@ -92,7 +94,7 @@ val appModule = module {
     viewModel { UpdateSettingsViewModel() }
     viewModel { SignInSettingsViewModel() }
     viewModel { HomeViewModel() }
-    viewModel { VersionListViewModel(androidApplication(), get<SineShopRepository>()) }
+//    viewModel { VersionListViewModel(androidApplication(), get<SineShopRepository>()) }
 //    viewModel { DownloadViewModel(androidApplication(), get<DownloadTaskRepository>()) }
     viewModel { MyCommentsViewModel(androidApplication(), get()) }
     viewModel { MyReviewsViewModel(androidApplication(), get()) }
