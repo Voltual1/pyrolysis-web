@@ -160,22 +160,24 @@ fun HomeScreen(
                     SineShopProfileScreen(
                         userInfo = sineShopUserInfo,
                         modifier = Modifier.fillMaxSize(),
-                        onNavigateToResourcePlaza = { mode ->
-                            when (mode) {
-                                "my_upload" -> {
-                                    navController.navigate(ResourcePlaza(isMyResource = true, mode = "my_upload").createRoute())
-                                }
-                                "my_favourite" -> {
-                                    navController.navigate(ResourcePlaza(isMyResource = true, mode = "my_favourite").createRoute())
-                                }
-                                "my_history" -> {
-                                    navController.navigate(ResourcePlaza(isMyResource = true, mode = "my_history").createRoute())
-                                }
-                                else -> {
-                                    navController.navigate(ResourcePlaza(false).createRoute())
-                                }
-                            }
-                        },
+onNavigateToResourcePlaza = { mode, targetStoreName -> //  这里接收两个参数
+    when (mode) {
+        "my_upload" -> {
+            // 使用传入的 targetStoreName
+            navController.navigate(ResourcePlaza(isMyResource = true, mode = "my_upload", storeName = targetStoreName).createRoute())
+        }
+        "my_favourite" -> {
+            navController.navigate(ResourcePlaza(isMyResource = true, mode = "my_favourite", storeName = targetStoreName).createRoute())
+        }
+        "my_history" -> {
+            navController.navigate(ResourcePlaza(isMyResource = true, mode = "my_history", storeName = targetStoreName).createRoute())
+        }
+        else -> {
+            // 如果其他情况也需要特定的 storeName，这里也用 targetStoreName
+            navController.navigate(ResourcePlaza(isMyResource = false, storeName = targetStoreName).createRoute())
+        }
+    }
+},
                         onNavigateToUpdate = onNavigateToUpdate,
                         onNavigateToMyComments = onNavigateToMyComments,
                         onNavigateToMyReviews = onNavigateToMyReviews,

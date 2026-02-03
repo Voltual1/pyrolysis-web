@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
 import androidx.navigation.NavController
 import cc.bbq.xq.LingMarketClient
-import cc.bbq.xq.ui.AccountProfile
+import cc.bbq.xq.ui.*
 import cc.bbq.xq.ui.theme.BBQCard
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -130,6 +130,22 @@ fun LingMarketProfileScreen(
             icon = Icons.Filled.Edit,
             label = "编辑个人资料",
             onClick = { navController.navigate(AccountProfile.createRoute(AppStore.LING_MARKET)) }
+        )
+        // 新增：我的收藏
+        FunctionCard(
+            icon = Icons.Filled.Favorite,
+            label = "我的收藏",
+            onClick = { 
+                // 导航到资源广场，设置"我的收藏"模式
+                navController.navigate(
+                    ResourcePlaza(
+                        isMyResource = true,
+                        userId = -1, // 灵应用商店看的是Authorization头
+                        mode = "my_favourite",
+                        storeName = AppStore.LING_MARKET.name
+                    ).createRoute()
+                )
+            }
         )
     }
 }
