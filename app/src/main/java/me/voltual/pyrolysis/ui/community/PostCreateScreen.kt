@@ -35,6 +35,7 @@ import me.voltual.pyrolysis.core.ui.theme.*
 
 private const val MODE_CREATE = "create"
 private const val MODE_REFUND = "refund"
+private const val MAX_IMAGE_COUNT = 20  // 添加图片数量限制常量
 
 data class Subsection(val id: Int, val name: String)
 
@@ -147,22 +148,12 @@ fun PostCreateScreen(
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) { 
             result.data?.data?.let { uri ->
-                if (uiState.imageUriToUrlMap.size < 2) {
+                if (uiState.imageUriToUrlMap.size < MAX_IMAGE_COUNT) {
                     viewModel.uploadImage(uri)
                 }
             }
         }
-    }
-
-    val startImagePicker: () -> Unit = {
-        activity?.let {
-            ImagePicker.with(it)
-                .crop()
-                .compress(1024)
-                .maxResultSize(1080, 1080)
-                .createIntent { intent -> imagePickerLauncher.launch(intent) }
-        }
-    }
+    }    
 
     if (uiState.showProgressDialog) {
         AlertDialog(
@@ -290,7 +281,7 @@ fun PostCreateScreen(
         // 图片上传区
         Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
             Text(
-                "图片上传 (最多20张)",
+                "图片上传 (最多 $MAX_IMAGE_COUNT 张)",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -311,9 +302,15 @@ fun PostCreateScreen(
                         }
                     )
                 }
-                if (uiState.imageUriToUrlMap.size < 20) {
+                if (uiState.imageUriToUrlMap.size < MAX_IMAGE_COUNT) {
                     item {
-                        OutlinedButton(onClick = startImagePicker, modifier = Modifier.size(80.dp)) {
+                        OutlinedButton(onClick = {ImagePicker.with(context as Activity)
+                                            .crop()
+//                                            .compress(1024)
+//                                            .maxResultSize(1080, 1080)
+                                            .createIntent { intent ->
+                                                imagePickerLauncher.launch(intent)
+                                            }}, modifier = Modifier.size(80.dp)) {
                             Icon(Icons.Default.Add, "添加图片")
                         }
                     }

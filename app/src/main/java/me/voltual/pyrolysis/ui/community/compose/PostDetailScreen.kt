@@ -598,9 +598,10 @@ fun CommentDialog(
                                 Button(
                                     onClick = {
                                         ImagePicker.with(context as Activity)
-                                            .crop()
-                                            .compress(1024)
-                                            .maxResultSize(1080, 1080)
+                                            //.crop()
+//                                            .compress(1024)
+.galleryOnly()	//用户只能从图库选择图片
+//                                            .maxResultSize(1080, 1080)
                                             .createIntent { intent ->
                                                 imagePickerLauncher.launch(intent)
                                             }
