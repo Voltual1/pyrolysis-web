@@ -438,7 +438,7 @@ private fun PersonalCenterSection(
                     Spacer(modifier = Modifier.width(16.dp))
 
                     Text(
-                        text = "ID:",
+                        text = "用户名:",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -484,28 +484,28 @@ private fun StatsRow(
     ) {
         StatItem(
             count = followersCount,
-            label = "我的关注",
+            label = "关注",
             onClick = onFollowersClick,
             modifier = Modifier.weight(1f)
         )
 
         StatItem(
             count = fansCount,
-            label = "我的粉丝",
+            label = "粉丝",
             onClick = onFansClick,
             modifier = Modifier.weight(1f)
         )
 
         StatItem(
             count = postsCount,
-            label = "我的帖子",
+            label = "帖子",
             onClick = onPostsClick,
             modifier = Modifier.weight(1f)
         )
 
         StatItem(
             count = likesCount,
-            label = "我的获赞",
+            label = "获赞",
             modifier = Modifier.weight(1f)
         )
     }
@@ -593,7 +593,7 @@ private fun FunctionCardSection(
             // 功能区列表
             FunctionItem(
                 icon = R.drawable.ic_menu_message,
-                label = "消息中心",
+                label = "消息",
                 onClick = onMessageCenterClick
             )
 
@@ -601,7 +601,7 @@ private fun FunctionCardSection(
 
             FunctionItem(
                 icon = R.drawable.ic_visibility,
-                label = "浏览记录",
+                label = "看过的",
                 onClick = onBrowseHistoryClick
             )
 
@@ -609,7 +609,7 @@ private fun FunctionCardSection(
 
             FunctionItem(
                 icon = R.drawable.heart_favorites_open,
-                label = "我喜欢的",
+                label = "喜欢的",
                 onClick = onMyLikesClick
             )
 
@@ -617,7 +617,7 @@ private fun FunctionCardSection(
 
             FunctionItem(
                 icon = R.drawable.ic_menu_settings,
-                label = "主题设置",
+                label = "主题",
                 onClick = onSettingsClick
             )
 
@@ -625,7 +625,7 @@ private fun FunctionCardSection(
 
             FunctionItem(
                 icon = R.drawable.google_cloud_search,
-                label = "我的资源",
+                label = "资源",
                 onClick = onMyResourcesClick
             )
 
@@ -633,7 +633,7 @@ private fun FunctionCardSection(
 
             FunctionItem(
                 icon = R.drawable.mobills,
-                label = "我的账单",
+                label = "账单",
                 onClick = onBillingClick
             )
 
@@ -641,25 +641,25 @@ private fun FunctionCardSection(
 
             FunctionItem(
                 icon = R.drawable.banking_4a,
-                label = "支付中心",
+                label = "投币",
                 onClick = onPaymentCenterClick
             )
 
             Divider()
+            
+            FunctionItem(
+                icon = Icons.Filled.Person,
+                label = "资料",
+                onClick = onAccountProfileClick
+            )
+            
+            Divider()           
 
             FunctionItem(
                 icon = R.drawable.ic_info_outline,
-                label = "关于本程序",
+                label = "关于",
                 onClick = onAboutClick
-            )
-
-            Divider()
-
-            FunctionItem(
-                icon = Icons.Filled.Person,
-                label = "账号资料",
-                onClick = onAccountProfileClick
-            )
+            )            
         }
     }
 }

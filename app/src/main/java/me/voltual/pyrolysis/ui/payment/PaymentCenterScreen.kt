@@ -10,6 +10,7 @@ package me.voltual.pyrolysis.ui.payment
 
 import android.app.Activity
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -18,11 +19,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -31,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
@@ -182,11 +188,6 @@ fun PaymentContent(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text(
-                            "高级支付模式",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
                         OutlinedTextField(
                             value = postIdInput,
                             onValueChange = { postIdInput = it },
@@ -257,17 +258,119 @@ fun PaymentContent(
                                 }
                             }
                             PaymentType.POST_REWARD -> {
-                                // 帖子打赏布局
-                                Text(
-                                    "帖子打赏: ${info.appName}",
-                                    modifier = Modifier.padding(16.dp)
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // 帖子标题
+                            Text(
+                                paymentInfo.postTitle,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            // 显示预览内容
+                            Text(
+                                text = paymentInfo.previewContent,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            // 作者信息
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                AsyncImage(
+                                    model = paymentInfo.authorAvatar,
+                                    contentDescription = "作者头像",
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
                                 )
+
+                                Spacer(Modifier.width(12.dp))
+
+                                Column {
+                                    Text(
+                                        paymentInfo.authorName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        "发布于 ${paymentInfo.postTime}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
+                        }
+                    }
 //                            else -> { Text("支付信息", modifier = Modifier.padding(16.dp)) }
                         }
                     }
                 }
             }
+            
+            // ==================== 支付金额区域 ====================
+            if (paymentInfo?.type == PaymentType.POST_REWARD) {
+                BBQCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = AppShapes.medium
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            "打赏金额",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        // 金额选择器
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            listOf(5, 10, 20, 50, 100).forEach { coinAmount ->
+                                CoinAmountChip(
+                                    amount = coinAmount,
+                                    selected = amount == coinAmount.toString(),
+                                    onClick = { amount = coinAmount.toString() }
+                                )
+                            }
+                        }
+
+                        // 自定义金额输入
+                        OutlinedTextField(
+                            value = amount,
+                            onValueChange = {
+                                if (it.isEmpty() || it.toIntOrNull() != null) {
+                                    amount = it
+                                }
+                            },
+                            label = { Text("自定义金额") },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                            ),
+                            trailingIcon = {
+                                Text("硬币", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        )
+                    }
+                }
+            }        
 
             // 余额区域
             BBQCard(modifier = Modifier.fillMaxWidth()) {
@@ -302,35 +405,107 @@ fun PaymentContent(
                 }
             }
 
-            // 支付按钮逻辑
-            val payAmount = amount.toIntOrNull() ?: 0
+            // ==================== 支付按钮区域 ====================
+        val payAmount = amount.toIntOrNull() ?: 0
+        BBQCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            shape = AppShapes.medium
+        ) {
             BBQButton(
                 onClick = {
                     if (payAmount > 0) {
                         if (coinsBalance != null && payAmount > coinsBalance) {
                             coroutineScope.launch {
-                                snackbarHostState.showSnackbar("硬币余额不足")
+                                snackbarHostState.showSnackbar("硬币余额不足，请充值")
                             }
-                        } else onPay(payAmount)
+                        } else {
+                            onPay(payAmount)
+                        }
+                    } else {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("请输入有效的支付金额")
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = payAmount > 0 && !isPaymentProcessing,
+                enabled = payAmount > 0 && (coinsBalance == null || payAmount <= coinsBalance) && !isPaymentProcessing, // 禁用条件
+                contentPadding = PaddingValues(vertical = 16.dp),
                 text = {
-                    if (isPaymentProcessing) CircularProgressIndicator(Modifier.size(24.dp))
-                    else Text("确认支付")
+                    if (isPaymentProcessing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text(
+                            text = when {
+                                paymentInfo?.type == PaymentType.APP_PURCHASE ->
+                                    "确认支付 ${paymentInfo.price} 硬币购买应用"
+
+                                paymentInfo?.type == PaymentType.POST_REWARD ->
+                                    "打赏 $payAmount 硬币"
+
+                                else -> "确认支付 $payAmount 硬币"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             )
         }
-
-        BBQSnackbarHost(
+    }
+    BBQSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
-    }
+        }        
+    
 
     errorMessage?.let { msg ->
         LaunchedEffect(msg) { snackbarHostState.showSnackbar(msg) }
+    }
+}
+
+@Composable
+private fun CoinAmountChip(
+    amount: Int,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (selected) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+
+    val borderColor = if (selected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.outline
+    }
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .background(backgroundColor)
+            .border(
+                width = 1.dp,
+                color = borderColor,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "$amount",
+            style = MaterialTheme.typography.titleMedium,
+            color = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 

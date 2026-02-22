@@ -224,7 +224,7 @@ fun PostDetailScreen(
                                             onDismissRequest = { showMoreOptions = false }
                                         ) {
                                             DropdownMenuItem(
-                                                text = { Text("分享") },
+                                                text = { Text("复制链接") },
                                                 onClick = {
                                                     showMoreOptions = false
                                                     showShareDialog = true
@@ -238,7 +238,7 @@ fun PostDetailScreen(
                                                 }
                                             )
                                             DropdownMenuItem(
-                                                text = { Text("打赏") },
+                                                text = { Text("投币") },
                                                 onClick = {
                                                     showMoreOptions = false
                                                     // 类型安全导航到打赏页面
