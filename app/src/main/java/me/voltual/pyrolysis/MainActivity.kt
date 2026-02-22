@@ -33,6 +33,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalTextToolbar
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
@@ -84,7 +86,14 @@ class MainActivity : AppCompatActivity() {
                 startRoute = Home,
                 topLevelRoutes = topLevelRoutes
             )
-            val navigator = remember(navigationState) { Navigator(navigationState) }
+            // 在这里获取 TextToolbar
+    val textToolbar = LocalTextToolbar.current
+
+    val view = LocalView.current // 获取承载 Compose 的原生 View
+
+    val navigator = remember(navigationState, textToolbar, view) { 
+        Navigator(navigationState, textToolbar, view) 
+    }
 
             CompositionLocalProvider(
                 LocalNavigator provides navigator,
@@ -381,7 +390,6 @@ BBQNavDisplay(
     }
 }
 
-/** 更新检查组件（修正版） */
 @Composable
 fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
     val context = LocalContext.current

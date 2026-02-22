@@ -26,6 +26,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import me.voltual.pyrolysis.ui.*
 import java.util.regex.Pattern
+import androidx.compose.runtime.DisposableEffect
 
 private val INTERNAL_POST_LINK_PATTERN: Pattern = Pattern.compile(
     "http://apk\\.xiaoqu\\.online/post/(\\d+)\\.html"
@@ -72,7 +73,7 @@ fun LinkifyText(
     } else {
         style
     }
-
+        
     val annotatedString = remember(text, linkColor) {
         val processedText = text.replace("<br>", "\n")
         buildAnnotatedString {
