@@ -47,7 +47,7 @@ fun LoginScreen(
 
     if (loginSuccess) {
         LaunchedEffect(Unit) {
-            navigator.navigate(Home)
+            onLoginSuccess()
         }
     }
 

@@ -108,7 +108,7 @@ fun BBQNavDisplay(
                     val viewModel: LoginViewModel = koinViewModel()
                     LoginScreen(
                         viewModel = viewModel,
-                        onLoginSuccess = { navigator.navigate(Home) },
+                        onLoginSuccess = { navigator.goBack() },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
