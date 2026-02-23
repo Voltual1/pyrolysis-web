@@ -52,7 +52,10 @@ import me.voltual.pyrolysis.ui.user.compose.UserListScreen
 import androidx.compose.foundation.*
 import androidx.navigation3.ui.NavDisplay
 import org.koin.androidx.compose.koinViewModel
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.compose.material3.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.*
 import me.voltual.pyrolysis.core.ui.animation.*
 
@@ -65,10 +68,16 @@ fun BBQNavDisplay(
 ) {
     val mySceneStrategy = remember { DialogSceneStrategy<NavKey>() }
     val slideDistance = rememberSlideDistance() // 获取 30dp 对应的像素值
+    
+    val decorators = listOf(
+        rememberSaveableStateHolderNavEntryDecorator<NavKey>(), // 保持 UI 状态（如滚动位置）
+        rememberViewModelStoreNavEntryDecorator<NavKey>()      // 核心：为每个 Entry 提供独立的 ViewModel 存储
+    )
 
     NavDisplay(
         backStack = backStack,
         onBack = onBack,
+        entryDecorators = decorators, // 传入装饰器
         modifier = modifier.fillMaxSize(),
         sceneStrategy = mySceneStrategy,
         
@@ -144,9 +153,11 @@ fun BBQNavDisplay(
 
                 is PostDetail -> NavEntry(key) {
                     val navigator = LocalNavigator.current
+                    val viewModel: PostDetailViewModel = koinViewModel()
                     PostDetailScreen(
                         postId = key.postId,
                         onPostDeleted = { navigator.goBack() },
+                        viewModel = viewModel,   
                         snackbarHostState = snackbarHostState,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -190,8 +201,10 @@ fun BBQNavDisplay(
 
                 is BrowseHistory -> NavEntry(key) {
                     val navigator = LocalNavigator.current
+                    val viewModel: BrowseHistoryViewModel = koinViewModel() // 显式获取 ViewModel
                     BrowseHistoryScreen(
                         onPostClick = { postId -> navigator.navigate(PostDetail(postId)) },
+                        viewModel = viewModel, // 传递已获取的实例
                         modifier = Modifier.fillMaxSize(),
                         snackbarHostState = snackbarHostState
                     )

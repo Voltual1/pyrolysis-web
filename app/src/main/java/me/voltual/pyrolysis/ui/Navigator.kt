@@ -14,11 +14,11 @@ class Navigator(
 ) {
     private fun forceCleanup() {
         // 尝试常规隐藏
-        textToolbar?.hide()
+//        textToolbar?.hide()
         
         // 暴力终结原生的 ActionMode (FloatingToolbar)
         // 在 View 层级上，这会强制销毁当前的上下文菜单，不再触发坐标计算
-        hostView?.cancelPendingInputEvents()
+//        hostView?.cancelPendingInputEvents()
         
         // 剥夺焦点：防止某些组件因持有焦点而在销毁瞬间尝试重绘菜单
         hostView?.clearFocus()

@@ -79,13 +79,14 @@ import java.io.File
 fun PostDetailScreen(
     postId: Long,
     onPostDeleted: () -> Unit,
+    viewModel: PostDetailViewModel,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
     // Navigation 3 导航器
     val navigator = LocalNavigator.current
 
-    val viewModel: PostDetailViewModel = viewModel()
+    //val viewModel: PostDetailViewModel = viewModel()
     val context = LocalContext.current
 
     val postDetail by viewModel.postDetail.collectAsState()

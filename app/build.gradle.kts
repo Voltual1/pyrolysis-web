@@ -25,8 +25,8 @@ android {
         applicationId = "me.voltual.pyrolysis"
         minSdk = 24
         targetSdk = 36
-        versionCode = 503
-        versionName = "20.3"
+        versionCode = 504
+        versionName = "20.4"
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         resourceConfigurations += listOf("zh")
@@ -125,6 +125,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 //    implementation(libs.androidx.navigation.compose)Nav2再见！
     implementation(libs.compose.navigation3)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0") // 请根据版本调整
         implementation(libs.zxing.core)
     implementation(libs.compose.navigation3.ui)
     implementation(libs.compose.adaptive)
