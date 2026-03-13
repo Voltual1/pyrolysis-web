@@ -65,13 +65,6 @@ fun AppReleaseScreen(
         }
     }
 
-    // 当选择弦开放平台时，自动加载标签
-    LaunchedEffect(selectedStore) {
-        if (selectedStore == AppStore.SINE_OPEN_MARKET) {
-            viewModel.loadTagOptions()
-        }
-    }
-
     val apkLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -111,7 +104,7 @@ fun AppReleaseScreen(
                 AppStoreDropdownMenu(
                     selectedStore = selectedStore,
                     onStoreChange = { viewModel.onStoreSelected(it) },
-                    appStores = listOf(AppStore.XIAOQU_SPACE, AppStore.SINE_OPEN_MARKET)
+                    appStores = listOf(AppStore.XIAOQU_SPACE)
                 )
             }
 
@@ -188,51 +181,6 @@ fun AppReleaseScreen(
 
                 item { CategoryDropdown(viewModel) }
                 item { PaymentSettings(viewModel) }
-            }
-
-            // --- 弦开放平台表单 ---
-            if (selectedStore == AppStore.SINE_OPEN_MARKET) {
-                item { AppTypeDropdown(viewModel = viewModel) }
-                item { VersionTypeDropdown(viewModel = viewModel) }
-                item { TagDropdown(viewModel = viewModel) }
-                item { FormTextField(label = "应用名称", state = viewModel.appName) }
-                item { FormTextField(label = "包名", state = viewModel.packageName) }
-                item { FormTextField(label = "版本名", state = viewModel.versionName) }
-                item { FormTextField(label = "开发者", state = viewModel.developer) }
-                item { FormTextField(label = "应用来源", state = viewModel.source) }
-                item { FormTextField(label = "关键字 (空格分隔)", state = viewModel.keyword) }
-                item { FormTextField(label = "应用描述", state = viewModel.describe, singleLine = false, minLines = 3) }
-                item { FormTextField(label = "更新日志", state = viewModel.updateLog, singleLine = false, minLines = 2) }
-                item { FormTextField(label = "给审核员的留言", state = viewModel.uploadMessage, singleLine = false, minLines = 2) }
-
-                item {
-                    Column {
-                        Text("2. 添加应用截图 (发布时上传)", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        BBQOutlinedButton(
-                            onClick = { imageLauncher.launch("image/*") },
-                            modifier = Modifier.fillMaxWidth(),
-                            text = { Text("选择截图 (${viewModel.screenshotsUris.size})") }
-                        )
-                        if (viewModel.screenshotsUris.isNotEmpty()) {
-                            Row(
-                                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                viewModel.screenshotsUris.forEach { uri ->
-                                    ImagePreviewItem(
-                                        imageUrl = uri.toString(),
-                                        onRemoveClick = { viewModel.removeScreenshot(uri) },
-                                        onImageClick = {
-                                            // 本地 URI 预览，如果需要可导航到 ImagePreview
-                                            // navigator.navigate(ImagePreview(uri.toString()))
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
             }
 
             // --- 提交按钮 ---

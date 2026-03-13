@@ -47,7 +47,7 @@ import me.voltual.pyrolysis.feature.store.index.RepositoryUpdater
 import me.voltual.pyrolysis.feature.store.repository.InstalledRepository
 import me.voltual.pyrolysis.feature.store.repository.RepositoriesRepository
 import me.voltual.pyrolysis.core.utils.buildSyncLine
-//import com.machiav3lli.fdroid.utils.displayVulnerabilitiesNotification
+import me.voltual.pyrolysis.core.utils.displayVulnerabilitiesNotification
 import me.voltual.pyrolysis.core.utils.extension.android.Android
 import me.voltual.pyrolysis.core.utils.reportSyncFail
 import kotlinx.coroutines.async
@@ -287,9 +287,9 @@ class BatchSyncWorker(
 
         val installedWithVulns = vulnsDeferred.await()
         if (installedWithVulns.isNotEmpty()) {
-/*            langContext.displayVulnerabilitiesNotification(
+            langContext.displayVulnerabilitiesNotification(
                 installedWithVulns.map { it.toItem() }
-            )*/
+            )
         }
     }
 

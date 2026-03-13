@@ -220,15 +220,6 @@ fun AppDetailScreen(
                         }
                     }
                 }
-                AppStore.SIENE_SHOP -> {
-                    val shareUrl = "sinemarket://app/${detail.id}"
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    val clip = ClipData.newPlainText("应用链接", shareUrl)
-                    clipboard.setPrimaryClip(clip)
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("已复制分享链接: $shareUrl")
-                    }
-                }
                 else -> {
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar("暂不支持该商店的分享功能")
@@ -266,7 +257,8 @@ fun AppDetailScreen(
         } else if (appDetail != null) {
             val detail = appDetail!!
             val pageCount = when (detail.store) {
-                AppStore.SIENE_SHOP -> 2
+                AppStore.LOCAL -> 2
+                //暂时硬编码为LOCAL占位
                 else -> 1
             }
             val pagerState = rememberPagerState(pageCount = { pageCount })
@@ -476,24 +468,12 @@ fun AppDetailContent(
             }
         }
 
-        if (appDetail.store == AppStore.SIENE_SHOP || appDetail.store == AppStore.LING_MARKET) {
-            item {
-                val favoriteState = UnifiedFavoriteState(
-                    isFavorite = appDetail.isFavorite,
-                    favoriteCount = appDetail.favoriteCount
-                )
-                AppFavoriteCard(
-                    state = favoriteState,
-                    onToggle = { onFavoriteToggle() }
-                )
-            }
-        }
-
         // --- 更新日志 ---
         val updateLog = when (appDetail.store) {
-            AppStore.SIENE_SHOP, AppStore.LING_MARKET -> appDetail.updateLog
+            AppStore.LOCAL -> appDetail.updateLog
             else -> null
         }
+        //暂时用LOCAL占位
         if (!updateLog.isNullOrEmpty()) {
             item {
                 UpdateLogSection(
@@ -527,8 +507,6 @@ fun AppDetailContent(
 
                     when (appDetail.store) {
                         AppStore.XIAOQU_SPACE -> XiaoquSpaceAppInfo(appDetail = appDetail)
-                        AppStore.SIENE_SHOP -> SineShopAppInfo(appDetail = appDetail)
-                        AppStore.LING_MARKET -> LingMarketAppInfo(appDetail = appDetail)
                         else -> Text(
                             text = "⚠️什么都没有(||๐_๐)",
                             style = MaterialTheme.typography.bodySmall,

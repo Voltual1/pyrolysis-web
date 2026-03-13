@@ -113,15 +113,9 @@ val appModule = module {
     
     single { DeviceNameDataStore(androidContext()) }
     single { XiaoQuRepository(KtorClient.ApiServiceImpl) }
-    single { SineShopRepository() }
-    single { SineOpenMarketRepository() } 
-    single { LingMarketRepository() }    
     single<Map<AppStore, IAppStoreRepository>> {
     val map = mutableMapOf<AppStore, IAppStoreRepository>()
     map[AppStore.XIAOQU_SPACE] = get<XiaoQuRepository>()
-    map[AppStore.SIENE_SHOP] = get<SineShopRepository>()
-    map[AppStore.SINE_OPEN_MARKET] = get<SineOpenMarketRepository>()
-    map[AppStore.LING_MARKET] = get<LingMarketRepository>()
     map
 }
 }

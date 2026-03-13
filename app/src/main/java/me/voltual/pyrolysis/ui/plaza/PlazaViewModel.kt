@@ -286,22 +286,15 @@ class PlazaViewModel(
             
             // 根据当前商店和模式设置分类ID
             when {
-                // 弦应用商店的特殊模式
-                _appStore.value == AppStore.SIENE_SHOP -> {
+                // 特殊模式，暂时硬编码为LOCAL
+                _appStore.value == AppStore.LOCAL -> {
                     when (currentMode) {
                         "my_upload" -> _currentCategoryId.value = "-3"
                         "my_favourite" -> _currentCategoryId.value = "-4"
                         "my_history" -> _currentCategoryId.value = "-5"
                         else -> _currentCategoryId.value = null
                     }
-                }
-                // 灵应用商店的特殊模式
-                _appStore.value == AppStore.LING_MARKET -> {
-                    when (currentMode) {
-                        "my_favourite" -> _currentCategoryId.value = "-4"
-                        else -> _currentCategoryId.value = null
-                    }
-                }
+                }              
                 // 其他商店
                 else -> _currentCategoryId.value = null
             }
@@ -310,8 +303,8 @@ class PlazaViewModel(
             if (currentMode in listOf("my_upload", "my_favourite", "my_history")) {
                 // 检查当前商店是否支持该模式
                 val supportedModes = when (_appStore.value) {
-                    AppStore.SIENE_SHOP -> listOf("my_upload", "my_favourite", "my_history")
-                    AppStore.LING_MARKET -> listOf("my_favourite")
+                    AppStore.LOCAL -> listOf("my_upload", "my_favourite", "my_history")
+                    //暂时硬编码为LOCAL
                     else -> emptyList()
                 }
                 

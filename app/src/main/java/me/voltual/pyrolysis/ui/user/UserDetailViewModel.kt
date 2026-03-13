@@ -17,7 +17,6 @@ import me.voltual.pyrolysis.data.unified.toUnifiedUserDetail
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.KtorClient
-import me.voltual.pyrolysis.SineShopClient
 import me.voltual.pyrolysis.BBQApplication
 import me.voltual.pyrolysis.data.unified.UnifiedUserDetail 
 import kotlinx.coroutines.launch
@@ -151,18 +150,14 @@ class UserDetailViewModel(application: Application) : AndroidViewModel(applicati
                             token = token
                         )
                     }
-                    AppStore.SIENE_SHOP -> {
-                        // 弦应用商店 API
-                        SineShopClient.getUserInfoById(_currentUserId)
-                    }
                     else -> {
                         // 其他应用商店：不支持用户详情，直接返回失败
                         Result.failure(IllegalArgumentException("当前应用商店不支持用户详情"))
                     }
                 }
 
-                // 只有在前两个分支时才处理响应
-                if (_currentStore == AppStore.XIAOQU_SPACE || _currentStore == AppStore.SIENE_SHOP) {
+                // 只有在分支时才处理响应
+                if (_currentStore == AppStore.XIAOQU_SPACE ) {
                     when (val response = result.getOrNull()) {
                         is KtorClient.UserInformationResponse -> {
                             // 小趣空间响应
@@ -172,11 +167,6 @@ class UserDetailViewModel(application: Application) : AndroidViewModel(applicati
                             } else {
                                 _errorMessage.value = "加载失败: ${response.msg}"
                             }
-                        }
-                        is SineShopClient.SineShopUserInfo -> {
-                            // 弦应用商店响应：直接是数据对象
-                            _userData.value = response.toUnifiedUserDetail()
-                            _errorMessage.value = null
                         }
                         else -> {
                             _errorMessage.value = "加载失败: ${result.exceptionOrNull()?.message ?: "网络错误"}"

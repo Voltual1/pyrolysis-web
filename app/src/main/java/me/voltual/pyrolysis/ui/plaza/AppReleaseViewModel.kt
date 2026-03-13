@@ -18,9 +18,7 @@ import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.KtorClient
-import me.voltual.pyrolysis.SineShopClient
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
-import me.voltual.pyrolysis.feature.store.repository.SineOpenMarketRepository
 import me.voltual.pyrolysis.feature.store.repository.XiaoQuRepository
 import me.voltual.pyrolysis.data.unified.UnifiedAppReleaseParams
 import me.voltual.pyrolysis.core.utils.ApkInfo
@@ -69,12 +67,10 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
 
     // --- 仓库实例 ---
     private val xiaoQuRepo: IAppStoreRepository = XiaoQuRepository(KtorClient.ApiServiceImpl)
-    private val sineOpenRepo: IAppStoreRepository = SineOpenMarketRepository()
 
     private fun getCurrentRepo(): IAppStoreRepository {
         return when (_selectedStore.value) {
             AppStore.XIAOQU_SPACE -> xiaoQuRepo
-            AppStore.SINE_OPEN_MARKET -> sineOpenRepo
             else -> xiaoQuRepo // 默认
         }
     }
@@ -134,35 +130,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
     // 应用标签 (从API获取)
     val tagOptions = mutableStateListOf<String>() // 改为可变列表
     val selectedTagIndex = mutableStateOf(0)
-    val appTags = mutableStateOf(0) // 默认选中第一个
-            
-    // 加载标签的函数，由 UI 手动调用
-    fun loadTagOptions() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                // 调用 SineShopClient 获取标签列表
-                val tagListResult = SineShopClient.getAppTagList()
-                if (tagListResult.isSuccess) {
-                    val tagList = tagListResult.getOrNull() ?: emptyList() // 直接获取列表
-                    // 将标签名称添加到列表中
-                    tagOptions.clear()
-                    tagOptions.addAll(tagList.map { it.name })
-                    // 设置默认选中第一个
-                    if (tagList.isNotEmpty()) {
-                        selectedTagIndex.value = 0
-                        appTags.value = 0 // ID 从 0 开始
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                // 如果加载失败，可以设置一个默认列表
-                tagOptions.clear()
-                tagOptions.addAll(listOf("实用工具", "应用商店", "游戏", "通讯社交", "学习教育"))
-                selectedTagIndex.value = 0
-                appTags.value = 0
-            }
-        }
-    }
+    val appTags = mutableStateOf(0) // 默认选中第一个                
 
     // SDK 版本状态
     val sdkMin = mutableStateOf(21)
@@ -189,21 +157,11 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
     
     // 根据商店类型定义不同的最大图片数量
     private val MAX_INTRO_IMAGES_XIAOQU = 3
-    private val MAX_INTRO_IMAGES_SINE_OPEN = 5
-// 弦开放平台：选择截图（保存本地URI，发布时一起上传）
-    fun addScreenshots(uris: List<Uri>) {
-        if (_selectedStore.value != AppStore.SINE_OPEN_MARKET) return
-        
-        // 检查当前数量是否已达到上限
-        if (screenshotsUris.size >= MAX_INTRO_IMAGES_SINE_OPEN) {
-            // 可以通过 Snackbar 或其他方式提示用户
-            // 这里为了简化，直接返回
-            return
-        }
+    fun addScreenshots(uris: List<Uri>) {       
         
         // 计算还能添加多少张
         val currentCount = screenshotsUris.size
-        val remainingSlots = MAX_INTRO_IMAGES_SINE_OPEN - currentCount
+        val remainingSlots = MAX_INTRO_IMAGES_XIAOQU - currentCount
         val urisToUpload = uris.take(remainingSlots)
         
         screenshotsUris.addAll(urisToUpload)
@@ -249,24 +207,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                 // 自动填充字段
                 appExplain.value = "适配性能描述 •\n包名：${parsedInfo.packageName}\n版本：${parsedInfo.versionName}"
                 
-                // 如果是弦开放平台，自动填充 SDK 信息
-                if (_selectedStore.value == AppStore.SINE_OPEN_MARKET) {
-                    // 使用解析出的 SDK 信息
-                    // 注意：minSdkVersion 和 targetSdkVersion 可能为 0，表示未指定
-                    if (parsedInfo.minSdkVersion > 0) {
-                        sdkMin.value = parsedInfo.minSdkVersion
-                    } else {
-                        // 如果未指定，可以使用一个默认值
-                        sdkMin.value = 21
-                    }
-                    
-                    if (parsedInfo.targetSdkVersion > 0) {
-                        sdkTarget.value = parsedInfo.targetSdkVersion
-                    } else {
-                        // 如果未指定，可以使用一个默认值
-                        sdkTarget.value = 33
-                    }
-                }
             }
 
             // 仅小趣空间需要立即上传 APK 和图标到图床

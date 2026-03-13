@@ -13,12 +13,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.KtorClient 
-import me.voltual.pyrolysis.SineShopClient
 import me.voltual.pyrolysis.data.SignInSettingsDataStore
 import me.voltual.pyrolysis.core.ui.theme.ThemeManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import me.voltual.pyrolysis.LingMarketClient
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -57,10 +55,6 @@ data class HomeUiState(
     val lastSignTime: String = "",
     val displayDaysDiff: Int = 0,
     val dataLoadState: DataLoadState = DataLoadState.NotLoaded,
-    val sineShopUserInfo: SineShopClient.SineShopUserInfo? = null,
-    val sineShopLoginPrompt: Boolean = true,
-    val lingMarketUserInfo: LingMarketClient.LingMarketUser? = null,
-    val lingMarketLoginPrompt: Boolean = true
 )
 
 @KoinViewModel
@@ -158,78 +152,7 @@ if (userCredentials.userId == 0L || userCredentials.token.isEmpty()) {
                 )
             }
         }
-    }
-    
-    private fun loadLingMarketUserInfo(context: Context) {
-    viewModelScope.launch {
-        try {
-            // 获取灵应用商店token
-            val lingMarketTokenFlow = AuthManager.getLingMarketToken(context)
-            val lingMarketToken = lingMarketTokenFlow.first()
-
-            // 如果没有token，则显示登录提示
-            if (lingMarketToken.isNullOrEmpty()) {
-                uiState.value = uiState.value.copy(
-                    lingMarketLoginPrompt = true,
-                    lingMarketUserInfo = null
-                )
-                return@launch
-            }
-
-            // 调用获取用户个人资料的API - 现在直接返回 LingMarketUser
-            val userProfileResult = withContext(Dispatchers.IO) {
-                LingMarketClient.LingMarketApiServiceImpl.getUserProfile()
-            }
-
-            userProfileResult.onSuccess { user ->
-                // 成功获取用户信息
-                uiState.value = uiState.value.copy(
-                    lingMarketUserInfo = user,
-                    lingMarketLoginPrompt = false
-                )
-                println("✅ LingMarket user info loaded: ${user.nickname}")
-            }.onFailure { e ->
-                println("❌ Failed to load LingMarket user info: ${e.message}")
-                uiState.value = uiState.value.copy(
-                    lingMarketLoginPrompt = true,
-                    lingMarketUserInfo = null
-                )
-            }
-        } catch (e: Exception) {
-            println("❌ Error loading LingMarket user info: ${e.message}")
-            uiState.value = uiState.value.copy(
-                lingMarketLoginPrompt = true,
-                lingMarketUserInfo = null
-            )
-        }
-    }
-}
-    
-    //显式检查和更新灵应用商店登录状态的方法
-    fun checkAndUpdateLingMarketLoginState(context: Context) {
-        viewModelScope.launch {
-            try {
-                // 获取灵应用商店token
-                val lingMarketTokenFlow = AuthManager.getLingMarketToken(context)
-                val lingMarketToken = lingMarketTokenFlow.first()
-
-                // 更新登录状态
-                val isLoggedIn = !lingMarketToken.isNullOrEmpty()
-                uiState.value = uiState.value.copy(lingMarketLoginPrompt = !isLoggedIn)
-
-                // 如果已登录，加载用户信息
-                if (isLoggedIn) {
-                    loadLingMarketUserInfo(context)
-                }
-            } catch (e: Exception) {
-                println("Error checking LingMarket login state: ${e.message}")
-                uiState.value = uiState.value.copy(
-                    lingMarketLoginPrompt = true,
-                    lingMarketUserInfo = null
-                )
-            }
-        }
-    }
+    }        
     
     // 检查并执行自动签到
     private fun checkAndAutoSignIn(context: Context) {
@@ -324,56 +247,7 @@ if (userCredentials.userId == 0L || userCredentials.token.isEmpty()) {
                 )
             }
         }
-    }
-       
-    // 加载弦应用商店用户信息
-    private fun loadSineShopUserInfo(context: Context) {
-        viewModelScope.launch {
-            try {
-                // 获取弦应用商店token
-                val sineShopTokenFlow = AuthManager.getSineMarketToken(context)
-                val sineShopToken = sineShopTokenFlow.first()
-
-                // 如果没有token，则显示登录提示
-                if (sineShopToken.isNullOrEmpty()) {
-                    uiState.value = uiState.value.copy(
-                        sineShopLoginPrompt = true,
-                        sineShopUserInfo = null
-                    )
-                    return@launch
-                }
-
-                val sineShopUserInfoResult = withContext(Dispatchers.IO) {
-                    SineShopClient.getUserInfo(token=sineShopToken)
-                }
-
-                sineShopUserInfoResult.onSuccess { userInfo ->
-                    uiState.value = uiState.value.copy(
-                        sineShopUserInfo = userInfo,
-                        sineShopLoginPrompt = false
-                    )
-                }.onFailure { e ->
-                    // 处理失败情况，例如显示错误信息
-                    println("Failed to load SineShop user info: ${e.message}")
-                    uiState.value = uiState.value.copy(
-                        sineShopLoginPrompt = true,
-                        sineShopUserInfo = null
-                    )
-                }
-            } catch (e: Exception) {
-                println("Error loading SineShop user info: ${e.message}")
-                uiState.value = uiState.value.copy(
-                    sineShopLoginPrompt = true,
-                    sineShopUserInfo = null
-                )
-            }
-        }
-    }
-
-    // 更新弦应用商店登录提示状态
-    fun updateSineShopLoginState(isLoggedIn: Boolean) {
-        uiState.value = uiState.value.copy(sineShopLoginPrompt = !isLoggedIn)
-    }
+    }          
 
     // 强制刷新用户数据
     fun refreshUserData(context: Context) {
@@ -425,30 +299,5 @@ if (userCredentials.userId == 0L || userCredentials.token.isEmpty()) {
         viewModelScope.launch {
             snackbarHostState.value?.showSnackbar(message)
         }
-    }
-
-    fun checkAndUpdateSineShopLoginState(context: Context) {
-        viewModelScope.launch {
-            try {
-                // 获取弦应用商店token
-                val sineShopTokenFlow = AuthManager.getSineMarketToken(context)
-                val sineShopToken = sineShopTokenFlow.first()
-
-                // 更新登录状态
-                val isLoggedIn = !sineShopToken.isNullOrEmpty()
-                uiState.value = uiState.value.copy(sineShopLoginPrompt = !isLoggedIn)
-
-                // 如果已登录，加载用户信息
-                if (isLoggedIn) {
-                    loadSineShopUserInfo(context)
-                }
-            } catch (e: Exception) {
-                println("Error checking SineShop login state: ${e.message}")
-                uiState.value = uiState.value.copy(
-                    sineShopLoginPrompt = true,
-                    sineShopUserInfo = null
-                )
-            }
-        }
-    }
+    }    
 }

@@ -41,9 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.LingMarketClient
 import me.voltual.pyrolysis.R
-import me.voltual.pyrolysis.SineShopClient
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.theme.AppShapes
 import me.voltual.pyrolysis.core.ui.theme.BBQBackgroundCard
@@ -51,12 +49,6 @@ import me.voltual.pyrolysis.core.ui.theme.BBQBackgroundCard
 @Composable
 fun HomeScreen(
     state: HomeState,
-    sineShopUserInfo: SineShopClient.SineShopUserInfo?,
-    sineShopLoginPrompt: Boolean,
-    lingMarketUserInfo: LingMarketClient.LingMarketUser?,
-    lingMarketLoginPrompt: Boolean,
-    onSineShopLoginClick: () -> Unit,
-    onLingMarketLoginClick: () -> Unit,
     onAvatarClick: () -> Unit,
     onAvatarLongClick: () -> Unit,
     onMessageCenterClick: () -> Unit,
@@ -116,104 +108,12 @@ fun HomeScreen(
                     onRecalculateDays = onRecalculateDays,
                     onAboutClick = onAboutClick,
                     onAccountProfileClick = onAccountProfileClick,
-                    onSineShopLoginClick = onSineShopLoginClick,
                     viewModel = viewModel,
                     snackbarHostState = snackbarHostState
                 )
             }
-            1 -> {
-                if (sineShopLoginPrompt) {
-                    SineShopLoginPrompt(onSineShopLoginClick = onSineShopLoginClick)
-                } else {
-                    SineShopProfileScreen(
-                        userInfo = sineShopUserInfo,
-                        modifier = Modifier.fillMaxSize(),
-                        onNavigateToResourcePlaza = { mode, targetStoreName ->
-                            // 使用 Navigation 3 类型安全导航
-                            when (mode) {
-                                "my_upload" -> {
-                                    navigator.navigate(
-                                        ResourcePlaza(
-                                            isMyResource = true,
-                                            mode = "my_upload",
-                                            storeName = targetStoreName
-                                        )
-                                    )
-                                }
-                                "my_favourite" -> {
-                                    navigator.navigate(
-                                        ResourcePlaza(
-                                            isMyResource = true,
-                                            mode = "my_favourite",
-                                            storeName = targetStoreName
-                                        )
-                                    )
-                                }
-                                "my_history" -> {
-                                    navigator.navigate(
-                                        ResourcePlaza(
-                                            isMyResource = true,
-                                            mode = "my_history",
-                                            storeName = targetStoreName
-                                        )
-                                    )
-                                }
-                                else -> {
-                                    navigator.navigate(
-                                        ResourcePlaza(
-                                            isMyResource = false,
-                                            storeName = targetStoreName
-                                        )
-                                    )
-                                }
-                            }
-                        },
-                        onNavigateToUpdate = onNavigateToUpdate,
-                        onNavigateToMyComments = onNavigateToMyComments,
-                        onNavigateToMyReviews = onNavigateToMyReviews,
-                        onNavigateToCreateAppRelease = onNavigateToCreateAppRelease
-                        // navController 参数已移除
-                    )
-                }
-            }
-            2 -> {
-                if (lingMarketLoginPrompt) {
-                    LingMarketLoginPrompt(onLingMarketLoginClick = onLingMarketLoginClick)
-                } else {
-                    LingMarketProfileScreen(
-                        userInfo = lingMarketUserInfo,
-                        modifier = Modifier.fillMaxSize()
-                        // navController 参数已移除，该屏幕内部应使用 LocalNavigator
-                        // 若需要导航回调，可在此处添加，例如 onNavigateToDetail = { ... }
-                    )
-                }
-            }
-        }
     }
 }
-
-@Composable
-fun LingMarketLoginPrompt(onLingMarketLoginClick: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "您尚未登录灵应用商店，请登录后使用完整功能",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
-        TextButton(
-            onClick = onLingMarketLoginClick,
-            modifier = Modifier.padding(horizontal = 32.dp)
-        ) {
-            Text("立即登录", style = MaterialTheme.typography.bodyLarge)
-        }
-    }
 }
 
 @Composable
@@ -236,7 +136,6 @@ fun XiaoquSpaceHomePage(
     onRecalculateDays: () -> Unit,
     onAboutClick: () -> Unit,
     onAccountProfileClick: () -> Unit,
-    onSineShopLoginClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel,
     snackbarHostState: SnackbarHostState
@@ -757,27 +656,3 @@ data class HomeState(
     val exp: Int = 0,
     val displayDaysDiff: Int = 0
 )
-
-@Composable
-fun SineShopLoginPrompt(onSineShopLoginClick: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "您尚未登录弦应用商店，请登录后使用完整功能",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
-        TextButton(
-            onClick = onSineShopLoginClick,
-            modifier = Modifier.padding(horizontal = 32.dp)
-        ) {
-            Text("立即登录", style = MaterialTheme.typography.bodyLarge)
-        }
-    }
-}

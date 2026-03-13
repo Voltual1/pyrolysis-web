@@ -1,3 +1,11 @@
+/*
+ * This file is adapted from Neo Store (https://github.com/NeoApplications/Neo-Store)
+ * Modified by Voltual to fit Pyrolysis architecture.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+ */
 package me.voltual.pyrolysis.manager.service
 
 import android.app.PendingIntent
@@ -6,6 +14,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.os.Build
+import android.os.Parcelable
 import android.util.Log
 import androidx.core.net.toUri
 import me.voltual.pyrolysis.ARG_PACKAGE_NAME
@@ -20,14 +29,6 @@ import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-/**
- * Runs during or after a PackageInstaller session in order to handle completion, failure, or
- * interruptions requiring user intervention, such as the package installer prompt.
- */
-/**
- * Runs during or after a PackageInstaller session in order to handle completion, failure, or
- * interruptions requiring user intervention, such as the package installer prompt.
- */
 class InstallerReceiver : BroadcastReceiver(), KoinComponent {
     companion object {
         private const val TAG = "InstallerReceiver"
@@ -36,48 +37,59 @@ class InstallerReceiver : BroadcastReceiver(), KoinComponent {
         const val ACTION_UNINSTALL = "uninstall"
         const val INSTALLED_NOTIFICATION_TIMEOUT: Long = 5000
         const val NOTIFICATION_TAG_PREFIX = "install-"
+
+        /**
+         * 兼容性扩展函数：处理 Parcelable 获取
+         */
+        inline fun <reified T : Parcelable> Intent.getParcelableExtraCompat(key: String): T? {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                getParcelableExtra(key, T::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                getParcelableExtra(key) as? T
+            }
+        }
     }
 
     val installer: AppInstaller by inject()
 
     override fun onReceive(context: Context, intent: Intent?) {
-        val status = intent?.getIntExtra(PackageInstaller.EXTRA_STATUS, -1)
-        val sessionId = intent?.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1) ?: 0
+        if (intent == null) return
+        
+        val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, -1)
+        val sessionId = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
 
-        // get package information from session
         val sessionInstaller = context.packageManager.packageInstaller
         val session = if (sessionId > 0) sessionInstaller.getSessionInfo(sessionId) else null
 
-        val packageName =
-            session?.appPackageName ?: intent?.getStringExtra(PackageInstaller.EXTRA_PACKAGE_NAME)
+        val packageName = session?.appPackageName ?: intent.getStringExtra(PackageInstaller.EXTRA_PACKAGE_NAME)
 
         Log.i(TAG, "Status: $status, Package: $packageName")
-        // only trigger a prompt if in foreground, otherwise make notification
 
         val pending = goAsync()
         val appScope = (context.applicationContext as BBQApplication).applicationScope
+        
         appScope.launch {
             try {
                 when (status) {
-                    PackageInstaller.STATUS_SUCCESS,
-                        -> packageName?.let { installer.reportSuccess(it) }
+                    PackageInstaller.STATUS_SUCCESS -> {
+                        packageName?.let { installer.reportSuccess(it) }
+                    }
 
-                    PackageInstaller.STATUS_PENDING_USER_ACTION,
-                        -> {
+                    PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                         val isNotInUserInteraction = !installer.isInUserInteraction(packageName) &&
                                 !(Android.sdk(Build.VERSION_CODES.R) && session?.isStagedSessionActive == true)
+                        
                         if (Utils.inForeground() && isNotInUserInteraction) {
                             installer.reportUserInteraction(packageName)
-                            // Triggers the installer prompt and "unknown apps" prompt if needed
-                            val promptIntent: Intent? =
-                                intent.getParcelableExtra(Intent.EXTRA_INTENT)
+                            
+                            // 使用兼容性函数修复警告
+                            val promptIntent = intent.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT)
 
                             promptIntent?.let {
                                 it.putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
-                                it.putExtra(
-                                    Intent.EXTRA_INSTALLER_PACKAGE_NAME,
-                                    "com.android.vending"
-                                )
+                                // 模拟来源以绕过某些系统的严格检查
+                                it.putExtra(Intent.EXTRA_INSTALLER_PACKAGE_NAME, "com.android.vending")
                                 it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
                                 Log.i(TAG, "Initiating install dialog for Package: $packageName")
@@ -90,8 +102,7 @@ class InstallerReceiver : BroadcastReceiver(), KoinComponent {
                     PackageInstaller.STATUS_FAILURE_CONFLICT,
                     PackageInstaller.STATUS_FAILURE_INCOMPATIBLE,
                     PackageInstaller.STATUS_FAILURE_INVALID,
-                    PackageInstaller.STATUS_FAILURE_STORAGE,
-                        -> {
+                    PackageInstaller.STATUS_FAILURE_STORAGE -> {
                         val cancelIntent = Intent(context, ActionReceiver::class.java).apply {
                             this.action = ActionReceiver.COMMAND_CANCEL_INSTALL
                             putExtra(ARG_PACKAGE_NAME, packageName)
@@ -100,8 +111,10 @@ class InstallerReceiver : BroadcastReceiver(), KoinComponent {
                         installer.reportFailure(translatePackageInstallerError(status))
                     }
                 }
-                if (!(Utils.inForeground() && status == PackageInstaller.STATUS_PENDING_USER_ACTION))
+                
+                if (!(Utils.inForeground() && status == PackageInstaller.STATUS_PENDING_USER_ACTION)) {
                     notifyStatus(context, intent)
+                }
             } finally {
                 pending.finish()
             }
@@ -109,31 +122,28 @@ class InstallerReceiver : BroadcastReceiver(), KoinComponent {
     }
 }
 
-/**
- * Generates an intent that provides the specified activity information necessary to trigger
- * the package manager's prompt, thus completing a staged installation requiring user
- * intervention.
- *
- * @param intent the intent provided by PackageInstaller to the callback target passed to
- * PackageInstaller.Session.commit().
- * @return a pending intent that can be attached to a background-accessible entry point such as
- * a notification
- */
 fun installIntent(context: Context, intent: Intent): PendingIntent {
-    // prepare prompt intent
-    val promptIntent: Intent? = intent.getParcelableExtra(Intent.EXTRA_INTENT)
+    // 同样使用兼容性逻辑获取 Intent 内部的 Intent
+    val promptIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+    } else {
+        @Suppress("DEPRECATION")
+        intent.getParcelableExtra(Intent.EXTRA_INTENT)
+    }
+    
     val name = intent.getStringExtra(PackageInstaller.EXTRA_PACKAGE_NAME)
     val cacheFileName = intent.getStringExtra(MainActivity.EXTRA_CACHE_FILE_NAME)
 
     return PendingIntent.getActivity(
         context,
         0,
-        Intent(context, MainActivity::class.java)
-            .setAction(MainActivity.ACTION_INSTALL)
-            .setData("package:$name".toUri())
-            .putExtra(Intent.EXTRA_INTENT, promptIntent)
-            .putExtra(MainActivity.EXTRA_CACHE_FILE_NAME, cacheFileName)
-            .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        Intent(context, MainActivity::class.java).apply {
+            action = MainActivity.ACTION_INSTALL
+            data = "package:$name".toUri()
+            putExtra(Intent.EXTRA_INTENT, promptIntent)
+            putExtra(MainActivity.EXTRA_CACHE_FILE_NAME, cacheFileName)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
 }

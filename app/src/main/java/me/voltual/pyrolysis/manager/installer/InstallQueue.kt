@@ -1,3 +1,12 @@
+/*
+ * This file is adapted from Neo Store (https://github.com/NeoApplications/Neo-Store)
+ * Modified by Voltual to fit Pyrolysis architecture.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+ */
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 package me.voltual.pyrolysis.manager.installer
 
 import android.util.Log

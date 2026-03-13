@@ -172,26 +172,35 @@ object Utils {
         return config
     }
     
-    fun Context.getLocaleOfCode(localeCode: String): Locale = when {
-    localeCode.isEmpty() -> 
-        resources.configuration.locales[0]
+fun Context.getLocaleOfCode(localeCode: String): Locale {
+    val defaultLocale = resources.configuration.locales[0]
+    if (localeCode.isEmpty()) return defaultLocale
 
-    localeCode.contains("-r") -> {
-        Locale.Builder()
-            .setLanguage(localeCode.substringBefore("-r"))
-            .setRegion(localeCode.substringAfter("-r"))
-            .build()
+    return try {
+        val builder = Locale.Builder()
+        when {
+            localeCode.contains("-r") -> {
+                builder.setLanguage(localeCode.substringBefore("-r"))
+                // 仅提取前两个字符作为 Region，防止后续脚本信息干扰
+                val region = localeCode.substringAfter("-r").take(2)
+                builder.setRegion(region)
+            }
+            localeCode.contains("_") -> {
+                builder.setLanguage(localeCode.substringBefore("_"))
+                // 只取下划线后的前两个字母，并确保它们是字母或数字
+                val rawRegion = localeCode.substringAfter("_")
+                val cleanRegion = rawRegion.filter { it.isLetterOrDigit() }.take(2)
+                if (cleanRegion.isNotEmpty()) builder.setRegion(cleanRegion)
+            }
+            else -> builder.setLanguage(localeCode)
+        }
+        builder.build()
+    } catch (e: Exception) {
+        // 发生任何解析错误（如 IllformedLocaleException）时，绝不让 App 崩溃
+        defaultLocale
     }
-
-    localeCode.contains("_") -> {
-        Locale.Builder()
-            .setLanguage(localeCode.substringBefore("_"))
-            .setRegion(localeCode.substringAfter("_"))
-            .build()
-    }
-
-    else -> Locale.Builder().setLanguage(localeCode).build()
 }
+
 
     /**
      * Checks if app is currently considered to be in the foreground by Android.

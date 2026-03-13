@@ -27,7 +27,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
-import me.voltual.pyrolysis.LingMarketClient
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
@@ -235,17 +234,11 @@ fun toggleFavorite() {
             val finalFavoriteState = result.getOrNull() ?: targetState
             
             // 计算新的收藏数
-            val newFavoriteCount = if (currentDetail.store == AppStore.LING_MARKET) {
-                // 如果是灵应用商店，保持原样，不手动增减
-                currentDetail.favoriteCount
-            } else {
-                // 其他商店，手动计算增减
-                if (finalFavoriteState) {
-                    (currentDetail.favoriteCount ?: 0) + 1
-                } else {
-                    maxOf(0, (currentDetail.favoriteCount ?: 1) - 1)
-                }
-            }
+val newFavoriteCount = if (finalFavoriteState) {
+    (currentDetail.favoriteCount ?: 0) + 1
+} else {
+    maxOf(0, (currentDetail.favoriteCount ?: 1) - 1)
+}
 
             // 更新本地 StateFlow 以立即刷新 UI
             _appDetail.value = currentDetail.copy(
@@ -273,69 +266,26 @@ fun toggleFavorite() {
             // 不需要购买，继续原有下载逻辑
             _isLoading.value = true
             
-            // 获取当前应用详情
-            val detail = _appDetail.value
-            
-            // 检查是否为灵应用商店且是否有直接下载URL
-            if (detail != null && detail.store == AppStore.LING_MARKET) {
-                // 对于灵应用商店，我们已经在 getAppDetail 中尝试获取了直接URL
-                if (detail.downloadUrl != null) {
-                    // 有直接下载URL，直接使用
-                    startDownload(detail.downloadUrl!!)
-                } else {
-                    // 如果没有直接下载URL，尝试从原始数据获取apkKey并请求下载URL
-                    handleLingMarketDownload(detail)
-                }
-            } else {
-                // 其他商店，使用原有逻辑
-                val result = repository.getAppDownloadSources(currentAppId, currentVersionId)
-                _isLoading.value = false
-
-                if (result.isSuccess) {
-                    val sources = result.getOrThrow()
-                    if (sources.isEmpty()) {
-                        _errorMessage.value = "未找到下载源"
-                    } else if (sources.size == 1) {
-                        // 只有一个源，直接触发下载
-                        startDownload(sources.first().url)
-                    } else {
-                        // 多个源，显示抽屉
-                        _downloadSources.value = sources
-                        _showDownloadDrawer.value = true
-                    }
-                } else {
-                    _errorMessage.value = "获取下载链接失败: ${result.exceptionOrNull()?.message}"
-                }
-            }
-        }
-    }
-}
-
-/**
- * 处理灵应用商店的下载逻辑
- */
-private suspend fun handleLingMarketDownload(detail: UnifiedAppDetail) {
-    try {
-        // 从原始数据获取apkKey
-        val raw = detail.raw as? LingMarketClient.LingMarketApp
-        if (raw != null && raw.apkKey.isNotEmpty()) {
-            // 获取直接下载URL
-            val result = LingMarketClient.getFileDownloadUrl(raw.apkKey)
+            // 使用原有逻辑获取下载源
+            val result = repository.getAppDownloadSources(currentAppId, currentVersionId)
             _isLoading.value = false
-            
+
             if (result.isSuccess) {
-                val downloadUrl = result.getOrThrow().url
-                startDownload(downloadUrl)
+                val sources = result.getOrThrow()
+                if (sources.isEmpty()) {
+                    _errorMessage.value = "未找到下载源"
+                } else if (sources.size == 1) {
+                    // 只有一个源，直接触发下载
+                    startDownload(sources.first().url)
+                } else {
+                    // 多个源，显示抽屉
+                    _downloadSources.value = sources
+                    _showDownloadDrawer.value = true
+                }
             } else {
-                _errorMessage.value = "获取下载链接失败: ${result.exceptionOrNull()?.message}你可能没有登录灵应用商店哦"
+                _errorMessage.value = "获取下载链接失败: ${result.exceptionOrNull()?.message}"
             }
-        } else {
-            _isLoading.value = false
-            _errorMessage.value = "未找到应用文件信息"
         }
-    } catch (e: Exception) {
-        _isLoading.value = false
-        _errorMessage.value = "处理下载时出错: ${e.message}"
     }
 }
 
@@ -427,12 +377,7 @@ private suspend fun handleLingMarketDownload(detail: UnifiedAppDetail) {
 
     fun deleteComment(commentId: String) {
     viewModelScope.launch {
-        // 判断是否为灵应用商店，如果是则使用新方法
-        val result = if (currentStore == AppStore.LING_MARKET) {
-            repository.deleteComment(currentAppId, commentId)
-        } else {
-            repository.deleteComment(commentId)
-        }
+        val result = repository.deleteComment(commentId)
         
         if (result.isSuccess) {
             loadComments()

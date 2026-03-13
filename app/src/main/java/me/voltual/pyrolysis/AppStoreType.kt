@@ -11,9 +11,5 @@ package me.voltual.pyrolysis
 
 enum class AppStore(val displayName: String) {
     XIAOQU_SPACE("小趣空间"),
-    SIENE_SHOP("弦应用商店"),
-    SINE_OPEN_MARKET("弦-开放平台"), 
-    LING_MARKET("灵应用商店"), 
-//    F_DROID("F-Droid"),
     LOCAL("本地应用")
 }

@@ -106,9 +106,6 @@ class MainActivity : AppCompatActivity() {
                 // 协议状态监听
                 val userAccepted by agreementDataStore.isUserAgreementAccepted.collectAsState(initial = true)
                 val xiaoquAccepted by agreementDataStore.isXiaoquAccepted.collectAsState(initial = true)
-                val sineAgreementAccepted by agreementDataStore.isSineAgreementAccepted.collectAsState(initial = true)
-                val sinePrivacyAccepted by agreementDataStore.isSinePrivacyAccepted.collectAsState(initial = true)
-                val lingAccepted by agreementDataStore.isLingAgreementAccepted.collectAsState(initial = true)
 
                 var isAgreementDataLoaded by remember { mutableStateOf(false) }
                 LaunchedEffect(Unit) {
@@ -117,8 +114,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val showAgreementDialog = isAgreementDataLoaded && !(
-                    userAccepted && xiaoquAccepted &&
-                    sineAgreementAccepted && sinePrivacyAccepted && lingAccepted
+                    userAccepted && xiaoquAccepted 
                 )
 
 
@@ -286,6 +282,7 @@ isLoggedIn.value = credentials.userId != 0L
                 Column(
                     modifier = Modifier
                         .fillMaxHeight()
+                        .roundScreenPadding()
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     DrawerHeader(

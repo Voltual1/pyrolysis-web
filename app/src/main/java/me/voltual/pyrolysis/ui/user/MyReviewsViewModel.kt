@@ -39,11 +39,11 @@ class MyReviewsViewModel(
     private var isLoadingMore = false
     private var hasMore = true
 
-    // 硬编码为弦应用商店，因为只有它支持我的评价功能
-    private val _selectedStore = MutableStateFlow(AppStore.SIENE_SHOP)
+    // 暂时硬编码为LOCAL
+    private val _selectedStore = MutableStateFlow(AppStore.LOCAL)
     val selectedStore: StateFlow<AppStore> = _selectedStore.asStateFlow()
 
-    // 新增：评价删除确认对话框状态
+    // 评价删除确认对话框状态
     private val _showDeleteReviewDialog = MutableStateFlow<String?>(null)
     val showDeleteReviewDialog: StateFlow<String?> = _showDeleteReviewDialog.asStateFlow()
 

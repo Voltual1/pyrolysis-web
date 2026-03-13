@@ -14,6 +14,7 @@ class AppManagerInstaller(context: Context) : BaseInstaller(context) {
 
     override suspend fun installPackage(packageName: String, apkFile: File) {
         runCatching {
+        @Suppress("DEPRECATION")
             val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
                 data = apkFile.getReleaseFileUri(context)
                 flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or

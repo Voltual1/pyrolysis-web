@@ -198,7 +198,6 @@ fun ProfileFields(
         
         val nicknameLabel = when (store) {
             AppStore.XIAOQU_SPACE -> "修改昵称"
-            AppStore.LING_MARKET -> "市场昵称"
             else -> "外显名称"
         }
 
@@ -217,16 +216,6 @@ fun ProfileFields(
                 label = { Text("QQ 号码") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
-            )
-        }
-
-        if (store == AppStore.SIENE_SHOP || store == AppStore.LING_MARKET) {
-            OutlinedTextField(
-                value = description,
-                onValueChange = onDescriptionChange,
-                label = { Text("个性签名") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2
             )
         }
 

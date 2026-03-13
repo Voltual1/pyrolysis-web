@@ -52,6 +52,7 @@ class LegacyInstaller(context: Context) : BaseInstaller(context) {
     }
 
     private fun createInstallIntent(fileUri: Uri, addNewTaskFlag: Boolean): Intent {
+    @Suppress("DEPRECATION")
         return Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
             data = fileUri
             flags = Intent.FLAG_GRANT_READ_URI_PERMISSION.let { baseFlags ->

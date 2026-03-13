@@ -13,8 +13,6 @@ import androidx.lifecycle.*
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.KtorClient
-import me.voltual.pyrolysis.OpenMarketSineWorldClient
-import me.voltual.pyrolysis.SineShopClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +20,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import org.koin.android.annotation.KoinViewModel
-import me.voltual.pyrolysis.LingMarketClient // 确保导入
 
 @KoinViewModel
 class LoginViewModel(
@@ -82,10 +79,7 @@ class LoginViewModel(
         _errorMessage.value = null
         try {
             when (_selectedStore.value) {
-                AppStore.XIAOQU_SPACE -> loginXiaoqu()
-                AppStore.SIENE_SHOP -> loginSineShop()
-                AppStore.SINE_OPEN_MARKET -> loginSineOpenMarket()
-                AppStore.LING_MARKET -> loginLingMarket() // 新增灵应用商店
+                AppStore.XIAOQU_SPACE -> loginXiaoqu()           
                 else -> {
                     _errorMessage.value = "不支持登录"
                 }
@@ -136,91 +130,7 @@ class LoginViewModel(
         } catch (e: Exception) {
             _errorMessage.value = "网络错误: ${e.message}"
         }
-    }
-    
-    /**
- * 灵应用商店登录逻辑
- */
-private suspend fun loginLingMarket() {
-    try {
-        val loginResult = LingMarketClient.login(
-            username = _username.value,
-            password = _password.value
-        )
-        
-        if (loginResult.isSuccess) {
-            val response = loginResult.getOrNull()
-            // 根据抓包：成功时 code 为 null 或 200/201
-            if (response != null && response.isSuccess && response.token != null) {
-                val context: Application = getApplication()
-                // 调用之前在 AuthManager 中新增的保存方法
-                AuthManager.saveLingMarketToken(context, response.token)
-                _loginSuccess.value = true
-            } else {
-                _errorMessage.value = response?.msg ?: "灵应用商店登录失败：未知错误"
-            }
-        } else {
-            _errorMessage.value = "灵应用商店登录失败: ${loginResult.exceptionOrNull()?.message}"
-        }
-    } catch (e: Exception) {
-        _errorMessage.value = "灵应用商店连接失败: ${e.message}"
-    }
-}
-
-    /**
-     * 弦应用商店登录逻辑
-     */
-    private suspend fun loginSineShop() {
-        try {
-            val loginResult = SineShopClient.login(
-                username = _username.value,
-                password = _password.value
-            )
-            if (loginResult.isSuccess) {
-                val token = loginResult.getOrNull() ?: ""
-                if (token.isNotEmpty()) {
-                    // 保存弦应用商店专用 Token
-                    val context: Application = getApplication()
-                    AuthManager.saveSineMarketToken(context, token)
-                    _loginSuccess.value = true // 登录成功，触发导航
-                } else {
-                    _errorMessage.value = "弦应用商店登录失败: 无法获取token"
-                }
-            } else {
-                _errorMessage.value = "弦应用商店登录失败: ${loginResult.exceptionOrNull()?.message}"
-            }
-        } catch (e: Exception) {
-            _errorMessage.value = "弦应用商店登录失败: ${e.message}"
-        }
-    }
-
-    /**
-     * 弦-开放平台登录逻辑
-     */
-    private suspend fun loginSineOpenMarket() {
-        try {
-            val loginResult = OpenMarketSineWorldClient.login(
-                username = _username.value,
-                password = _password.value
-            )
-            
-            if (loginResult.isSuccess) {
-                val loginData = loginResult.getOrNull()
-                if (loginData != null && loginData.token.isNotEmpty()) {
-                    // 保存弦-开放平台专用 Token
-                    val context: Application = getApplication()
-                    AuthManager.saveSineOpenMarketToken(context, loginData.token)
-                    _loginSuccess.value = true // 登录成功，触发导航
-                } else {
-                    _errorMessage.value = "开放平台登录失败: 返回数据无效"
-                }
-            } else {
-                _errorMessage.value = "开放平台登录失败: ${loginResult.exceptionOrNull()?.message}"
-            }
-        } catch (e: Exception) {
-            _errorMessage.value = "开放平台登录失败: ${e.message}"
-        }
-    }
+    }    
 
     // --- 注册逻辑 (仅限小趣空间) ---
 

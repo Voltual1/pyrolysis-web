@@ -161,8 +161,7 @@ fun ResourcePlazaContent(
     modifier = Modifier.fillMaxWidth(),
     appStores = remember { 
         AppStore.entries.filter { 
-            it != AppStore.LOCAL && 
-            it != AppStore.SINE_OPEN_MARKET 
+            it != AppStore.LOCAL             
         } 
     }
 )

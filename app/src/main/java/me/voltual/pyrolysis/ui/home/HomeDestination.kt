@@ -20,7 +20,6 @@ import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.R
-import me.voltual.pyrolysis.SineShopClient
 import me.voltual.pyrolysis.restartMainActivity
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.theme.BBQTheme
@@ -43,16 +42,10 @@ fun HomeDestination(
         val userCredentials = userCredentialsFlow.first()
         val isLoggedIn = userCredentials.token.isNotEmpty()
 
-        viewModel.checkAndUpdateLingMarketLoginState(context)
         viewModel.updateLoginState(isLoggedIn)
         if (isLoggedIn && uiState.dataLoadState == DataLoadState.NotLoaded) {
             viewModel.loadUserData(context)
         }
-        viewModel.checkAndUpdateSineShopLoginState(context)
-    }
-
-    val onLingMarketLoginClick = remember {
-        { navigator.navigate(Login) }
     }
 
     val onAvatarClick = remember {
@@ -71,17 +64,12 @@ fun HomeDestination(
         {
             if (!uiState.showLoginPrompt) {
                 viewModel.refreshUserData(context)
-                viewModel.checkAndUpdateSineShopLoginState(context)
             }
             restartMainActivity(context)
         }
     }
 
     val onLoginClick = remember {
-        { navigator.navigate(Login) }
-    }
-
-    val onSineShopLoginClick = remember {
         { navigator.navigate(Login) }
     }
 
@@ -106,12 +94,6 @@ fun HomeDestination(
                 signStatusMessage = uiState.signStatusMessage,
                 displayDaysDiff = uiState.displayDaysDiff
             ),
-            sineShopUserInfo = uiState.sineShopUserInfo,
-            sineShopLoginPrompt = uiState.sineShopLoginPrompt,
-            lingMarketUserInfo = uiState.lingMarketUserInfo,
-            lingMarketLoginPrompt = uiState.lingMarketLoginPrompt,
-            onSineShopLoginClick = onSineShopLoginClick,
-            onLingMarketLoginClick = onLingMarketLoginClick,
             onPaymentCenterClick = { navigator.navigate(PaymentCenterAdvanced) },
             onAvatarClick = onAvatarClick,
             onAvatarLongClick = onAvatarLongClick,

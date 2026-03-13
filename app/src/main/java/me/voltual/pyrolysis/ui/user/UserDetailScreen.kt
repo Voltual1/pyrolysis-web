@@ -145,12 +145,6 @@ private fun ScreenContent(
                         viewModel = viewModel,
                         isRefreshing = isRefreshing
                     )
-                    AppStore.SIENE_SHOP -> SieneShopProfileContent(
-                        userData = userData,
-                        onResourcesClick = onResourcesClick,
-                        onImagePreview = onImagePreview,
-                        snackbarHostState = snackbarHostState
-                    )
                     else -> Text("不支持的应用商店")
                 }
             }
@@ -226,7 +220,7 @@ private fun SieneShopProfileContent(
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(userData.avatarUrl ?: "https://static.sineshop.xin/images/user_avatar/default_avatar.png")
+                            .data(userData.avatarUrl ?: "https://icdn.binmt.cc/2603/69ad3fa30e30c.png")
                             .diskCachePolicy(CachePolicy.DISABLED)
                             .build(),
                         contentDescription = "用户头像",
