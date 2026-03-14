@@ -1,3 +1,11 @@
+/*
+ * This file is adapted from Neo Store (https://github.com/NeoApplications/Neo-Store)
+ * Modified by Voltual to fit Pyrolysis architecture.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+ */
 package me.voltual.pyrolysis.data.content
 
 import android.content.ContentValues
@@ -10,10 +18,10 @@ import android.provider.OpenableColumns
 import android.system.Os
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
-//import com.anggrayudi.storage.file.getAbsolutePath
-//import com.machiav3lli.fdroid.R
-//import com.machiav3lli.fdroid.utils.getDownloadFolder
-//import com.machiav3lli.fdroid.utils.isDownloadExternal
+import com.anggrayudi.storage.file.getAbsolutePath
+import me.voltual.pyrolysis.R
+import me.voltual.pyrolysis.core.utils.getDownloadFolder
+import me.voltual.pyrolysis.core.utils.isDownloadExternal
 import java.io.File
 import java.util.UUID
 import kotlin.concurrent.thread
@@ -70,7 +78,7 @@ object Cache {
         return File(ensureCacheDir(context, "index"), "index-v2-${repoId}.json")
     }
 
-/*    fun cleanup(context: Context) {
+    fun cleanup(context: Context) {
         thread {
             cleanup(
                 context,
@@ -90,7 +98,34 @@ object Cache {
                 Pair("releases", Preferences[Preferences.Key.ReleasesCacheRetention] * 24),
             )
         }
-    }*/
+    }
+    
+    private fun cleanup(context: Context, dir: File?, vararg dirHours: Pair<String, Int>) {
+        val knownNames = dirHours.map { it.first }.toSet()
+        val files = dir?.listFiles().orEmpty()
+        files.filter { it.name !in knownNames }.forEach {
+            if (it.isDirectory) {
+                cleanupDir(it, 0)
+                it.delete()
+            } else {
+                it.delete()
+            }
+        }
+        dirHours.forEach { (name, hours) ->
+            if (hours > 0) {
+                val file = File(dir, name)
+                if (file.exists()) {
+                    if (file.isDirectory) {
+                        cleanupDir(file, hours)
+                    } else {
+                        file.delete()
+                    }
+                }
+                if (name == "releases" && isDownloadExternal)
+                    cleanupDir(context, context.getDownloadFolder(), hours, "apk")
+            }
+        }
+    }
 
     private fun cleanupDir(dir: File, hours: Int, fileExtension: String? = null) {
         val olderThan = System.currentTimeMillis() / 1000L - hours * 60 * 60
@@ -124,7 +159,7 @@ object Cache {
         }
     }
 
-/*    private fun cleanupDir(
+    private fun cleanupDir(
         context: Context,
         dir: DocumentFile?,
         hours: Int,
@@ -159,14 +194,14 @@ object Cache {
                 }
             }
         }
-    }*/
+    }
 
     fun eraseDownload(context: Context, fileName: String) =
         getPartialReleaseFile(context, fileName).let {
             if (it.exists()) it else getReleaseFile(context, fileName)
         }.delete()
 
-/*    class Provider : FileProvider(R.xml.cache_provider) {
+    class Provider : FileProvider(R.xml.cache_provider) {
         companion object {
             private val defaultColumns = arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE)
         }
@@ -231,5 +266,5 @@ object Cache {
             val file = getFileAndTypeForUri(uri).first
             return ParcelFileDescriptor.open(file, openMode)
         }
-    }*/
+    }
 }

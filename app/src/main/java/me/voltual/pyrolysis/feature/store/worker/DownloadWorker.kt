@@ -493,7 +493,8 @@ class DownloadWorker(
                             PackageManager.GET_PROVIDERS or
                             PackageManager.GET_RECEIVERS or
                             PackageManager.GET_INSTRUMENTATION or
-//                            PackageManager.GET_SIGNATURES or
+                            @Suppress("DEPRECATION")
+                            PackageManager.GET_SIGNATURES or
                             PackageManager.GET_SIGNING_CERTIFICATES or
                             PackageManager.GET_PERMISSIONS
                 )

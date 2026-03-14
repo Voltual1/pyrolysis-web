@@ -38,6 +38,7 @@ data object Preferences : OnSharedPreferenceChangeListener {
         Key.DownloadShowDialog,
         Key.BottomSearchBar,
         Key.RootAllowDowngrades,
+        Key.ImagesCacheRetention,
         Key.InstallAfterSync,
         Key.RootSessionInstaller,
         Key.KeepInstallNotification,
@@ -233,6 +234,7 @@ data object Preferences : OnSharedPreferenceChangeListener {
         data object MaxIdleConnections : Key<Int>("max_num_idle_connections", Value.IntValue(10))
         data object DownloadManager : Key<Boolean>("system_download_manager", Value.BooleanValue(false))
         data object DownloadDirectory : Key<String>("download_directory_value", Value.StringValue(""))
+        data object ImagesCacheRetention : Key<Int>("images_cache_retention", Value.IntValue(14))
         data object EnableDownloadDirectory : Key<Boolean>("download_directory_enable", Value.BooleanValue(false))
         data object DisableCertificateValidation : Key<Boolean>("disable_certificate_validation", Value.BooleanValue(false))
 

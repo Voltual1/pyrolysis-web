@@ -72,6 +72,12 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+        
+        <provider
+            android:name="me.voltual.pyrolysis.data.content.Cache$Provider"
+            android:authorities="${applicationId}.provider.cache"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
         <activity
             android:name=".ui.CrashLogActivity"
