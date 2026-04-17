@@ -1,4 +1,7 @@
 懒得写README了
+项目是“小趣空间”
+http://app.xiaoqu.online/
+的第三方客户端
 但鸣谢是应该的
 ## 🙏 特别鸣谢
 
