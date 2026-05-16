@@ -155,7 +155,7 @@ fun ResourcePlazaContent(
             enter = slideInVertically(initialOffsetY = { -it }),
             exit = slideOutVertically(targetOffsetY = { -it })
         ) {
-            AppStoreDropdownMenu(
+/*            AppStoreDropdownMenu(
     selectedStore = selectedAppStore,
     onStoreChange = { viewModel.setAppStore(it) },
     modifier = Modifier.fillMaxWidth(),
@@ -164,7 +164,7 @@ fun ResourcePlazaContent(
             it != AppStore.LOCAL             
         } 
     }
-)
+)*/
         }
 
         // 仅在非"我的资源"模式且非"查看特定用户"模式下显示搜索框

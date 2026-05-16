@@ -68,7 +68,7 @@ fun XiaoquSpaceAppInfo(appDetail: UnifiedAppDetail) {
     if (appDetail.size != null) {
         InfoRow(
             label = "安装包大小",
-            value = appDetail.size
+            value = "${appDetail.size}MB"
         )
     }
     InfoRow(
@@ -158,7 +158,7 @@ fun XiaoquSpaceAppHeader(
                     fontWeight = FontWeight.Bold
                 )
                 Text("版本: ${appDetail.versionName}", style = MaterialTheme.typography.bodyMedium)
-                Text("大小: ${appDetail.size ?: "未知"}", style = MaterialTheme.typography.bodyMedium)
+                Text("大小: ${appDetail.size ?: "未知"}MB", style = MaterialTheme.typography.bodyMedium)
             }
 
             Box {

@@ -30,6 +30,7 @@ fun FollowingPostsScreen(
 
     BaseComposeListScreen(
         title = "我的关注",
+        currentRoute = "following_posts",
         posts = posts,
         isLoading = isLoading,
         errorMessage = errorMessage,

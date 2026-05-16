@@ -30,6 +30,7 @@ fun HotPostsScreen(
 
     BaseComposeListScreen(
         title = "热点",
+        currentRoute = "hot_posts", // 传入当前标识
         posts = posts,
         isLoading = isLoading,
         errorMessage = errorMessage,

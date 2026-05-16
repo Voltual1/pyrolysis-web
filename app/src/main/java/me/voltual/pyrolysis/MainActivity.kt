@@ -91,14 +91,19 @@ class MainActivity : AppCompatActivity() {
 
     val view = LocalView.current // 获取承载 Compose 的原生 View
 
-    val navigator = remember(navigationState, textToolbar, view) { 
-        Navigator(navigationState, textToolbar, view) 
-    }
+    val topAppBarController = remember { TopAppBarController() }
+
+      val navigator =
+        remember(navigationState, view) {
+          // 传入控制器
+          Navigator(navigationState, view, topAppBarController)
+        }
 
             CompositionLocalProvider(
-                LocalNavigator provides navigator,
-                LocalNavigationState provides navigationState
-            ) {
+        LocalNavigator provides navigator,
+        LocalNavigationState provides navigationState,
+        LocalTopAppBarController provides topAppBarController,
+      )  {
                 val snackbarHostState = remember { SnackbarHostState() }
                 val context = LocalContext.current
                 val scope = rememberCoroutineScope()
@@ -211,20 +216,9 @@ fun launchLockPrompt(action: () -> Unit) {
     }*/
 }
 
-/** 定义所有顶层路由（对应抽屉中独立返回堆栈的页面）*/
+/** 定义顶层路由（对应抽屉中独立返回堆栈的页面）*/
 val topLevelRoutes: Set<NavKey> = setOf(
-    Home,
-    ResourcePlaza(isMyResource = false),   // 资源广场
-    Community,
-    MessageCenter,
-    RankingList,
-    CreateAppRelease,
-    LogViewer,
-    StoreManager,
-    Download,
-    UpdateSettings,
-    ThemeCustomize,
-    SignInSettings
+    Home
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -248,13 +242,15 @@ fun MainScreenContent(
         currentRoute != Home && currentRoute != Login
     }
 
-    val isCommunityScreen = remember(currentRoute) {
+/*    val isCommunityScreen = remember(currentRoute) {
         currentRoute == Community ||
         currentRoute == MyLikes ||
         currentRoute == HotPosts ||
         currentRoute == FollowingPosts ||
         currentRoute is MyPosts
-    }
+    }*/
+    
+    val topAppBarController = LocalTopAppBarController.current
 
     val isPlayerScreen = remember(currentRoute) {
         currentRoute is Player
@@ -269,7 +265,7 @@ fun MainScreenContent(
     LaunchedEffect(Unit) {
         val credentials = AuthManager.getCredentials(context).first()
         // 逻辑：如果 userId 不等于 0，则认为已登录
-isLoggedIn.value = credentials.userId != 0L
+        isLoggedIn.value = credentials.userId != 0L
         if (isLoggedIn.value) {
             tryAutoLogin(credentials.username, credentials.password, context, navigator, snackbarHostState)
         }
@@ -305,13 +301,20 @@ isLoggedIn.value = credentials.userId != 0L
     ) {
         Scaffold(
             topBar = {
-                if (!isPlayerScreen && !isCommunityScreen) {
+                if (!isPlayerScreen) {
                     TopAppBar(
                         title = {
-                            Text(
-                                text = getTitleForDestination(currentRoute),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            // 逻辑：如果有自定义标题组件则渲染，否则渲染文字标题
+                            val customContent = topAppBarController.titleContent
+                            if (customContent != null) {
+                                customContent()
+                            } else {
+                                Text(
+                                    text = topAppBarController.customTitle ?: getTitleForDestination(currentRoute),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1
+                                )
+                            }
                         },
                         navigationIcon = {
                             if (showBackButton) {
@@ -334,8 +337,8 @@ isLoggedIn.value = credentials.userId != 0L
                         },
                         actions = {
                             if (currentRoute != Login) {
+                                // 基础按钮
                                 IconButton(onClick = {
-                                    // Search 需要参数，但默认搜索全部
                                     navigator.navigate(Search(userId = null, nickname = null))
                                 }) {
                                     Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onSurface)
@@ -345,6 +348,14 @@ isLoggedIn.value = credentials.userId != 0L
                                 }
                                 IconButton(onClick = { navigator.navigate(BrowseHistory) }) {
                                     Icon(Icons.Default.History, "浏览历史", tint = MaterialTheme.colorScheme.onSurface)
+                                }
+
+                                // 动态按钮
+                                topAppBarController.actions.forEach { action ->
+                                    val iconTint = action.tint?.invoke() ?: MaterialTheme.colorScheme.onSurface
+                                    IconButton(onClick = action.onClick) {
+                                        action.icon(iconTint)
+                                    }
                                 }
                             }
                         },
@@ -357,31 +368,38 @@ isLoggedIn.value = credentials.userId != 0L
             },
             snackbarHost = { BBQSnackbarHost(hostState = snackbarHostState) },
             content = { innerPadding ->
+                // 1. 只有播放器这种真正的全屏页面才使用 0.dp，社区页面现在需要 innerPadding
                 val contentPadding = when {
-                    isPlayerScreen || isCommunityScreen -> PaddingValues(0.dp)
+                    isPlayerScreen -> PaddingValues(0.dp)
                     else -> innerPadding
                 }
 
-// 如果找不到当前堆栈，则回退到 startRoute 的堆栈
-val currentBackStack = navigationState.backStacks[currentTopLevelRoute] 
-    ?: navigationState.backStacks[navigationState.startRoute]!! 
-    // 注意：startRoute 理论上必须存在，所以这里的 !! 是相对安全的
+                val currentBackStack = navigationState.backStacks[currentTopLevelRoute] 
+                    ?: navigationState.backStacks[navigationState.startRoute]!! 
 
-BBQNavDisplay(
-    backStack = currentBackStack, // 注意这里参数名是 backStack，类型是 List<NavKey>
-    onBack = { navigator.goBack() },
-    snackbarHostState = snackbarHostState,
-    modifier = Modifier.padding(contentPadding)
-)
-
-                if (showAgreementDialog) {
-                    UserAgreementDialog(
-                        onAgreed = { /* 已在 Dialog 内部处理 */ },
-                        onDismissRequest = onAgreementDismiss
+                // 2. 将 padding 应用在最外层容器上
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding) // 这里应用了顶栏高度
+                    .roundScreenPadding()
+                ) {
+                    BBQNavDisplay(
+                        backStack = currentBackStack,
+                        onBack = { navigator.goBack() },
+                        snackbarHostState = snackbarHostState,
+                        // 3. 内部不再重复应用 padding，直接 fillMaxSize
+                        modifier = Modifier.fillMaxSize()
                     )
-                }
 
-                CheckForUpdates(snackbarHostState)
+                    if (showAgreementDialog) {
+                        UserAgreementDialog(
+                            onAgreed = { /* ... */ },
+                            onDismissRequest = onAgreementDismiss
+                        )
+                    }
+
+                    CheckForUpdates(snackbarHostState)
+                }
             }
         )
     }

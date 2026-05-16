@@ -55,6 +55,7 @@ fun MyPostsScreen(
 
     BaseComposeListScreen(
         title = if (nickname != null) "$nickname 的帖子" else "用户帖子",
+        currentRoute = "my_posts/$userId",
         posts = posts,
         isLoading = isLoading,
         errorMessage = errorMessage,

@@ -25,8 +25,8 @@ android {
         applicationId = "me.voltual.pyrolysis"
         minSdk = 24
         targetSdk = 36
-        versionCode = 509
-        versionName = "21.2"
+        versionCode = 510
+        versionName = "22.0"
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         resourceConfigurations += listOf("zh")

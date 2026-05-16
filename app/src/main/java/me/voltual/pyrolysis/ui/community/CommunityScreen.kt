@@ -31,6 +31,7 @@ fun CommunityScreen(
 
     BaseComposeListScreen(
         title = "社区",
+        currentRoute = "community",
         posts = posts,
         isLoading = isLoading,
         errorMessage = errorMessage,
