@@ -1,18 +1,9 @@
-//Copyright (C) 2025 Voltual
-// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
-//（或任意更新的版本）的条款重新分发和/或修改它。
-//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
-//
-// 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 @file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 
-package me.voltual.pyrolysis
+package me.voltual.pyrolysis.network
 
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
@@ -22,19 +13,15 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
-import me.voltual.pyrolysis.data.UpdateInfo
-import io.ktor.http.Headers
-import io.ktor.http.HttpHeaders
-import java.io.ByteArrayInputStream
-import java.io.InputStream
-import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import java.io.IOException
 import io.ktor.utils.io.*
 import io.ktor.http.content.*
+
+// 定义跨平台的 IOException 别名或直接捕获 Exception
+// 在 KMP 中通常直接使用 Exception 或定义特定异常
 
 object KtorClient {
     private const val BASE_URL = "http://apk.xiaoqu.online/"
@@ -46,15 +33,37 @@ object KtorClient {
     private const val CONNECT_TIMEOUT = 30000L
     private const val SOCKET_TIMEOUT = 30000L
 
-    // Ktor HttpClient 实例
-val httpClient = HttpClient(OkHttp) {
-    initConfig(this)
-    defaultRequest {
-        header(HttpHeaders.Accept, ContentType.Application.Json.toString())
+    // 使用平台特定的引擎
+    val httpClient = HttpClient(getPlatformEngine()) {
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+                explicitNulls = false
+            })
+        }
+        
+        install(HttpTimeout) {
+            requestTimeoutMillis = REQUEST_TIMEOUT
+            connectTimeoutMillis = CONNECT_TIMEOUT
+            socketTimeoutMillis = SOCKET_TIMEOUT
+        }
+
+        install(Logging) {
+            logger = Logger.DEFAULT
+            level = LogLevel.HEADERS
+        }
+
+        defaultRequest {
+            url(BASE_URL)
+            header(HttpHeaders.Accept, ContentType.Application.Json.toString())
+            // 注意：Web 端 FormUrlEncoded 可能有跨域限制，需根据实际调整
+            header(HttpHeaders.ContentType, ContentType.Application.FormUrlEncoded.toString())
+        }
     }
-}
+
     // 上传专用客户端
-    val uploadHttpClient = HttpClient(OkHttp) {
+    val uploadHttpClient = HttpClient(getPlatformEngine()) {
         defaultRequest {
             url(UPLOAD_BASE_URL)
         }
@@ -68,7 +77,7 @@ val httpClient = HttpClient(OkHttp) {
     }
 
     // 挽悦云上传客户端
-    val wanyueyunUploadHttpClient = HttpClient(OkHttp) {
+    val wanyueyunUploadHttpClient = HttpClient(getPlatformEngine()) {
         defaultRequest {
             url(WANYUEYUN_UPLOAD_BASE_URL)
         }
@@ -80,37 +89,6 @@ val httpClient = HttpClient(OkHttp) {
             })
         }
     }
-
-    private fun initConfig(client: HttpClientConfig<OkHttpConfig>) {
-    // 默认请求配置
-    client.defaultRequest {
-        url(BASE_URL)
-        header(HttpHeaders.ContentType, ContentType.Application.FormUrlEncoded.toString())
-        header(HttpHeaders.Accept, ContentType.Application.Json.toString()) // 显式设置 Accept 头部
-    }
-
-    // JSON 序列化配置
-    client.install(ContentNegotiation) {
-        json(Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-            explicitNulls = false
-        })
-    }
-
-    // 日志配置
-    client.install(Logging) {
-        logger = Logger.DEFAULT
-        level = LogLevel.HEADERS
-    }
-
-    // 超时配置
-    client.install(HttpTimeout) {
-        requestTimeoutMillis = REQUEST_TIMEOUT
-        connectTimeoutMillis = CONNECT_TIMEOUT
-        socketTimeoutMillis = SOCKET_TIMEOUT
-    }
-}
 
     // ===== 模型类定义 =====
 
@@ -616,42 +594,28 @@ data class WanyueyunUploadResponse(
         }
     }
 
-/**
- * 安全地执行 Ktor 请求，并处理异常和重试
- */
- @Suppress("RedundantSuspendModifier")
-private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResponse): Result<T> {
-    var attempts = 0
-    while (attempts < MAX_RETRIES) {
-        try {
-            val response = block()
-            if (!response.status.isSuccess()) {
-                println("Request failed with status: ${response.status}")
-                throw IOException("Request failed with status: ${response.status}")
-            }
-            val responseBody: T = try {
-                response.body()
-            } catch (e: Exception) {
-                println("Failed to deserialize response body: ${e.message}")
-                throw e
-            }
-            return Result.success(responseBody)
-        } catch (e: IOException) {
-            attempts++
-            println("Request failed, retrying in $RETRY_DELAY ms... (Attempt $attempts/$MAX_RETRIES)")
-            delay(RETRY_DELAY)
-        } catch (e: Exception) {
-            println("Request failed: ${e.message}")
-            return Result.failure(e)
-        }
-    }
-    println("Request failed after $MAX_RETRIES attempts.")
-    return Result.failure(IOException("Request failed after $MAX_RETRIES attempts."))
-}
-
     /**
-     * 发起 Ktor 请求
+     * 安全地执行 Ktor 请求
      */
+    private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResponse): Result<T> {
+        var attempts = 0
+        while (attempts < MAX_RETRIES) {
+            try {
+                val response = block()
+                if (!response.status.isSuccess()) {
+                    throw Exception("Request failed with status: ${response.status}")
+                }
+                val responseBody: T = response.body()
+                return Result.success(responseBody)
+            } catch (e: Exception) {
+                attempts++
+                if (attempts >= MAX_RETRIES) return Result.failure(e)
+                delay(RETRY_DELAY)
+            }
+        }
+        return Result.failure(Exception("Request failed after $MAX_RETRIES attempts."))
+    }
+
     private suspend inline fun <reified T> request(
         url: String,
         method: HttpMethod = HttpMethod.Post,
@@ -665,7 +629,7 @@ private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResp
         }
     }
 
-    interface ApiService {
+interface ApiService {
         suspend fun login(
              appid: Int = 1,
              username: String,
@@ -1670,9 +1634,6 @@ override suspend fun uploadAvatar(
 }
     }
 
-    /**
-     * 关闭 HttpClient（在应用退出时调用）
-     */
     fun close() {
         httpClient.close()
         uploadHttpClient.close()
