@@ -1,4 +1,7 @@
 // shared/build.gradle.kts
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
@@ -8,13 +11,12 @@ plugins {
 }
 
 kotlin {
+    // 显式注册 androidTarget
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
-            }
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
         }
-        publishLibraryVariants("release", "debug")
     }
 
     js(IR) {
@@ -22,6 +24,7 @@ kotlin {
         binaries.executable()
     }
 
+    // 修复 wasmJs 的 Opt-in 和配置
     @OptIn(org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl::class)
     wasmJs {
         browser()
@@ -43,18 +46,22 @@ kotlin {
 
         val androidMain by getting {
             dependencies {
-                implementation(libs.ktor.client.okhttp) // Android 继续使用 OkHttp
+                implementation(libs.ktor.client.okhttp)
             }
         }
 
         val jsMain by getting {
             dependencies {
-                implementation(libs.ktor.client.js) // Web 使用 JS 引擎
+                implementation(libs.ktor.client.js)
             }
         }
         
         val wasmJsMain by getting {
             dependsOn(jsMain)
+            dependencies {
+                // Wasm 使用与 JS 相同的 Ktor 引擎
+                implementation(libs.ktor.client.js)
+            }
         }
     }
 }
