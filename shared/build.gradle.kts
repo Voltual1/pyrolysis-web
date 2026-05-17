@@ -56,7 +56,7 @@ kotlin {
             }
         }
 
-        val webMain by creating {
+        val webMain by getting {
             dependsOn(commonMain)
             dependencies {
                 implementation(libs.ktor.client.js)
