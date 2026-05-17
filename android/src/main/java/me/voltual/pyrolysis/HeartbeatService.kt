@@ -12,6 +12,7 @@ package me.voltual.pyrolysis
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import me.voltual.pyrolysis.network.KtorClient
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
