@@ -1,5 +1,5 @@
 // web/build.gradle.kts
-import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -22,7 +22,7 @@ kotlin {
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         outputModuleName = "pyrolysis-wasm"
-        browser() // 确保 WasmJs 也选择了 browser 环境
+        browser()
         binaries.executable()
     }
 
@@ -40,10 +40,6 @@ kotlin {
                 implementation(libs.compose.material3)
             }
         }
-
-        // 移除冗余的 jsMain.dependsOn(webMain)
-        val jsMain by getting
-        val wasmJsMain by getting
     }
 }
 

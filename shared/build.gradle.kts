@@ -1,7 +1,7 @@
 // shared/build.gradle.kts
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl // 修复：新的 Opt-in 路径
 
 plugins {
     alias(libs.plugins.android.library)
@@ -21,12 +21,12 @@ kotlin {
     }
 
     js(IR) {
-        browser() // 显式选择浏览器环境
+        browser()
     }
 
-    @OptIn(ExperimentalWasmDsl::class)
+    @OptIn(ExperimentalWasmDsl::class) // 修复：使用正确的注解
     wasmJs {
-        browser() // 显式选择浏览器环境
+        browser()
     }
 
     applyDefaultHierarchyTemplate()
@@ -51,16 +51,11 @@ kotlin {
             }
         }
 
-        // webMain 已经由 applyDefaultHierarchyTemplate 自动创建并关联
         val webMain by getting {
             dependencies {
                 implementation(libs.ktor.client.js)
             }
         }
-
-        // jsMain 和 wasmJsMain 自动继承 webMain，无需手动写 dependsOn
-        val jsMain by getting
-        val wasmJsMain by getting
     }
 }
 
