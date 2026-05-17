@@ -1,11 +1,10 @@
 // shared/build.gradle.kts
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
 
 plugins {
-    // 1. 先应用 Android 库插件
     alias(libs.plugins.android.library)
-    // 2. 再应用 KMP 插件
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform)
@@ -14,7 +13,6 @@ plugins {
 }
 
 kotlin {
-    // 注册 Android 目标
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
@@ -22,16 +20,13 @@ kotlin {
         }
     }
 
-    // Web 目标 (JS & Wasm)
     js(IR) {
-//        browser()
-        binaries.executable()
+        browser() // 显式选择浏览器环境
     }
 
-    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
-//        browser()
-        binaries.executable()
+        browser() // 显式选择浏览器环境
     }
 
     applyDefaultHierarchyTemplate()
@@ -56,20 +51,20 @@ kotlin {
             }
         }
 
+        // webMain 已经由 applyDefaultHierarchyTemplate 自动创建并关联
         val webMain by getting {
-            dependsOn(commonMain)
             dependencies {
                 implementation(libs.ktor.client.js)
             }
         }
 
-        val jsMain by getting { dependsOn(webMain) }
-        val wasmJsMain by getting { dependsOn(webMain) }
+        // jsMain 和 wasmJsMain 自动继承 webMain，无需手动写 dependsOn
+        val jsMain by getting
+        val wasmJsMain by getting
     }
 }
 
 android {
-    // 确保 namespace 唯一
     namespace = "me.voltual.pyrolysis.shared"
     compileSdk = 36
     defaultConfig {

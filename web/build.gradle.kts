@@ -1,5 +1,5 @@
 // web/build.gradle.kts
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -22,24 +22,28 @@ kotlin {
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         outputModuleName = "pyrolysis-wasm"
-        browser()
+        browser() // 确保 WasmJs 也选择了 browser 环境
         binaries.executable()
     }
 
+    applyDefaultHierarchyTemplate()
+
     sourceSets {
-        val webMain by creating {
-            dependsOn(commonMain.get())
+        val commonMain by getting
+        
+        val webMain by getting {
             dependencies {
-                implementation(project(":shared")) // 核心逻辑都在 shared 
+                implementation(project(":shared"))
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.ui)
                 implementation(libs.compose.foundation)
                 implementation(libs.compose.material3)
             }
         }
-        
-        val jsMain by getting { dependsOn(webMain) }
-        val wasmJsMain by getting { dependsOn(webMain) }
+
+        // 移除冗余的 jsMain.dependsOn(webMain)
+        val jsMain by getting
+        val wasmJsMain by getting
     }
 }
 
