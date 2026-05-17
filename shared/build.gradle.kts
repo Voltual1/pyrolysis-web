@@ -24,7 +24,7 @@ kotlin {
 
     // Web 目标 (JS & Wasm)
     js(IR) {
-        browser()
+//        browser()
         binaries.executable()
     }
 
