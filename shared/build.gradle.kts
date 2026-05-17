@@ -19,10 +19,9 @@ kotlin {
         }
     }
 
-    js(IR) {
-        browser {
-            binaries.executable()
-        }
+    js {
+        browser()
+        binaries.executable()
     }
 
     // 修复 wasmJs 的 Opt-in 和配置
