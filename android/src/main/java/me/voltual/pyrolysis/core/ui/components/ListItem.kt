@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.network.KtorClient
 import me.voltual.pyrolysis.core.ui.theme.messageCommentBg
 import me.voltual.pyrolysis.core.ui.theme.messageLikeBg
 import me.voltual.pyrolysis.core.ui.theme.messageDefaultBg

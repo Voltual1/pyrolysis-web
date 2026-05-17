@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.network.KtorClient
 import me.voltual.pyrolysis.AuthManager
 import kotlinx.coroutines.flow.first
 import org.koin.android.annotation.KoinViewModel

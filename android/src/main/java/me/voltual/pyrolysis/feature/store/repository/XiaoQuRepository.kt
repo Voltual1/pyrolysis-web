@@ -10,7 +10,7 @@ package me.voltual.pyrolysis.feature.store.repository
 
 import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.BBQApplication
-import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.network.KtorClient
 import me.voltual.pyrolysis.data.unified.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*

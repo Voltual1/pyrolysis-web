@@ -26,7 +26,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import me.voltual.pyrolysis.R
-import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.network.KtorClient
 import me.voltual.pyrolysis.core.ui.theme.BBQDropdownMenu
 import me.voltual.pyrolysis.AuthManager
 import kotlinx.coroutines.launch

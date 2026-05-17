@@ -205,7 +205,7 @@ fun AppDetailScreen(
         appDetail?.let { detail ->
             when (detail.store) {
                 AppStore.XIAOQU_SPACE -> {
-                    val raw = detail.raw as? me.voltual.pyrolysis.KtorClient.AppDetail
+                    val raw = detail.raw as? me.voltual.pyrolysis.network.KtorClient.AppDetail
                     val shareUrl = raw?.posturl
                     if (!shareUrl.isNullOrBlank()) {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

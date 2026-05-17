@@ -17,7 +17,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.AuthManager
-import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.network.KtorClient
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
 import me.voltual.pyrolysis.feature.store.repository.XiaoQuRepository
 import me.voltual.pyrolysis.data.unified.UnifiedAppReleaseParams

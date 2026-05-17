@@ -12,7 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.AuthManager
-import me.voltual.pyrolysis.KtorClient 
+import me.voltual.pyrolysis.network.KtorClient 
 import me.voltual.pyrolysis.data.SignInSettingsDataStore
 import me.voltual.pyrolysis.core.ui.theme.ThemeManager
 import kotlinx.coroutines.Dispatchers

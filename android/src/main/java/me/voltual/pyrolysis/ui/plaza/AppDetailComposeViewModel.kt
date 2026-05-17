@@ -16,7 +16,7 @@ import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
 import me.voltual.pyrolysis.data.unified.*
 import kotlinx.coroutines.flow.MutableSharedFlow
-import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.network.KtorClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import android.content.Context
@@ -158,7 +158,7 @@ class AppDetailComposeViewModel(
             val detail = _appDetail.value ?: return@launch
             
             if (detail.store == AppStore.XIAOQU_SPACE) {
-                val raw = detail.raw as? me.voltual.pyrolysis.KtorClient.AppDetail
+                val raw = detail.raw as? me.voltual.pyrolysis.network.KtorClient.AppDetail
                 if (raw != null) {
                     _refundEvent.emit(
                         RefundInfo(
@@ -181,7 +181,7 @@ class AppDetailComposeViewModel(
             val detail = _appDetail.value ?: return@launch
             
             if (detail.store == AppStore.XIAOQU_SPACE) {
-                val raw = detail.raw as? me.voltual.pyrolysis.KtorClient.AppDetail
+                val raw = detail.raw as? me.voltual.pyrolysis.network.KtorClient.AppDetail
                 if (raw != null) {
                     // 使用 KtorClient 的 JsonConverter 将 AppDetail 转换为 JSON 字符串
                     val appDetailJson = KtorClient.JsonConverter.toJson(raw)
@@ -203,7 +203,7 @@ class AppDetailComposeViewModel(
         
         // 仅小趣空间应用需要检查购买状态
         if (detail.store == AppStore.XIAOQU_SPACE) {
-            val raw = detail.raw as? me.voltual.pyrolysis.KtorClient.AppDetail
+            val raw = detail.raw as? me.voltual.pyrolysis.network.KtorClient.AppDetail
             if (raw != null && raw.is_pay == 1 && raw.pay_money > 0 && raw.is_user_pay != true) {
                 return PaymentInfo(
                     appId = raw.id,

@@ -63,7 +63,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.voltual.pyrolysis.AuthManager
-import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.network.KtorClient
 import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.animation.materialSharedAxisYIn

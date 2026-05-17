@@ -12,7 +12,7 @@ import android.app.Application
 import androidx.lifecycle.*
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.AuthManager
-import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.network.KtorClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

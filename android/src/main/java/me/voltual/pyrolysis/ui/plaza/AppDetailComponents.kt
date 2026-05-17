@@ -56,7 +56,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun XiaoquSpaceAppInfo(appDetail: UnifiedAppDetail) {
-    val raw = appDetail.raw as? me.voltual.pyrolysis.KtorClient.AppDetail
+    val raw = appDetail.raw as? me.voltual.pyrolysis.network.KtorClient.AppDetail
     InfoRow(
         label = "应用类型",
         value = appDetail.type
@@ -136,7 +136,7 @@ fun XiaoquSpaceAppHeader(
     onDeleteAppClick: () -> Unit
 ) {
     // 小趣空间特有逻辑
-    val raw = appDetail.raw as? me.voltual.pyrolysis.KtorClient.AppDetail
+    val raw = appDetail.raw as? me.voltual.pyrolysis.network.KtorClient.AppDetail
     var showMoreMenu by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(16.dp)) {
@@ -362,7 +362,7 @@ fun XiaoquSpaceExplainSection(
 ) {
     if (appDetail.store == AppStore.XIAOQU_SPACE) {
         val appExplain = when (val raw = appDetail.raw) {
-            is me.voltual.pyrolysis.KtorClient.AppDetail -> raw.app_explain
+            is me.voltual.pyrolysis.network.KtorClient.AppDetail -> raw.app_explain
             else -> null
         }
 
