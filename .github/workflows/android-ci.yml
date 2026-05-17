@@ -45,7 +45,7 @@ jobs:
         env:
           ENCODED_STRING: ${{ secrets.SIGNING_KEY }}
         run: |
-          echo $ENCODED_STRING | base64 -d > app/tag_keystore.p12
+          echo $ENCODED_STRING | base64 -d > android/tag_keystore.p12
 
       - name: Build with Gradle
         run: ./gradlew assembleDebug
