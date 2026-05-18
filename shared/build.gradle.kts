@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.serialization)
     id("kotlin-parcelize")
@@ -43,13 +44,9 @@ kotlin {
                 implementation(libs.ktor.client.logging)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
-                    // Koin 注入
-    implementation(libs.koin.android.compose)
-    implementation(libs.koin.core)
-    implementation(libs.koin.annotations)
-    implementation(libs.koin.workmanager)
-    implementation(libs.koin.startup)
-    ksp(libs.koin.ksp.compiler)
+                implementation(libs.koin.core)
+    			implementation(libs.koin.annotations)
+			    ksp(libs.koin.ksp.compiler)
             }
         }
 

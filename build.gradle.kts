@@ -3,6 +3,7 @@ plugins {
     // 应用 base 插件来统一管理生命周期任务
     id("base") 
     alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.ksp) apply false
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.multiplatform) apply false
