@@ -8,24 +8,30 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.feature.store.repository
 
-import me.voltual.pyrolysis.AuthManager
-import me.voltual.pyrolysis.BBQApplication
-import me.voltual.pyrolysis.KtorClient
-import me.voltual.pyrolysis.data.unified.*
+import io.ktor.client.call.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.utils.io.streams.asInput
 import kotlinx.coroutines.flow.first
 import me.voltual.pyrolysis.AppStore
-import io.ktor.client.call.*
-import java.io.File
+import me.voltual.pyrolysis.AuthManager
+import me.voltual.pyrolysis.BBQApplication
+import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.data.unified.*
+import okio.FileSystem
+import okio.Path
+import okio.asInputStream
+import okio.buffer
 import org.koin.core.annotation.Single
 
 /**
  * 小趣空间数据仓库实现。
+ * 已移除 java.io 依赖，全面转向 Okio。
  */
- @Single
+@Single
 class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStoreRepository {
+
+    private val fileSystem = FileSystem.SYSTEM
 
     // 辅助方法：获取 Token
     private suspend fun getToken(): String {
@@ -36,12 +42,9 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     override suspend fun getCurrentUserDetail(): Result<UnifiedUserDetail> {
         return try {
             val token = getToken()
-            if (token.isEmpty()) {
-                return Result.failure(Exception("未登录"))
-            }
+            if (token.isEmpty()) return Result.failure(Exception("未登录"))
             
-            val result = apiClient.getUserInfo(token = token)
-            result.map { response ->
+            apiClient.getUserInfo(token = token).map { response ->
                 if (response.code == 1) {
                     UnifiedUserDetail(
                         id = response.data.id,
@@ -70,31 +73,17 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     override suspend fun updateUserProfile(params: UpdateUserProfileParams): Result<Unit> {
         return try {
             val token = getToken()
-            if (token.isEmpty()) {
-                return Result.failure(Exception("未登录"))
-            }
+            if (token.isEmpty()) return Result.failure(Exception("未登录"))
             
-            // 更新昵称
             if (!params.nickname.isNullOrEmpty()) {
-                val nicknameResult = apiClient.modifyUserInfo(
-                    token = token,
-                    nickname = params.nickname,
-                    qq = null
-                )
-                nicknameResult.getOrThrow().let { res ->
-                    if (res.code != 1) throw Exception("昵称修改失败")
+                apiClient.modifyUserInfo(token = token, nickname = params.nickname).getOrThrow().let {
+                    if (it.code != 1) throw Exception("昵称修改失败")
                 }
             }
             
-            // 更新QQ号
             if (!params.qqNumber.isNullOrEmpty()) {
-                val qqResult = apiClient.modifyUserInfo(
-                    token = token,
-                    nickname = null,
-                    qq = params.qqNumber
-                )
-                qqResult.getOrThrow().let { res ->
-                    if (res.code != 1) throw Exception("QQ号修改失败")
+                apiClient.modifyUserInfo(token = token, qq = params.qqNumber).getOrThrow().let {
+                    if (it.code != 1) throw Exception("QQ号修改失败")
                 }
             }
             
@@ -108,23 +97,10 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     override suspend fun uploadAvatar(imageBytes: ByteArray, filename: String): Result<String> {
         return try {
             val token = getToken()
-            if (token.isEmpty()) {
-                return Result.failure(Exception("未登录"))
-            }
+            if (token.isEmpty()) return Result.failure(Exception("未登录"))
             
-            val result = apiClient.uploadAvatar(
-                appid = 1,
-                token = token,
-                file = imageBytes,
-                filename = filename
-            )
-            
-            result.map { response ->
-                if (response.code == 1) {
-                    "上传成功"
-                } else {
-                    throw Exception("头像上传失败: ${response.msg}")
-                }
+            apiClient.uploadAvatar(appid = 1, token = token, file = imageBytes, filename = filename).map { response ->
+                if (response.code == 1) "上传成功" else throw Exception("头像上传失败: ${response.msg}")
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -152,9 +128,7 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     private fun parseCategory(id: String?): Pair<Int?, Int?> {
         if (id == null || id == "null_null") return null to null
         val parts = id.split("_")
-        val cat = parts.getOrNull(0)?.toIntOrNull()
-        val sub = parts.getOrNull(1)?.toIntOrNull()
-        return cat to sub
+        return parts.getOrNull(0)?.toIntOrNull() to parts.getOrNull(1)?.toIntOrNull()
     }
 
     override suspend fun getApps(categoryId: String?, page: Int, userId: String?): Result<Pair<List<UnifiedAppItem>, Int>> {
@@ -162,21 +136,16 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
             val (catId, subCatId) = parseCategory(categoryId)
             val limit = if (userId != null) 12 else 9
             
-            val result = apiClient.getAppsList(
+            apiClient.getAppsList(
                 limit = limit,
                 page = page,
                 sortOrder = "desc",
                 categoryId = catId,
                 subCategoryId = subCatId,
-                appName = null,
                 userId = userId?.toLongOrNull()
-            )
-
-            result.map { response ->
+            ).map { response ->
                 if (response.code == 1) {
-                    val unifiedItems = response.data.list.map { it.toUnifiedAppItem() }
-                    val totalPages = if (response.data.pagecount > 0) response.data.pagecount else 1
-                    Pair(unifiedItems, totalPages)
+                    Pair(response.data.list.map { it.toUnifiedAppItem() }, response.data.pagecount.coerceAtLeast(1))
                 } else {
                     throw Exception("API Error: ${response.msg}")
                 }
@@ -188,18 +157,15 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
 
     override suspend fun searchApps(query: String, page: Int, userId: String?): Result<Pair<List<UnifiedAppItem>, Int>> {
          return try {
-            val result = apiClient.getAppsList(
+            apiClient.getAppsList(
                 limit = 20,
                 page = page,
                 appName = query,
                 sortOrder = "desc",
                 userId = userId?.toLongOrNull()
-            )
-            result.map { response ->
+            ).map { response ->
                 if (response.code == 1) {
-                    val unifiedItems = response.data.list.map { it.toUnifiedAppItem() }
-                    val totalPages = if (response.data.pagecount > 0) response.data.pagecount else 1
-                    Pair(unifiedItems, totalPages)
+                    Pair(response.data.list.map { it.toUnifiedAppItem() }, response.data.pagecount.coerceAtLeast(1))
                 } else {
                     throw Exception("Search failed: ${response.msg}")
                 }
@@ -212,17 +178,8 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     override suspend fun getAppDetail(appId: String, versionId: Long): Result<UnifiedAppDetail> {
         return try {
             val token = getToken()
-            val result = apiClient.getAppsInformation(
-                token = token,
-                appsId = appId.toLong(),
-                appsVersionId = versionId
-            )
-            result.map { response ->
-                if (response.code == 1) {
-                    response.data.toUnifiedAppDetail()
-                } else {
-                    throw Exception("API Error: ${response.msg}")
-                }
+            apiClient.getAppsInformation(token = token, appsId = appId.toLong(), appsVersionId = versionId).map { response ->
+                if (response.code == 1) response.data.toUnifiedAppDetail() else throw Exception("API Error: ${response.msg}")
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -231,18 +188,9 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
 
     override suspend fun getAppComments(appId: String, versionId: Long, page: Int): Result<Pair<List<UnifiedComment>, Int>> {
         return try {
-            val result = apiClient.getAppsCommentList(
-                appsId = appId.toLong(),
-                appsVersionId = versionId,
-                limit = 20,
-                page = page,
-                sortOrder = "desc"
-            )
-            result.map { response ->
+            apiClient.getAppsCommentList(appsId = appId.toLong(), appsVersionId = versionId, limit = 20, page = page, sortOrder = "desc").map { response ->
                 if (response.code == 1) {
-                    val unifiedComments = response.data.list.map { it.toUnifiedComment() }
-                    val totalPages = if (response.data.pagecount > 0) response.data.pagecount else 1
-                    Pair(unifiedComments, totalPages)
+                    Pair(response.data.list.map { it.toUnifiedComment() }, response.data.pagecount.coerceAtLeast(1))
                 } else {
                     throw Exception("API Error: ${response.msg}")
                 }
@@ -255,23 +203,9 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     override suspend fun postComment(appId: String, versionId: Long, content: String, parentCommentId: String?, mentionUserId: String?): Result<Unit> {
         return try {
             val token = getToken()
-            // 修正：如果 parentCommentId 为 null，则传 0 (根评论)
             val parentId = parentCommentId?.toLongOrNull() ?: 0L
-
-            val result = apiClient.postAppComment(
-                token = token,
-                content = content,
-                appsId = appId.toLong(),
-                appsVersionId = versionId, 
-                parentId = parentId,
-                imageUrl = null
-            )
-            result.map { response ->
-                if (response.code == 1) {
-                    Unit
-                } else {
-                    throw Exception("API Error: ${response.msg}")
-                }
+            apiClient.postAppComment(token = token, content = content, appsId = appId.toLong(), appsVersionId = versionId, parentId = parentId).map { response ->
+                if (response.code == 1) Unit else throw Exception("API Error: ${response.msg}")
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -281,13 +215,8 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     override suspend fun deleteComment(commentId: String): Result<Unit> {
         return try {
             val token = getToken()
-            val result = apiClient.deleteAppComment(token = token, commentId = commentId.toLong())
-             result.map { response ->
-                if (response.code == 1) {
-                    Unit
-                } else {
-                    throw Exception("API Error: ${response.msg}")
-                }
+            apiClient.deleteAppComment(token = token, commentId = commentId.toLong()).map { response ->
+                if (response.code == 1) Unit else throw Exception("API Error: ${response.msg}")
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -297,15 +226,8 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     override suspend fun deleteApp(appId: String, versionId: Long): Result<Unit> {
         return try {
             val token = getToken()
-            if (token.isEmpty()) {
-                throw Exception("未登录")
-            }
-            val result = apiClient.deleteApp(
-                usertoken = token,
-                apps_id = appId.toLong(),
-                app_version_id = versionId
-            )
-            result.map { response ->
+            if (token.isEmpty()) throw Exception("未登录")
+            apiClient.deleteApp(usertoken = token, apps_id = appId.toLong(), app_version_id = versionId).map { response ->
                 if (response.code == 1) Unit else throw Exception(response.msg)
             }
         } catch (e: Exception) {
@@ -363,15 +285,14 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
         }
     }
 
-    override suspend fun uploadImage(file: File, type: String): Result<String> {
-        // 复用 KtorClient 中的上传逻辑
+    override suspend fun uploadImage(path: Path, type: String): Result<String> {
         return try {
             val response = KtorClient.uploadHttpClient.submitFormWithBinaryData(
                 url = "api.php",
                 formData = formData {
-                    append("file", InputProvider { file.inputStream().asInput() }, Headers.build {
+                    append("file", createPathInputProvider(path), Headers.build {
                         append(HttpHeaders.ContentType, "image/*")
-                        append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
+                        append(HttpHeaders.ContentDisposition, "filename=\"${path.name}\"")
                     })
                 }
             )
@@ -391,11 +312,11 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
         }
     }
 
-    override suspend fun uploadApk(file: File, serviceType: String): Result<String> {
+    override suspend fun uploadApk(path: Path, serviceType: String): Result<String> {
         return try {
             when (serviceType) {
-                "KEYUN" -> uploadToKeyun(file)
-                "WANYUEYUN" -> uploadToWanyueyun(file)
+                "KEYUN" -> uploadToKeyun(path)
+                "WANYUEYUN" -> uploadToWanyueyun(path)
                 else -> Result.failure(Exception("不支持的上传服务类型: $serviceType"))
             }
         } catch (e: Exception) {
@@ -403,14 +324,14 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
         }
     }
     
-    private suspend fun uploadToKeyun(file: File): Result<String> {
-        try {
+    private suspend fun uploadToKeyun(path: Path): Result<String> {
+        return try {
             val response = KtorClient.uploadHttpClient.submitFormWithBinaryData(
                 url = "api.php",
                 formData = formData {
-                    append("file", InputProvider { file.inputStream().asInput() }, Headers.build {
+                    append("file", createPathInputProvider(path), Headers.build {
                         append(HttpHeaders.ContentType, "application/octet-stream")
-                        append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
+                        append(HttpHeaders.ContentDisposition, "filename=\"${path.name}\"")
                     })
                 }
             )
@@ -418,27 +339,27 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
             if (response.status.isSuccess()) {
                 val responseBody: KtorClient.UploadResponse = response.body()
                 if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
-                    return Result.success(responseBody.downurl)
+                    Result.success(responseBody.downurl)
                 } else {
-                    return Result.failure(Exception(responseBody.msg))
+                    Result.failure(Exception(responseBody.msg))
                 }
             } else {
-                return Result.failure(Exception("网络错误 ${response.status}"))
+                Result.failure(Exception("网络错误 ${response.status}"))
             }
         } catch (e: Exception) {
-            return Result.failure(e)
+            Result.failure(e)
         }
     }
 
-    private suspend fun uploadToWanyueyun(file: File): Result<String> {
-        try {
+    private suspend fun uploadToWanyueyun(path: Path): Result<String> {
+        return try {
             val response = KtorClient.wanyueyunUploadHttpClient.submitFormWithBinaryData(
                 url = "upload",
                 formData = formData {
                     append("Api", "小趣API")
-                    append("file", InputProvider { file.inputStream().asInput() }, Headers.build {
+                    append("file", createPathInputProvider(path), Headers.build {
                         append(HttpHeaders.ContentType, "application/vnd.android.package-archive")
-                        append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
+                        append(HttpHeaders.ContentDisposition, "filename=\"${path.name}\"")
                     })
                 }
             )
@@ -446,34 +367,31 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
             if (response.status.isSuccess()) {
                 val responseBody: KtorClient.WanyueyunUploadResponse = response.body()
                 if (responseBody.code == 200 && !responseBody.data.isNullOrBlank()) {
-                    return Result.success(responseBody.data)
+                    Result.success(responseBody.data)
                 } else {
-                    return Result.failure(Exception(responseBody.msg))
+                    Result.failure(Exception(responseBody.msg))
                 }
             } else {
-                return Result.failure(Exception("网络错误 ${response.status}"))
+                Result.failure(Exception("网络错误 ${response.status}"))
             }
         } catch (e: Exception) {
-            return Result.failure(e)
+            Result.failure(e)
+        }
+    }
+
+    private fun createPathInputProvider(path: Path): InputProvider {
+        return InputProvider { 
+            fileSystem.source(path).buffer().asInputStream().asInput() 
         }
     }
     
-    override suspend fun deleteReview(reviewId: String): Result<Unit> {
-    return Result.failure(Exception("小趣空间暂不支持评价功能。"))
-}
+    override suspend fun deleteReview(reviewId: String): Result<Unit> = Result.failure(Exception("小趣空间暂不支持评价功能。"))
 
-override suspend fun getMyReviews(page: Int): Result<Pair<List<UnifiedComment>, Int>> {
-        return Result.failure(Exception("小趣空间暂不支持获取我的评价功能。"))
-    }    
+    override suspend fun getMyReviews(page: Int): Result<Pair<List<UnifiedComment>, Int>> = Result.failure(Exception("小趣空间暂不支持获取我的评价功能。"))
 
-override suspend fun deleteComment(appId: String, commentId: String): Result<Unit> {
-    // 对于小趣空间，appId 参数不是必需的，但为了接口一致性，我们实现它
-    return deleteComment(commentId)
-}
+    override suspend fun deleteComment(appId: String, commentId: String): Result<Unit> = deleteComment(commentId)
     
-override suspend fun getMyComments(page: Int): Result<Pair<List<UnifiedComment>, Int>> {
-    return Result.failure(NotImplementedError("小趣空间不支持获取我的评论"))
-}
+    override suspend fun getMyComments(page: Int): Result<Pair<List<UnifiedComment>, Int>> = Result.failure(NotImplementedError("小趣空间不支持获取我的评论"))
 
     override suspend fun getAppDownloadSources(appId: String, versionId: Long): Result<List<UnifiedDownloadSource>> {
         return getAppDetail(appId, versionId).map { detail ->

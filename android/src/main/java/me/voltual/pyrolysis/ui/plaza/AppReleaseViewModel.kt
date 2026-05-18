@@ -39,6 +39,7 @@ import okio.Path
 import okio.Path.Companion.toPath
 import okio.buffer
 import okio.source
+import okio.asInputStream // 关键导入：用于 Source 转 InputStream
 
 // 小趣空间分类模型
 data class AppCategory(
@@ -198,7 +199,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                 versionCode.value = parsedInfo.versionCode
                 appSize.value = parsedInfo.sizeInMb.toString()
                 
-                // 将 File 转换为 Okio Path
                 tempApkPath.value = parsedInfo.tempApkFile.absolutePath.toPath()
                 tempIconPath.value = parsedInfo.tempIconFile?.absolutePath?.toPath()
                 localIconUri.value = parsedInfo.tempIconFileUri
@@ -215,7 +215,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                         ApkUploadService.KEYUN -> "KEYUN"
                         ApkUploadService.WANYUEYUN -> "WANYUEYUN"
                     }
-                    // 假设 Repository 已支持 Path，否则此处需 .toFile() 过渡
                     val apkResult = xiaoQuRepo.uploadApk(parsedInfo.tempApkFile, serviceType)
                     apkResult.onSuccess { url ->
                         apkDownloadUrl.value = url
@@ -264,7 +263,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                     val tempFileName = "intro_${System.currentTimeMillis()}.jpg"
                     val path = uriToTempPath(context, uri, tempFileName)
                     path?.let {
-                        // 此处 Repository 兼容性处理
                         val imageResult = xiaoQuRepo.uploadImage(it.toFile(), "intro")
                         imageResult.onSuccess { url ->
                             if (introductionImageUrls.size < MAX_INTRO_IMAGES_XIAOQU) {
@@ -281,9 +279,13 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    /**
+     * 使用 Okio 实现 Ktor 的 InputProvider
+     */
     private fun createPathInputProvider(path: Path): InputProvider {
-        // 使用 Okio 读取并转换为 Ktor Input
-        return InputProvider { fileSystem.source(path).buffer().asInputStream().asInput() }
+        return InputProvider { 
+            fileSystem.source(path).buffer().asInputStream().asInput() 
+        }
     }
     
     fun clearProcessFeedback() {
@@ -292,6 +294,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
 
     private fun uriToTempPath(context: Context, uri: Uri, fileName: String): Path? {
         return try {
+            // 使用 Okio 的 source() 扩展函数
             val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() ?: return null
             val cacheDir = context.cacheDir.absolutePath.toPath()
             val tempPath = cacheDir / fileName
@@ -324,9 +327,9 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                     versionName = versionName.value,
                     versionCode = versionCode.value,
                     sizeInMb = appSize.value.toDoubleOrNull() ?: 0.0,
-                    iconPath = tempIconPath.value, // 使用 Path
+                    iconPath = tempIconPath.value,
                     iconUrl = iconUrl.value,
-                    apkPath = tempApkPath.value,   // 使用 Path
+                    apkPath = tempApkPath.value,
                     apkUrl = apkDownloadUrl.value,
                     
                     introduce = appIntroduce.value,
@@ -353,7 +356,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                     keyword = keyword.value,
                     isWearOs = isWearOs.value,
                     abi = abi.value,
-                    screenshots = tempScreenshotPaths.toList() // 使用 List<Path>
+                    screenshots = tempScreenshotPaths.toList()
                 )
                 
                 val result = repo.releaseApp(params)

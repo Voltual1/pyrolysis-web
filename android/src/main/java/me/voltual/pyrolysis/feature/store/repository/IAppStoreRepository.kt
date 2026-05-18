@@ -1,8 +1,20 @@
+//Copyright (C) 2025 Voltual
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//（或任意更新的版本）的条款重新分发和/或修改它。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.feature.store.repository
 
 import me.voltual.pyrolysis.data.unified.*
-import java.io.File
+import okio.Path
 
+/**
+ * 统一的应用商店仓库接口定义。
+ * 已移除 java.io 依赖，全面适配 Okio。
+ */
 interface IAppStoreRepository {
 
     // 给默认实现返回"不支持"
@@ -18,7 +30,6 @@ interface IAppStoreRepository {
 
     suspend fun getAppDetail(appId: String, versionId: Long): Result<UnifiedAppDetail> =
         Result.failure(UnsupportedOperationException("当前商店不支持获取应用详情"))
-    // 默认“不支持”，子类按需重写
 
     suspend fun getAppComments(appId: String, versionId: Long, page: Int): Result<Pair<List<UnifiedComment>, Int>> =
         Result.failure(UnsupportedOperationException("当前商店不支持查看评论"))
@@ -57,10 +68,16 @@ interface IAppStoreRepository {
     // 文件与用户相关：默认“不支持”
     // ==========================================================
 
-    suspend fun uploadImage(file: File, type: String): Result<String> =
+    /**
+     * 上传图片，使用 okio.Path 代替 java.io.File
+     */
+    suspend fun uploadImage(path: Path, type: String): Result<String> =
         Result.failure(UnsupportedOperationException("当前商店不支持上传图片"))
 
-    suspend fun uploadApk(file: File, serviceType: String): Result<String> =
+    /**
+     * 上传 APK，使用 okio.Path 代替 java.io.File
+     */
+    suspend fun uploadApk(path: Path, serviceType: String): Result<String> =
         Result.failure(UnsupportedOperationException("当前商店不支持上传 APK"))
 
     suspend fun getCurrentUserDetail(): Result<UnifiedUserDetail> =
@@ -71,17 +88,17 @@ interface IAppStoreRepository {
 
     suspend fun uploadAvatar(imageBytes: ByteArray, filename: String): Result<String> =
         Result.failure(UnsupportedOperationException("当前商店不支持上传头像"))
+
     suspend fun getAppVersionsByPackageName(packageName: String): Result<List<UnifiedAppItem>> {
-    return Result.failure(UnsupportedOperationException("当前商店不支持获取版本列表"))
-}
-    suspend fun getAppVersionsByPackageName(packageName: String,page: Int): Result<Pair<List<UnifiedAppItem>, Int>> {
-    return Result.failure(UnsupportedOperationException("当前商店不支持获取分页的版本列表"))
-}
+        return Result.failure(UnsupportedOperationException("当前商店不支持获取版本列表"))
+    }
+
+    suspend fun getAppVersionsByPackageName(packageName: String, page: Int): Result<Pair<List<UnifiedAppItem>, Int>> {
+        return Result.failure(UnsupportedOperationException("当前商店不支持获取分页的版本列表"))
+    }
+
     /**
      * 获取应用相对于当前登录用户的收藏/点赞状态
-     * * [思路说明]:
-     * 1. 对于灵商店: 调用独立的 check 接口。
-     * 2. 对于其他商店 (如弦应用商店已在详情中包含状态): 此方法可作为缓存查询或直接返回详情中的状态。
      */
     suspend fun getFavoriteState(appId: String): Result<UnifiedFavoriteState> =
         Result.success(UnifiedFavoriteState(isFavorite = false)) 
