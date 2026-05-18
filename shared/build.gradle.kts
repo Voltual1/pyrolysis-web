@@ -43,6 +43,13 @@ kotlin {
                 implementation(libs.ktor.client.logging)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
+                    // Koin 注入
+    implementation(libs.koin.android.compose)
+    implementation(libs.koin.core)
+    implementation(libs.koin.annotations)
+    implementation(libs.koin.workmanager)
+    implementation(libs.koin.startup)
+    ksp(libs.koin.ksp.compiler)
             }
         }
 
