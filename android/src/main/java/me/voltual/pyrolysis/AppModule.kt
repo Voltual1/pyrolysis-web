@@ -50,9 +50,31 @@ import me.voltual.pyrolysis.data.UserFilterDataStore
 import me.voltual.pyrolysis.data.UserAgreementDataStore
 import me.voltual.pyrolysis.ui.user.MyCommentsViewModel
 import me.voltual.pyrolysis.feature.store.repository.*
+import me.voltual.pyrolysis.di.commonModule
+import kotlinx.coroutines.flow.first
 
 val appModule = module {
-    // ViewModel definitions
+    // 1. 包含共享模块
+    includes(commonModule)
+
+    // 2. 修正 XiaoQuRepository 的注入
+    // 我们在这里提供 Android 特有的 token 获取逻辑
+    single { 
+        XiaoQuRepository(
+            apiClient = get(), // 从 commonModule 获取 ApiServiceImpl
+            tokenProvider = { 
+                // 调用 Android 端的 AuthManager 获取 Token
+                AuthManager.getCredentials(androidContext()).first()?.token ?: "" 
+            }
+        ) 
+    }
+
+    // 3. 修正仓库映射
+    single<Map<AppStore, IAppStoreRepository>> {
+        mapOf(AppStore.XIAOQU_SPACE to get<XiaoQuRepository>())
+    }
+
+    // --- ViewModels (保持不变，因为它们目前仍深度绑定 Android) ---
     viewModel { LoginViewModel(androidApplication()) }
     viewModel { BillingViewModel(androidApplication()) }
     viewModel { CommunityViewModel() }
@@ -62,15 +84,10 @@ val appModule = module {
     viewModel { LogViewModel(androidApplication()) }
     viewModel { MessageViewModel(androidApplication()) }   
     viewModel { AppDetailComposeViewModel(androidApplication(), get()) }
-    
     viewModel { AppReleaseViewModel(androidApplication()) }
-    
-    viewModel { PlazaViewModel(androidApplication(),get(),get(), get(), get()) }
-    
+    viewModel { PlazaViewModel(androidApplication(), get(), get(), get(), get()) }
     viewModel { PlayerViewModel(androidApplication()) }
-    
     viewModel { SearchViewModel(get(), get()) }
-    
     viewModel { UserListViewModel(androidApplication()) }
     viewModel { PostCreateViewModel(androidApplication()) }
     viewModel { MyPostsViewModel(get()) }
@@ -78,7 +95,6 @@ val appModule = module {
     viewModel { VersionListViewModel(androidApplication(), get()) }
     viewModel { UserDetailViewModel(androidApplication()) }
     viewModel { StoreManagerViewModel(androidApplication()) }
-    
     viewModel { BrowseHistoryViewModel(androidApplication()) }
     viewModel { PostDetailViewModel(androidApplication()) }
     viewModel { RankingListViewModel() }
@@ -91,15 +107,16 @@ val appModule = module {
     viewModel { PrefsVM(get(), get(), get()) }
     viewModel { SearchVM(get(), get(), get()) }    
     viewModel { ExploreVM(get(), get(), get()) }
-    viewModel { AppPageVM(get(), get(), get(),get(),get(),get()) }
+    viewModel { AppPageVM(get(), get(), get(), get(), get(), get()) }
+    viewModel { UserProfileViewModel(get(), get()) }
 
-    // Singletons    
+    // --- 其他 Singletons ---
     single { UserFilterDataStore(get()) }    
     single { InstallsRepository(get()) }  
     single { ExtrasRepository(get()) }    
     single { DownloadedRepository(get()) }    
     single { ProductsRepository(get(), get(), get(), get()) }
-    single { PrivacyRepository(get(), get(), get(),get(), get()) }
+    single { PrivacyRepository(get(), get(), get(), get(), get()) }
     single { InstalledRepository(get(), get()) }
     single { RepositoriesRepository(get(), get(), get()) }
     single { UserAgreementDataStore(androidContext()) }    
@@ -110,13 +127,5 @@ val appModule = module {
     single { get<AppDatabase>().postDraftDao() }         
     single { SearchHistoryDataStore(androidApplication()) }
     single { StorageSettingsDataStore(androidApplication()) }
-    viewModel { UserProfileViewModel(get(), get()) }
-    
     single { DeviceNameDataStore(androidContext()) }
-    single { XiaoQuRepository(KtorClient.ApiServiceImpl) }
-    single<Map<AppStore, IAppStoreRepository>> {
-    val map = mutableMapOf<AppStore, IAppStoreRepository>()
-    map[AppStore.XIAOQU_SPACE] = get<XiaoQuRepository>()
-    map
-}
 }
