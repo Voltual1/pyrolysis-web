@@ -1,12 +1,18 @@
+//Copyright (C) 2025 Voltual
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//（或任意更新的版本）的条款重新分发和/或修改它。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.data.unified
 
-import kotlinx.serialization.Serializable
 import me.voltual.pyrolysis.AppStore
 
 /**
  * 统一的用户信息模型
  */
-@Serializable
 data class UnifiedUser(
     val id: String,
     val displayName: String,
@@ -14,51 +20,43 @@ data class UnifiedUser(
 )
 
 /**
- * 统一的下载源模型
- */
-@Serializable
-data class UnifiedDownloadSource(
-    val name: String,
-    val url: String,
-    val isOfficial: Boolean
-)
-
-/**
  * 统一的评论模型
  */
-@Serializable
 data class UnifiedComment(
     val id: String,
     val content: String,
     val sendTime: Long,
     val sender: UnifiedUser,
     val childCount: Int,
-    val childComments: List<UnifiedComment> = emptyOfList(),
+    val childComments: List<UnifiedComment> = emptyList(),
     val fatherReply: UnifiedComment? = null,
-    val raw: String, // 在 KMP 中建议存为 String 或 JsonElement
+    val raw: Any,
     val appId: String? = null,
     val versionId: Long? = null,
     val rating: Int? = null,
     val isCountedInRating: Boolean? = null 
 )
 
-private fun <T> emptyOfList(): List<T> = emptyList()
-
 /**
  * 统一的更新用户资料参数
  */
 data class UpdateUserProfileParams(
+    // 小趣空间字段
     val nickname: String? = null,
     val qqNumber: String? = null,
+    
+    // 弦应用商店字段
     val displayName: String? = null,
     val description: String? = null,
+    
+    // 设备名称（本地存储）
     val deviceName: String? = null
 )
 
 /**
  * 统一的应用详情模型
  */
-@Serializable
+
 data class UnifiedAppDetail(
     val id: String,
     val store: AppStore,
@@ -80,8 +78,8 @@ data class UnifiedAppDetail(
     val isFavorite: Boolean,
     val favoriteCount: Int,
     val reviewCount: Int,
-    val downloadUrl: String?,
-    val raw: String,
+    val downloadUrl: String?, // 直接可用的下载URL
+    val raw: Any,
     // 微思应用商店专用字段
     val minsdkDisplay: String? = null,
     val targetsdkDisplay: String? = null,
@@ -94,9 +92,17 @@ data class UnifiedAppDetail(
 )
 
 /**
+ * 统一的收藏/点赞状态数据类
+ * 屏蔽不同商店 API 字段名（like, favorite, ratingCount）的差异
+ */
+data class UnifiedFavoriteState(
+    val isFavorite: Boolean,
+    val favoriteCount: Int = -1 // 默认值为 -1，表示不支持统计
+)
+
+/**
  * 统一的应用列表项模型
  */
-@Serializable
 data class UnifiedAppItem(
     val uniqueId: String,
     val navigationId: String,
@@ -105,13 +111,13 @@ data class UnifiedAppItem(
     val name: String,
     val iconUrl: String,
     val versionName: String,
+    // 新增：统一的描述性副标题/信息标签
     val info: String? = null
 )
 
 /**
- * 统一的分类模型
+ * 统一的应用分类模型
  */
-@Serializable
 data class UnifiedCategory(
     val id: String,
     val name: String,
@@ -119,25 +125,37 @@ data class UnifiedCategory(
 )
 
 /**
- * 统一的用户详情模型
+ * 统一的下载源模型
  */
-@Serializable
+data class UnifiedDownloadSource(
+    val name: String,
+    val url: String,
+    val isOfficial: Boolean
+)
+
+/**
+ * 统一的用户详情模型（支持小趣空间和弦应用商店）
+ */
 data class UnifiedUserDetail(
     val id: Long,
     val username: String,
     val displayName: String,
     val avatarUrl: String?,
     val description: String? = null,
-    val hierarchy: String? = null,
+    
+    // 小趣空间特有字段
+    val hierarchy: String? = null,  // 等级
     val followersCount: String? = null,
     val fansCount: String? = null,
     val postCount: String? = null,
     val likeCount: String? = null,
-    val followStatus: Int? = null, // 简化为 Int，对应 FollowStatus.value
+    val followStatus: FollowStatus? = null, // 新增：关注状态
     val money: Int? = null,
     val commentCount: Int? = null,
-    val seriesDays: Int? = null,
+    val seriesDays: Int? = null,  // 连续签到天数
     val lastActivityTime: String? = null,
+    
+    // 弦应用商店特有字段
     val userOfficial: String? = null,
     val userBadge: String? = null,
     val userStatus: Int? = null,
@@ -153,49 +171,54 @@ data class UnifiedUserDetail(
     val lastOnlineTime: Long? = null,
     val uploadCount: Int? = null,
     val replyCount: Int? = null,
+    
     val store: AppStore,
-    val raw: String? = null
+    val raw: Any? = null
 )
-
 /**
- * 统一的发布应用参数 (KMP 适配版)
+ * 统一的发布应用参数
+ * 包含两个平台所需的所有字段，使用可空类型处理差异
  */
 data class UnifiedAppReleaseParams(
     val store: AppStore,
+    // 通用字段
     val appName: String,
     val packageName: String,
     val versionName: String,
     val versionCode: Long,
     val sizeInMb: Double,
-    // 将 File 替换为 ByteArray 以便跨平台，但保留字段名
-    val iconFile: ByteArray? = null, 
-    val iconUrl: String? = null,
-    val apkFile: ByteArray? = null,   
-    val apkUrl: String? = null,
-    val introduce: String? = null,
-    val explain: String? = null,
-    val introImages: List<String>? = null,
+    val iconByteArray: ByteArray?, // 本地文件
+    val iconUrl: String?, // 网络URL (小趣空间用)
+    val apkByteArray: ByteArray?,   // 本地文件 (弦开放平台用)
+    val apkUrl: String?,  // 网络URL (小趣空间用)
+    
+    // 小趣空间特有
+    val introduce: String? = null, // 资源介绍
+    val explain: String? = null,   // 适配说明
+    val introImages: List<String>? = null, // 介绍图URL列表
     val categoryId: Int? = null,
     val subCategoryId: Int? = null,
     val isPay: Int? = null,
     val payMoney: String? = null,
     val isUpdate: Boolean = false,
-    val appId: Long? = null,
-    val appVersionId: Long? = null,
+    val appId: Long? = null, // 更新时需要
+    val appVersionId: Long? = null, // 更新/删除时需要
+
+    // 弦开放平台特有
     val appTypeId: Int? = null,
     val appVersionTypeId: Int? = null,
-    val appTags: String? = null,
+    val appTags: String? = null, // ID字符串
     val sdkMin: Int? = null,
     val sdkTarget: Int? = null,
     val developer: String? = null,
     val source: String? = null,
-    val describe: String? = null,
+    val describe: String? = null, // 应用描述
     val updateLog: String? = null,
     val uploadMessage: String? = null,
     val keyword: String? = null,
     val isWearOs: Int? = null,
     val abi: Int? = null,
-    val screenshots: List<ByteArray>? = null 
+    val screenshots: List<ByteArray>? = null // 本地截图文件列表
 )
 
 // 小趣空间关注状态密封类
