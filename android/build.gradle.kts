@@ -112,7 +112,7 @@ dependencies {
     implementation(libs.google.material)
     implementation(libs.okhttp)
     implementation(libs.photoview)
-    implementation(project(":shared"))
+//    implementation(project(":shared"))
     implementation(libs.fragment)
     implementation(libs.biometric)
     implementation(libs.simple.storage)
