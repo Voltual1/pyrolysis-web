@@ -21,7 +21,7 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Pyrolysis"
-include(":shared")
+//include(":shared")
 include(":android")
-include(":web")
+//include(":web")
 include(":DanmakuFlameMaster")

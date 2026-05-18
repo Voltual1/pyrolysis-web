@@ -12,7 +12,6 @@ import me.voltual.pyrolysis.core.database.*
 import me.voltual.pyrolysis.core.database.dao.*
 import me.voltual.pyrolysis.ui.auth.LoginViewModel
 import me.voltual.pyrolysis.ui.billing.BillingViewModel
-import me.voltual.pyrolysis.network.KtorClient
 import org.koin.android.ext.koin.androidContext
 import me.voltual.pyrolysis.ui.community.CommunityViewModel
 import me.voltual.pyrolysis.ui.community.FollowingPostsViewModel

@@ -16,7 +16,7 @@ import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.data.unified.toUnifiedUserDetail  
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.AuthManager
-import me.voltual.pyrolysis.network.KtorClient
+import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.BBQApplication
 import me.voltual.pyrolysis.data.unified.UnifiedUserDetail 
 import kotlinx.coroutines.launch

@@ -13,7 +13,7 @@ package me.voltual.pyrolysis.ui.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.BBQApplication
-import me.voltual.pyrolysis.network.KtorClient 
+import me.voltual.pyrolysis.KtorClient 
 import kotlinx.coroutines.flow.*
 import org.koin.android.annotation.KoinViewModel
 import me.voltual.pyrolysis.data.SearchHistoryDataStore

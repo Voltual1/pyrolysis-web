@@ -9,6 +9,7 @@
 package me.voltual.pyrolysis.data.unified
 
 import me.voltual.pyrolysis.AppStore
+import java.io.File
 
 /**
  * 统一的用户信息模型
@@ -187,9 +188,9 @@ data class UnifiedAppReleaseParams(
     val versionName: String,
     val versionCode: Long,
     val sizeInMb: Double,
-    val iconByteArray: ByteArray?, // 本地文件
+    val iconFile: File?, // 本地文件
     val iconUrl: String?, // 网络URL (小趣空间用)
-    val apkByteArray: ByteArray?,   // 本地文件 (弦开放平台用)
+    val apkFile: File?,   // 本地文件 (弦开放平台用)
     val apkUrl: String?,  // 网络URL (小趣空间用)
     
     // 小趣空间特有
@@ -218,7 +219,7 @@ data class UnifiedAppReleaseParams(
     val keyword: String? = null,
     val isWearOs: Int? = null,
     val abi: Int? = null,
-    val screenshots: List<ByteArray>? = null // 本地截图文件列表
+    val screenshots: List<File>? = null // 本地截图文件列表
 )
 
 // 小趣空间关注状态密封类

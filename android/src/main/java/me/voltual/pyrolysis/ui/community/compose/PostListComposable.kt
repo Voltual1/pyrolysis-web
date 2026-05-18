@@ -21,7 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import me.voltual.pyrolysis.network.KtorClient
+import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.core.ui.components.SharedPostItem
 
 @Composable

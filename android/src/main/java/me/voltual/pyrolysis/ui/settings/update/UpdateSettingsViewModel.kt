@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.data.UpdateSettingsDataStore
-import me.voltual.pyrolysis.network.KtorClient
+import me.voltual.pyrolysis.KtorClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext

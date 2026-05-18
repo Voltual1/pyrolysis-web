@@ -9,12 +9,12 @@
 package me.voltual.pyrolysis.data.unified
 
 import me.voltual.pyrolysis.AppStore
-import me.voltual.pyrolysis.network.KtorClient
-import me.voltual.pyrolysis.network.KtorClient.AppItem
-import me.voltual.pyrolysis.network.KtorClient.Comment
-import me.voltual.pyrolysis.network.KtorClient.AppComment
-import me.voltual.pyrolysis.network.KtorClient.AppDetail
-import me.voltual.pyrolysis.network.KtorClient.UserInformationData
+import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.KtorClient.AppItem
+import me.voltual.pyrolysis.KtorClient.Comment
+import me.voltual.pyrolysis.KtorClient.AppComment
+import me.voltual.pyrolysis.KtorClient.AppDetail
+import me.voltual.pyrolysis.KtorClient.UserInformationData
 
 // --- KtorClient (小趣空间) Mappers ---
 

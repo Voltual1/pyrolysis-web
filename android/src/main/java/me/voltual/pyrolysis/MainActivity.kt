@@ -18,7 +18,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.biometric.BiometricManager
-import me.voltual.pyrolysis.network.KtorClient
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.core.content.ContextCompat

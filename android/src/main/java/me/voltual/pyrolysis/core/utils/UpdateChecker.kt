@@ -8,7 +8,7 @@ package me.voltual.pyrolysis.core.utils
 
 import android.content.Context
 import me.voltual.pyrolysis.BuildConfig
-import me.voltual.pyrolysis.network.KtorClient
+import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.data.UpdateInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

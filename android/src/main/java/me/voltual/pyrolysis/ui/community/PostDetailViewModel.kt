@@ -11,7 +11,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.AuthManager
-import me.voltual.pyrolysis.network.KtorClient
+import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.core.database.BrowseHistoryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

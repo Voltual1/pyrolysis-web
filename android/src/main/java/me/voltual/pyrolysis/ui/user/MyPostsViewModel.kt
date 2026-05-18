@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.network.KtorClient
+import me.voltual.pyrolysis.KtorClient
 import java.io.IOException
 import org.koin.android.annotation.KoinViewModel
 import me.voltual.pyrolysis.data.UserFilterDataStore

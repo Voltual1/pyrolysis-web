@@ -1,6 +1,7 @@
 package me.voltual.pyrolysis.feature.store.repository
 
 import me.voltual.pyrolysis.data.unified.*
+import java.io.File
 
 interface IAppStoreRepository {
 
@@ -56,10 +57,10 @@ interface IAppStoreRepository {
     // 文件与用户相关：默认“不支持”
     // ==========================================================
 
-    suspend fun uploadImage(imageBytes: ByteArray, filename: String): Result<String> =
+    suspend fun uploadImage(file: File, type: String): Result<String> =
         Result.failure(UnsupportedOperationException("当前商店不支持上传图片"))
 
-    suspend fun uploadApk(apkBytes: ByteArray, filename: String, serviceType: String): Result<String> =
+    suspend fun uploadApk(file: File, serviceType: String): Result<String> =
         Result.failure(UnsupportedOperationException("当前商店不支持上传 APK"))
 
     suspend fun getCurrentUserDetail(): Result<UnifiedUserDetail> =
