@@ -76,9 +76,9 @@ jobs:
             **注意**: Release 包含 Release 和 Debug 两种 APK。
           draft: true
           files: |
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/mapping/release/mapping.txt
+            android/build/outputs/apk/debug/*.apk
+            android/build/outputs/apk/release/*.apk
+            android/build/outputs/mapping/release/mapping.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
