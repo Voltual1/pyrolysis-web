@@ -20,9 +20,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-
-// 注意：UpdateInfo 需要移动到 shared 模块的 commonMain 中
-// 建议路径：shared/src/commonMain/kotlin/me/voltual/pyrolysis/data/UpdateInfo.kt
 import me.voltual.pyrolysis.data.UpdateInfo
 
 object KtorClient {
