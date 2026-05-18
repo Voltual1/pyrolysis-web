@@ -9,7 +9,7 @@
 package me.voltual.pyrolysis.data.unified
 
 import me.voltual.pyrolysis.AppStore
-import java.io.File
+import okio.Path
 
 /**
  * 统一的用户信息模型
@@ -57,7 +57,6 @@ data class UpdateUserProfileParams(
 /**
  * 统一的应用详情模型
  */
-
 data class UnifiedAppDetail(
     val id: String,
     val store: AppStore,
@@ -94,7 +93,6 @@ data class UnifiedAppDetail(
 
 /**
  * 统一的收藏/点赞状态数据类
- * 屏蔽不同商店 API 字段名（like, favorite, ratingCount）的差异
  */
 data class UnifiedFavoriteState(
     val isFavorite: Boolean,
@@ -112,7 +110,6 @@ data class UnifiedAppItem(
     val name: String,
     val iconUrl: String,
     val versionName: String,
-    // 新增：统一的描述性副标题/信息标签
     val info: String? = null
 )
 
@@ -135,7 +132,7 @@ data class UnifiedDownloadSource(
 )
 
 /**
- * 统一的用户详情模型（支持小趣空间和弦应用商店）
+ * 统一的用户详情模型
  */
 data class UnifiedUserDetail(
     val id: Long,
@@ -145,15 +142,15 @@ data class UnifiedUserDetail(
     val description: String? = null,
     
     // 小趣空间特有字段
-    val hierarchy: String? = null,  // 等级
+    val hierarchy: String? = null,
     val followersCount: String? = null,
     val fansCount: String? = null,
     val postCount: String? = null,
     val likeCount: String? = null,
-    val followStatus: FollowStatus? = null, // 新增：关注状态
+    val followStatus: FollowStatus? = null,
     val money: Int? = null,
     val commentCount: Int? = null,
-    val seriesDays: Int? = null,  // 连续签到天数
+    val seriesDays: Int? = null,
     val lastActivityTime: String? = null,
     
     // 弦应用商店特有字段
@@ -176,9 +173,10 @@ data class UnifiedUserDetail(
     val store: AppStore,
     val raw: Any? = null
 )
+
 /**
  * 统一的发布应用参数
- * 包含两个平台所需的所有字段，使用可空类型处理差异
+ * 使用 okio.Path 代替 java.io.File
  */
 data class UnifiedAppReleaseParams(
     val store: AppStore,
@@ -188,41 +186,43 @@ data class UnifiedAppReleaseParams(
     val versionName: String,
     val versionCode: Long,
     val sizeInMb: Double,
-    val iconFile: File?, // 本地文件
-    val iconUrl: String?, // 网络URL (小趣空间用)
-    val apkFile: File?,   // 本地文件 (弦开放平台用)
-    val apkUrl: String?,  // 网络URL (小趣空间用)
+    val iconPath: Path?, // Okio Path
+    val iconUrl: String?, 
+    val apkPath: Path?,   // Okio Path
+    val apkUrl: String?,  
     
     // 小趣空间特有
-    val introduce: String? = null, // 资源介绍
-    val explain: String? = null,   // 适配说明
-    val introImages: List<String>? = null, // 介绍图URL列表
+    val introduce: String? = null,
+    val explain: String? = null,
+    val introImages: List<String>? = null,
     val categoryId: Int? = null,
     val subCategoryId: Int? = null,
     val isPay: Int? = null,
     val payMoney: String? = null,
     val isUpdate: Boolean = false,
-    val appId: Long? = null, // 更新时需要
-    val appVersionId: Long? = null, // 更新/删除时需要
+    val appId: Long? = null,
+    val appVersionId: Long? = null,
 
     // 弦开放平台特有
     val appTypeId: Int? = null,
     val appVersionTypeId: Int? = null,
-    val appTags: String? = null, // ID字符串
+    val appTags: String? = null,
     val sdkMin: Int? = null,
     val sdkTarget: Int? = null,
     val developer: String? = null,
     val source: String? = null,
-    val describe: String? = null, // 应用描述
+    val describe: String? = null,
     val updateLog: String? = null,
     val uploadMessage: String? = null,
     val keyword: String? = null,
     val isWearOs: Int? = null,
     val abi: Int? = null,
-    val screenshots: List<File>? = null // 本地截图文件列表
+    val screenshots: List<Path>? = null // Okio Path 列表
 )
 
-// 小趣空间关注状态密封类
+/**
+ * 小趣空间关注状态
+ */
 sealed class FollowStatus(val value: Int) {
     data object MutualFollow : FollowStatus(0)      // 已互关
     data object FollowedYou : FollowStatus(1)       // 关注了你
@@ -230,14 +230,11 @@ sealed class FollowStatus(val value: Int) {
     data object NotFollowed : FollowStatus(3)       // 未关注
     
     companion object {
-        fun fromValue(value: Int): FollowStatus {
-            return when (value) {
-                0 -> MutualFollow
-                1 -> FollowedYou
-                2 -> YouFollowed
-                3 -> NotFollowed
-                else -> NotFollowed
-            }
+        fun fromValue(value: Int): FollowStatus = when (value) {
+            0 -> MutualFollow
+            1 -> FollowedYou
+            2 -> YouFollowed
+            else -> NotFollowed
         }
     }
 }
