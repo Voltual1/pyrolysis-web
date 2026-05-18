@@ -14,6 +14,16 @@ data class UnifiedUser(
 )
 
 /**
+ * 统一的下载源模型
+ */
+@Serializable
+data class UnifiedDownloadSource(
+    val name: String,
+    val url: String,
+    val isOfficial: Boolean
+)
+
+/**
  * 统一的评论模型
  */
 @Serializable
@@ -187,3 +197,23 @@ data class UnifiedAppReleaseParams(
     val abi: Int? = null,
     val screenshots: List<ByteArray>? = null 
 )
+
+// 小趣空间关注状态密封类
+sealed class FollowStatus(val value: Int) {
+    data object MutualFollow : FollowStatus(0)      // 已互关
+    data object FollowedYou : FollowStatus(1)       // 关注了你
+    data object YouFollowed : FollowStatus(2)       // 已关注
+    data object NotFollowed : FollowStatus(3)       // 未关注
+    
+    companion object {
+        fun fromValue(value: Int): FollowStatus {
+            return when (value) {
+                0 -> MutualFollow
+                1 -> FollowedYou
+                2 -> YouFollowed
+                3 -> NotFollowed
+                else -> NotFollowed
+            }
+        }
+    }
+}

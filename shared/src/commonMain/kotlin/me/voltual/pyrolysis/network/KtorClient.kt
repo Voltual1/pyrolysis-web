@@ -75,23 +75,26 @@ object KtorClient {
 
     // ===== 模型类定义 =====
 
-    @Serializable
+    // 基础响应模型
+    @kotlinx.serialization.Serializable
     data class BaseResponse(
         val code: Int,
         val msg: String,
-        val data: JsonElement? = null,
+        val data: JsonElement? = null, // 改为 JsonElement? 来支持任何 JSON 类型
         val timestamp: Long
     ) {
-        fun getDownloadUrl(): String? {
-            return if (data is JsonObject) {
-                data["download"]?.toString()?.removeSurrounding("\"")
-            } else {
-                null
-            }
+        // 辅助方法：从 data 字段获取下载链接
+    fun getDownloadUrl(): String? {
+        return if (data is JsonObject) {
+            data["download"]?.toString()?.removeSurrounding("\"")
+        } else {
+            null
         }
     }
+}
 
-    @Serializable
+    // 帖子详情响应模型
+    @kotlinx.serialization.Serializable
     data class PostDetailResponse(
         val code: Int,
         val msg: String,
@@ -99,7 +102,7 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class PostDetail(
         val id: Long,
         val title: String,
@@ -124,7 +127,8 @@ object KtorClient {
         val is_collection: Int
     )
 
-    @Serializable
+    // 评论列表响应模型
+    @kotlinx.serialization.Serializable
     data class CommentListResponse(
         val code: Int,
         val msg: String,
@@ -132,14 +136,14 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class CommentListData(
         val list: List<Comment>,
         val pagecount: Int,
         val current_number: Int
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class Comment(
         val id: Long,
         val content: String,
@@ -156,7 +160,8 @@ object KtorClient {
         val sub_comments_count: Int
     )
 
-    @Serializable
+    // 帖子列表响应模型
+    @kotlinx.serialization.Serializable
     data class PostListResponse(
         val code: Int,
         val msg: String,
@@ -164,14 +169,14 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class PostListData(
         val list: List<Post>,
         val pagecount: Int,
         val current_number: Int
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class Post(
         val postid: Long,
         val title: String,
@@ -191,7 +196,7 @@ object KtorClient {
         val img_url: List<String>? = null
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class LoginResponse(
         val code: Int,
         val msg: String,
@@ -199,7 +204,7 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class LoginData(
         val usertoken: String,
         val id: Long,
@@ -207,14 +212,14 @@ object KtorClient {
         val is_section_moderator: Int = 0
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class HeartbeatResponse(
         val code: Int,
         val msg: String,
         val timestamp: Long
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class UserInfoResponse(
         val code: Int,
         val msg: String,
@@ -222,26 +227,27 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
-    data class UserData(
-        val id: Long,
-        val username: String,
-        val usertx: String,
-        val nickname: String,
-        val hierarchy: String,
-        val money: Int,
-        val followerscount: String,
-        val fanscount: String,
-        val postcount: String,
-        val likecount: String,
-        val exp: Int,
-        val create_time: String = "",
-        val signlasttime: String = "",
-        val series_days: Int = 0,
-        val sign_today: Boolean = false  
-    )
+@kotlinx.serialization.Serializable
+data class UserData(
+    val id: Long,
+    val username: String,
+    val usertx: String,
+    val nickname: String,
+    val hierarchy: String,
+    val money: Int,
+    val followerscount: String,
+    val fanscount: String,
+    val postcount: String,
+    val likecount: String,
+    val exp: Int,
+    val create_time: String = "",
+    val signlasttime: String = "",
+    val series_days: Int = 0,
+    val sign_today: Boolean = false  
+)
 
-    @Serializable
+    // 应用列表模型
+    @kotlinx.serialization.Serializable
     data class AppListResponse(
         val code: Int,
         val msg: String,
@@ -249,14 +255,14 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class AppListData(
         val list: List<AppItem>,
         val pagecount: Int,
         val current_number: Int
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class AppItem(
         val id: Long,
         val appname: String,
@@ -268,7 +274,8 @@ object KtorClient {
         val apps_version_id: Long
     )
 
-    @Serializable
+    // 应用详情响应模型
+    @kotlinx.serialization.Serializable
     data class AppDetailResponse(
         val code: Int,
         val msg: String,
@@ -276,7 +283,8 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
+    // 消息通知响应
+    @kotlinx.serialization.Serializable
     data class MessageNotificationResponse(
         val code: Int,
         val msg: String,
@@ -284,14 +292,14 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class MessageNotificationData(
         val list: List<MessageNotification>,
         val pagecount: Int,
         val current_number: Int
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class MessageNotification(
         val id: Long,
         val title: String,
@@ -307,7 +315,7 @@ object KtorClient {
         val is_admin: Int
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class AppDetail(
         val id: Long,
         val appname: String,
@@ -351,7 +359,7 @@ object KtorClient {
         val posturl: String?
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class BrowseHistoryResponse(
         val code: Int,
         val msg: String,
@@ -359,14 +367,14 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class BrowseHistoryData(
         val list: List<BrowseHistoryItem>,
         val pagecount: Int,
         val current_number: Int
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class BrowseHistoryItem(
         val postid: Long,
         val title: String,
@@ -386,7 +394,8 @@ object KtorClient {
         val img_url: List<String>? = null
     )
 
-    @Serializable
+    // 应用评论列表响应模型
+    @kotlinx.serialization.Serializable
     data class AppCommentListResponse(
         val code: Int,
         val msg: String,
@@ -394,14 +403,14 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class AppCommentListData(
         val list: List<AppComment>,
         val pagecount: Int,
         val current_number: Int
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class AppComment(
         val id: Long,
         val content: String,
@@ -417,7 +426,8 @@ object KtorClient {
         val image_path: List<String>? = null
     )
 
-    @Serializable
+    // 用户列表响应模型
+    @kotlinx.serialization.Serializable
     data class UserListResponse(
         val code: Int,
         val msg: String,
@@ -425,14 +435,14 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class UserListData(
         val list: List<UserItem>,
         val pagecount: Int,
         val current_number: Int
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class UserItem(
         val id: Long,
         val username: String,
@@ -448,7 +458,7 @@ object KtorClient {
         val sexName: String
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class UserInformationResponse(
         val code: Int,
         val msg: String,
@@ -456,7 +466,7 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class UserInformationData(
         val id: Long,
         val follow_status: String,
@@ -475,7 +485,7 @@ object KtorClient {
         val commentcount: String?
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class BillingResponse(
         val code: Int,
         val msg: String,
@@ -483,14 +493,14 @@ object KtorClient {
         val timestamp: Long
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class BillingData(
         val list: List<BillingItem>,
         val pagecount: Int,
         val current_number: Int
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class BillingItem(
         val id: Long,
         val transaction_type: Int,
@@ -499,35 +509,37 @@ object KtorClient {
         val remark: String,
         val type: Int
     )
+    
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class RankingUser(
         val id: Long,
         val username: String,
         val nickname: String,
         val usertx: String,
-        val money: Int? = null,
-        val exp: Int? = null,
+    val money: Int? = null,  // 改为可选
+    val exp: Int? = null,    // 改为可选
         val title: List<String>?,
         val badge: List<JsonObject>?
     )
 
-    @Serializable
+    @kotlinx.serialization.Serializable
     data class RankingListResponse(
         val code: Int,
         val msg: String,
         val data: List<RankingUser>,
         val timestamp: Long
     )
+    
+    @kotlinx.serialization.Serializable
+data class AppCategory(
+    val categoryId: Int?,
+    val subCategoryId: Int?,
+    val categoryName: String
+)
 
-    @Serializable
-    data class AppCategory(
-        val categoryId: Int?,
-        val subCategoryId: Int?,
-        val categoryName: String
-    )
-
-    @Serializable
+    // 上传响应模型
+    @kotlinx.serialization.Serializable
     data class UploadResponse(
         val code: Int,
         val msg: String,
@@ -535,22 +547,31 @@ object KtorClient {
         val downurl: String?,
         val viewurl: String?
     )
-
-    @Serializable
-    data class WanyueyunUploadResponse(
-        val code: Int,
-        val msg: String,
-        val data: String?
-    )
-
+    
+    @kotlinx.serialization.Serializable
+data class WanyueyunUploadResponse(
+    val code: Int,
+    val msg: String,
+    val data: String?
+)
+    
+    // **NEW**: Helper object to handle JSON conversion
     object JsonConverter {
-        fun toJson(appDetail: AppDetail): String {
-            return commonJson.encodeToString(AppDetail.serializer(), appDetail)
+        private val json = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+            explicitNulls = false
         }
+
+        fun toJson(appDetail: AppDetail): String {
+            return json.encodeToString(AppDetail.serializer(), appDetail)
+        }
+
         fun fromJson(jsonString: String): AppDetail? {
             return try {
-                commonJson.decodeFromString(AppDetail.serializer(), jsonString)
+                json.decodeFromString(AppDetail.serializer(), jsonString)
             } catch (e: Exception) {
+                e.printStackTrace()
                 null
             }
         }
