@@ -466,9 +466,6 @@ object KtorClient {
     )
 
     @Serializable
-    val userInformationDataSerializer = Serializable(UserInformationData::class)
-
-    @Serializable
     data class UserInformationData(
         val id: Long,
         val follow_status: String,
@@ -980,6 +977,27 @@ object KtorClient {
             }
             if (!response.status.isSuccess()) throw PyrolysisNetworkException("Upload failed: ${response.status}")
             response.body<BaseResponse>()
+        }
+    }
+    
+    object JsonConverter {
+        private val json = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+            explicitNulls = false
+        }
+
+        fun toJson(appDetail: AppDetail): String {
+            return json.encodeToString(AppDetail.serializer(), appDetail)
+        }
+
+        fun fromJson(jsonString: String): AppDetail? {
+            return try {
+                json.decodeFromString(AppDetail.serializer(), jsonString)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
         }
     }
 
