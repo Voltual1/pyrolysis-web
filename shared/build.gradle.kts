@@ -46,7 +46,6 @@ kotlin {
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.koin.core)
     			implementation(libs.koin.annotations)
-			    ksp(libs.koin.ksp.compiler)
             }
         }
 
