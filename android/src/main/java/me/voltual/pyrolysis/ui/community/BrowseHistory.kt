@@ -10,24 +10,39 @@
 package me.voltual.pyrolysis.ui.community
 
 import androidx.room.Entity
-import androidx.room.Ignore
 import androidx.room.PrimaryKey
-import java.text.SimpleDateFormat 
-import java.util.Date
-import java.util.Locale
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
+/**
+ * 浏览历史实体类
+ * 已移除 java.util.Date 和 SimpleDateFormat，全面适配 kotlinx-datetime
+ */
 @Entity(tableName = "browse_history")
 data class BrowseHistory(
     @PrimaryKey val postId: Long,
     val title: String,
     val previewContent: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = Clock.System.now().toEpochMilliseconds()
 ) {
-    @Ignore
-    private val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-
+    /**
+     * 格式化时间字符串 (yyyy-MM-dd HH:mm)
+     * 使用 Kotlin 原生方式处理日期，避免 Java 平台依赖
+     */
     fun formattedTime(): String {
-        val date = Date(timestamp)
-        return formatter.format(date)
+        val instant = Instant.fromEpochMilliseconds(timestamp)
+        val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+        
+        return with(localDateTime) {
+            val yearStr = year.toString()
+            val monthStr = monthNumber.toString().padStart(2, '0')
+            val dayStr = dayOfMonth.toString().padStart(2, '0')
+            val hourStr = hour.toString().padStart(2, '0')
+            val minuteStr = minute.toString().padStart(2, '0')
+            
+            "$yearStr-$monthStr-$dayStr $hourStr:$minuteStr"
+        }
     }
 }

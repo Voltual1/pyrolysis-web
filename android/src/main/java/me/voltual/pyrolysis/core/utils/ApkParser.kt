@@ -18,11 +18,19 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import androidx.core.net.toUri
-import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
+import kotlinx.datetime.Clock
+import okio.FileSystem
+import okio.Path
+import okio.Path.Companion.toPath
+import okio.asOutputStream
+import okio.buffer
+import okio.source
 import kotlin.math.roundToInt
 
+/**
+ * 统一的应用信息模型
+ * 使用 okio.Path 代替 java.io.File
+ */
 data class ApkInfo(
     val appName: String,
     val packageName: String,
@@ -31,25 +39,32 @@ data class ApkInfo(
     val minSdkVersion: Int,        
     val targetSdkVersion: Int,    
     val sizeInMb: Double,
-    val tempApkFile: File,
-    val tempIconFile: File?,
+    val tempApkPath: Path,
+    val tempIconPath: Path?,
     val tempIconFileUri: Uri?
 )
 
 object ApkParser {
 
+    private val fileSystem = FileSystem.SYSTEM
+
     private fun generateUniqueFileName(prefix: String, extension: String): String {
-        val timestamp = System.currentTimeMillis()
+        val timestamp = Clock.System.now().toEpochMilliseconds()
         val randomSuffix = (100..999).random()
         return "${prefix}_${timestamp}_${randomSuffix}.$extension"
     }
 
+    /**
+     * 解析 APK 文件并提取信息
+     */
     fun parse(context: Context, apkUri: Uri): ApkInfo? {
         val tempApkFileName = generateUniqueFileName("release", "apk")
-        val tempApkFile = uriToTempFile(context, apkUri, tempApkFileName) ?: return null
-        val archivePath = tempApkFile.absolutePath
+        val tempApkPath = uriToTempPath(context, apkUri, tempApkFileName) ?: return null
+        
+        // Android 系统 API 仍需字符串路径，使用 toString() 转换
+        val archivePath = tempApkPath.toString()
 
-        try {
+        return try {
             val pm = context.packageManager
             val flags = PackageManager.GET_META_DATA
             val packageInfo: PackageInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -58,9 +73,9 @@ object ApkParser {
                 @Suppress("DEPRECATION")
                 pm.getPackageArchiveInfo(archivePath, flags)
             }
-            val appInfo = packageInfo?.applicationInfo
-            if (appInfo == null) {
-                tempApkFile.delete()
+            
+            val appInfo = packageInfo?.applicationInfo ?: run {
+                fileSystem.delete(tempApkPath)
                 return null
             }
 
@@ -77,17 +92,20 @@ object ApkParser {
                 packageInfo.versionCode.toLong()
             }
             
-            val minSdkVersion = packageInfo.applicationInfo?.minSdkVersion ?: 0
-            val targetSdkVersion = packageInfo.applicationInfo?.targetSdkVersion ?: 0
+            val minSdkVersion = appInfo.minSdkVersion
+            val targetSdkVersion = appInfo.targetSdkVersion
+            
+            // 提取图标
             val iconDrawable = appInfo.loadIcon(pm)
             val tempIconFileName = generateUniqueFileName("icon", "png")
-            val tempIconFile = drawableToTempFile(context, iconDrawable, tempIconFileName)
-            val tempIconFileUri = tempIconFile?.toUri()
+            val tempIconPath = drawableToTempPath(context, iconDrawable, tempIconFileName)
+            val tempIconFileUri = tempIconPath?.toFileUri()
 
-            val sizeInBytes = tempApkFile.length()
+            // 计算大小
+            val sizeInBytes = fileSystem.metadata(tempApkPath).size ?: 0L
             val sizeInMb = (sizeInBytes / 1024.0 / 1024.0 * 100).roundToInt() / 100.0
 
-            return ApkInfo(
+            ApkInfo(
                 appName = appName,
                 packageName = packageName,
                 versionName = versionName,
@@ -95,39 +113,38 @@ object ApkParser {
                 minSdkVersion = minSdkVersion,     
                 targetSdkVersion = targetSdkVersion,
                 sizeInMb = sizeInMb,
-                tempApkFile = tempApkFile,
-                tempIconFile = tempIconFile,
+                tempApkPath = tempApkPath,
+                tempIconPath = tempIconPath,
                 tempIconFileUri = tempIconFileUri
             )
         } catch (e: Exception) {
-            e.printStackTrace()
-            tempApkFile.delete()
-            return null
+            fileSystem.delete(tempApkPath)
+            null
         }
     }
     
-    private fun uriToTempFile(context: Context, uri: Uri, fileName: String): File? {
+    /**
+     * 将 Uri 转换为临时 Path (Okio 实现)
+     */
+    private fun uriToTempPath(context: Context, uri: Uri, fileName: String): Path? {
         return try {
-            val inputStream: InputStream = context.contentResolver.openInputStream(uri) ?: return null
-            val file = File(context.cacheDir, fileName)
-            if (file.exists()) {
-                file.delete()
+            val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() ?: return null
+            val cachePath = context.cacheDir.absolutePath.toPath()
+            val targetPath = cachePath / fileName
+            
+            fileSystem.write(targetPath) {
+                writeAll(source)
             }
-            FileOutputStream(file).use { outputStream ->
-                val buffer = ByteArray(4 * 1024) // 4KB buffer
-                var bytesRead: Int
-                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                    outputStream.write(buffer, 0, bytesRead)
-                }
-            }
-            file
+            targetPath
         } catch (e: Exception) {
-            e.printStackTrace()
             null
         }
     }
 
-    private fun drawableToTempFile(context: Context, drawable: Drawable?, fileName: String): File? {
+    /**
+     * 将 Drawable 转换为临时 Path (Okio 实现)
+     */
+    private fun drawableToTempPath(context: Context, drawable: Drawable?, fileName: String): Path? {
         if (drawable == null) return null
         return try {
             val bitmap = if (drawable is BitmapDrawable) {
@@ -144,17 +161,21 @@ object ApkParser {
                 bmp
             }
 
-            val file = File(context.cacheDir, fileName)
-            if (file.exists()) {
-                file.delete()
+            val cachePath = context.cacheDir.absolutePath.toPath()
+            val targetPath = cachePath / fileName
+            
+            fileSystem.write(targetPath) {
+                // Bitmap.compress 必须接收 OutputStream，使用 Okio 的桥接
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, this.asOutputStream())
             }
-            FileOutputStream(file).use {
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
-            }
-            file
+            targetPath
         } catch (e: Exception) {
-            e.printStackTrace()
             null
         }
     }
+
+    /**
+     * 内部辅助：Path 转 Uri
+     */
+    private fun Path.toFileUri(): Uri = this.toFile().toUri()
 }

@@ -25,7 +25,7 @@ import me.voltual.pyrolysis.core.utils.ApkParser
 import io.ktor.client.call.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
-import io.ktor.utils.io.streams.asInput
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,13 +33,11 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.android.annotation.KoinViewModel
-import androidx.core.net.toUri
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
 import okio.buffer
 import okio.source
-import okio.asInputStream // 关键导入：用于 Source 转 InputStream
 
 // 小趣空间分类模型
 data class AppCategory(
@@ -59,7 +57,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
     private val context: Context = application.applicationContext
     private val fileSystem = FileSystem.SYSTEM
     
-    // --- 商店选择 ---
     private val _selectedStore = MutableStateFlow(AppStore.XIAOQU_SPACE)
     val selectedStore = _selectedStore.asStateFlow()
     
@@ -68,14 +65,11 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
         clearProcessFeedback()
     }
 
-    // --- 仓库实例 ---
     private val xiaoQuRepo: IAppStoreRepository = XiaoQuRepository(KtorClient.ApiServiceImpl)
 
-    private fun getCurrentRepo(): IAppStoreRepository {
-        return when (_selectedStore.value) {
-            AppStore.XIAOQU_SPACE -> xiaoQuRepo
-            else -> xiaoQuRepo
-        }
+    private fun getCurrentRepo(): IAppStoreRepository = when (_selectedStore.value) {
+        AppStore.XIAOQU_SPACE -> xiaoQuRepo
+        else -> xiaoQuRepo
     }
 
     // --- 通用状态 ---
@@ -83,7 +77,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
     val packageName = mutableStateOf("")
     val versionName = mutableStateOf("")
     val versionCode = mutableStateOf(0L)
-    val appSize = mutableStateOf("") // MB
+    val appSize = mutableStateOf("") 
     val localIconUri = mutableStateOf<Uri?>(null)
     val tempIconPath = mutableStateOf<Path?>(null)
     val tempApkPath = mutableStateOf<Path?>(null)
@@ -103,20 +97,13 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
     val introductionImageUrls = mutableStateListOf<String>() 
     
     val categories = listOf(
-        AppCategory(45, 47, "影音阅读"),
-        AppCategory(45, 55, "音乐听歌"),
-        AppCategory(45, 61, "休闲娱乐"),
-        AppCategory(45, 58, "文件管理"),
-        AppCategory(45, 59, "图像摄影"),
-        AppCategory(45, 53, "输入方式"),
-        AppCategory(45, 54, "生活出行"),
-        AppCategory(45, 50, "社交通讯"),
-        AppCategory(45, 56, "上网浏览"),
-        AppCategory(45, 60, "其他类型"),
-        AppCategory(45, 62, "跑酷竞技"),
-        AppCategory(45, 49, "系统工具"),
-        AppCategory(45, 48, "桌面插件"),
-        AppCategory(45, 65, "学习教育")
+        AppCategory(45, 47, "影音阅读"), AppCategory(45, 55, "音乐听歌"),
+        AppCategory(45, 61, "休闲娱乐"), AppCategory(45, 58, "文件管理"),
+        AppCategory(45, 59, "图像摄影"), AppCategory(45, 53, "输入方式"),
+        AppCategory(45, 54, "生活出行"), AppCategory(45, 50, "社交通讯"),
+        AppCategory(45, 56, "上网浏览"), AppCategory(45, 60, "其他类型"),
+        AppCategory(45, 62, "跑酷竞技"), AppCategory(45, 49, "系统工具"),
+        AppCategory(45, 48, "桌面插件"), AppCategory(45, 65, "学习教育")
     ).filter { it.categoryId != null && it.subCategoryId != null }
      .distinctBy { it.subCategoryId }
      .sortedBy { it.categoryName }
@@ -124,17 +111,13 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
     // --- 弦开放平台特定状态 ---
     val appTypeOptions = listOf("手表应用", "手机应用", "大屏应用", "TV应用", "WearOS应用")
     val appTypeId = mutableStateOf(2) 
-
     val versionTypeOptions = listOf("官方版", "正式版", "测试版", "公测版", "美化版", "破解版", "修改版", "免费版", "定制版", "手表版")
     val appVersionTypeId = mutableStateOf(2) 
-
     val tagOptions = mutableStateListOf<String>() 
     val selectedTagIndex = mutableStateOf(0)
     val appTags = mutableStateOf(0) 
-
     val sdkMin = mutableStateOf(21)
     val sdkTarget = mutableStateOf(33)
-
     val developer = mutableStateOf("")
     val source = mutableStateOf("互联网")
     val describe = mutableStateOf("介绍一下你的应用…")
@@ -146,7 +129,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
     val screenshotsUris = mutableStateListOf<Uri>() 
     val tempScreenshotPaths = mutableStateListOf<Path>()
 
-    // --- 进度状态 ---
     val isApkUploading = mutableStateOf(false)
     val isIconUploading = mutableStateOf(false)
     val isIntroImagesUploading = mutableStateOf(false)
@@ -165,7 +147,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
         
         viewModelScope.launch(Dispatchers.IO) {
             urisToUpload.forEach { uri ->
-                val path = uriToTempPath(context, uri, "screenshot_${System.currentTimeMillis()}.png")
+                val path = uriToTempPath(context, uri, "screenshot_${Clock.System.now().toEpochMilliseconds()}.png")
                 path?.let { tempScreenshotPaths.add(it) }
             }
         }
@@ -175,16 +157,15 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
         val index = screenshotsUris.indexOf(uri)
         if (index != -1) {
             screenshotsUris.removeAt(index)
-            if (index < tempScreenshotPaths.size) {
-                tempScreenshotPaths.removeAt(index)
-            }
+            if (index < tempScreenshotPaths.size) tempScreenshotPaths.removeAt(index)
         }
     }
 
-    // --- APK 解析 ---
+    // --- APK 解析与上传 ---
     fun parseAndUploadApk(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             _processFeedback.value = Result.success("正在解析APK...")
+            // 注意：此处 ApkParser 需更新为返回 Path 的版本
             val parsedInfo: ApkInfo? = ApkParser.parse(context, uri)
 
             if (parsedInfo == null) {
@@ -199,8 +180,9 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                 versionCode.value = parsedInfo.versionCode
                 appSize.value = parsedInfo.sizeInMb.toString()
                 
-                tempApkPath.value = parsedInfo.tempApkFile.absolutePath.toPath()
-                tempIconPath.value = parsedInfo.tempIconFile?.absolutePath?.toPath()
+                // 此时 tempApkPath 已经是 okio.Path
+                tempApkPath.value = parsedInfo.tempApkPath
+                tempIconPath.value = parsedInfo.tempIconPath
                 localIconUri.value = parsedInfo.tempIconFileUri
                 
                 appExplain.value = "适配性能描述 •\n包名：${parsedInfo.packageName}\n版本：${parsedInfo.versionName}"
@@ -215,7 +197,8 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                         ApkUploadService.KEYUN -> "KEYUN"
                         ApkUploadService.WANYUEYUN -> "WANYUEYUN"
                     }
-                    val apkResult = xiaoQuRepo.uploadApk(parsedInfo.tempApkFile, serviceType)
+                    // 修复点：直接传递 Path
+                    val apkResult = xiaoQuRepo.uploadApk(parsedInfo.tempApkPath, serviceType)
                     apkResult.onSuccess { url ->
                         apkDownloadUrl.value = url
                     }.onFailure { e ->
@@ -224,10 +207,11 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                     isApkUploading.value = false
                 }
 
-                parsedInfo.tempIconFile?.let { iconFile ->
+                parsedInfo.tempIconPath?.let { iconPath ->
                     uploadJobs += launch {
                         isIconUploading.value = true
-                        val imageResult = xiaoQuRepo.uploadImage(iconFile, "icon")
+                        // 修复点：直接传递 Path
+                        val imageResult = xiaoQuRepo.uploadImage(iconPath, "icon")
                         imageResult.onSuccess { url ->
                             iconUrl.value = url
                         }.onFailure { e ->
@@ -243,7 +227,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    // --- 图片处理 ---
     fun uploadIntroductionImages(uris: List<Uri>) {
         if (_selectedStore.value != AppStore.XIAOQU_SPACE) return
         
@@ -260,10 +243,10 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
 
             val uploadJobs = urisToUpload.map { uri ->
                 launch {
-                    val tempFileName = "intro_${System.currentTimeMillis()}.jpg"
+                    val tempFileName = "intro_${Clock.System.now().toEpochMilliseconds()}.jpg"
                     val path = uriToTempPath(context, uri, tempFileName)
                     path?.let {
-                        val imageResult = xiaoQuRepo.uploadImage(it.toFile(), "intro")
+                        val imageResult = xiaoQuRepo.uploadImage(it, "intro")
                         imageResult.onSuccess { url ->
                             if (introductionImageUrls.size < MAX_INTRO_IMAGES_XIAOQU) {
                                 introductionImageUrls.add(url)
@@ -279,47 +262,23 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    /**
-     * 使用 Okio 实现 Ktor 的 InputProvider
-     */
-    private fun createPathInputProvider(path: Path): InputProvider {
-        return InputProvider { 
-            fileSystem.source(path).buffer().asInputStream().asInput() 
-        }
-    }
-    
-    fun clearProcessFeedback() {
-        _processFeedback.value = null
-    }
+    fun clearProcessFeedback() { _processFeedback.value = null }
 
     private fun uriToTempPath(context: Context, uri: Uri, fileName: String): Path? {
         return try {
-            // 使用 Okio 的 source() 扩展函数
             val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() ?: return null
-            val cacheDir = context.cacheDir.absolutePath.toPath()
-            val tempPath = cacheDir / fileName
-            fileSystem.write(tempPath) {
-                writeAll(source)
-            }
+            val tempPath = context.cacheDir.absolutePath.toPath() / fileName
+            fileSystem.write(tempPath) { writeAll(source) }
             tempPath
-        } catch (e: Exception) {
-            null
-        }
+        } catch (e: Exception) { null }
     }
 
-    fun removeIntroductionImage(url: String) {
-        introductionImageUrls.remove(url)
-    }
-
-    // --- 发布逻辑 ---
     fun releaseApp(onSuccess: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             isReleasing.value = true
             _processFeedback.value = Result.success("正在准备发布...")
             
             try {
-                val repo = getCurrentRepo()
-                
                 val params = UnifiedAppReleaseParams(
                     store = _selectedStore.value,
                     appName = appName.value,
@@ -331,7 +290,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                     iconUrl = iconUrl.value,
                     apkPath = tempApkPath.value,
                     apkUrl = apkDownloadUrl.value,
-                    
                     introduce = appIntroduce.value,
                     explain = appExplain.value,
                     introImages = introductionImageUrls.toList(),
@@ -342,7 +300,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                     isUpdate = isUpdateMode.value,
                     appId = appId,
                     appVersionId = appVersionId,
-                    
                     appTypeId = appTypeId.value,
                     appVersionTypeId = appVersionTypeId.value,
                     appTags = appTags.value.toString(),
@@ -359,15 +316,12 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                     screenshots = tempScreenshotPaths.toList()
                 )
                 
-                val result = repo.releaseApp(params)
-                
-                if (result.isSuccess) {
+                getCurrentRepo().releaseApp(params).onSuccess {
                     _processFeedback.value = Result.success("发布成功！")
                     withContext(Dispatchers.Main) { onSuccess() }
-                } else {
-                    _processFeedback.value = Result.failure(result.exceptionOrNull() ?: Exception("发布失败"))
+                }.onFailure { e ->
+                    _processFeedback.value = Result.failure(e)
                 }
-                
             } catch (e: Exception) {
                 _processFeedback.value = Result.failure(e)
             } finally {
@@ -378,18 +332,12 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
 
     fun populateFromAppDetail(appDetail: KtorClient.AppDetail) {
         if (_selectedStore.value != AppStore.XIAOQU_SPACE) return
-        
         isUpdateMode.value = true
         appId = appDetail.id
         appVersionId = appDetail.apps_version_id
-
         appName.value = appDetail.appname
         apkDownloadUrl.value = appDetail.download ?: ""
-
-        val explainLines = appDetail.app_explain?.split("\n")
-        val pkgNameLine = explainLines?.find { it.startsWith("包名：") }
-        packageName.value = pkgNameLine?.substringAfter("包名：")?.trim() ?: ""
-
+        packageName.value = appDetail.app_explain?.split("\n")?.find { it.startsWith("包名：") }?.substringAfter("包名：")?.trim() ?: ""
         versionName.value = appDetail.version
         versionCode.value = appDetail.apps_version_id 
         appSize.value = appDetail.app_size.replace("MB", "").trim()
@@ -400,14 +348,10 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
         selectedCategoryIndex.value = categories.indexOfFirst {
             it.categoryId == appDetail.category_id && it.subCategoryId == appDetail.sub_category_id
         }.takeIf { it != -1 } ?: 0
-
         iconUrl.value = appDetail.app_icon
-        localIconUri.value = null
         tempIconPath.value = null
         introductionImageUrls.clear()
-        appDetail.app_introduction_image_array?.let {
-            introductionImageUrls.addAll(it)
-        }
+        appDetail.app_introduction_image_array?.let { introductionImageUrls.addAll(it) }
     }
     
     fun setAppTypeId(id: Int) { appTypeId.value = id }
