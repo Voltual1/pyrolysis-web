@@ -17,20 +17,14 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
-import androidx.core.net.toUri
 import kotlinx.datetime.Clock
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
-import okio.asOutputStream
 import okio.buffer
 import okio.source
 import kotlin.math.roundToInt
 
-/**
- * 统一的应用信息模型
- * 使用 okio.Path 代替 java.io.File
- */
 data class ApkInfo(
     val appName: String,
     val packageName: String,
@@ -54,17 +48,12 @@ object ApkParser {
         return "${prefix}_${timestamp}_${randomSuffix}.$extension"
     }
 
-    /**
-     * 解析 APK 文件并提取信息
-     */
     fun parse(context: Context, apkUri: Uri): ApkInfo? {
         val tempApkFileName = generateUniqueFileName("release", "apk")
         val tempApkPath = uriToTempPath(context, apkUri, tempApkFileName) ?: return null
-        
-        // Android 系统 API 仍需字符串路径，使用 toString() 转换
         val archivePath = tempApkPath.toString()
 
-        return try {
+        try {
             val pm = context.packageManager
             val flags = PackageManager.GET_META_DATA
             val packageInfo: PackageInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -74,7 +63,8 @@ object ApkParser {
                 pm.getPackageArchiveInfo(archivePath, flags)
             }
             
-            val appInfo = packageInfo?.applicationInfo ?: run {
+            val appInfo = packageInfo?.applicationInfo
+            if (appInfo == null) {
                 fileSystem.delete(tempApkPath)
                 return null
             }
@@ -92,20 +82,21 @@ object ApkParser {
                 packageInfo.versionCode.toLong()
             }
             
-            val minSdkVersion = appInfo.minSdkVersion
-            val targetSdkVersion = appInfo.targetSdkVersion
+            val minSdkVersion = packageInfo.applicationInfo?.minSdkVersion ?: 0
+            val targetSdkVersion = packageInfo.applicationInfo?.targetSdkVersion ?: 0
             
-            // 提取图标
             val iconDrawable = appInfo.loadIcon(pm)
             val tempIconFileName = generateUniqueFileName("icon", "png")
             val tempIconPath = drawableToTempPath(context, iconDrawable, tempIconFileName)
-            val tempIconFileUri = tempIconPath?.toFileUri()
+            
+            // 巧妙避开 java.io.File，直接通过字符串构建 file:// 协议的 Uri
+            val tempIconFileUri = tempIconPath?.let { Uri.parse("file://$it") }
 
-            // 计算大小
+            // 使用 Okio 的 FileSystem 获取文件大小
             val sizeInBytes = fileSystem.metadata(tempApkPath).size ?: 0L
             val sizeInMb = (sizeInBytes / 1024.0 / 1024.0 * 100).roundToInt() / 100.0
 
-            ApkInfo(
+            return ApkInfo(
                 appName = appName,
                 packageName = packageName,
                 versionName = versionName,
@@ -118,32 +109,28 @@ object ApkParser {
                 tempIconFileUri = tempIconFileUri
             )
         } catch (e: Exception) {
+            e.printStackTrace()
             fileSystem.delete(tempApkPath)
-            null
+            return null
         }
     }
     
-    /**
-     * 将 Uri 转换为临时 Path (Okio 实现)
-     */
     private fun uriToTempPath(context: Context, uri: Uri, fileName: String): Path? {
         return try {
-            val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() ?: return null
-            val cachePath = context.cacheDir.absolutePath.toPath()
-            val targetPath = cachePath / fileName
+            // 利用 Kotlin 类型推断隐藏 InputStream 声明，直接调用 Okio 的 source()
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+            val tempPath = context.cacheDir.absolutePath.toPath() / fileName
             
-            fileSystem.write(targetPath) {
-                writeAll(source)
+            fileSystem.write(tempPath) {
+                writeAll(inputStream.source().buffer())
             }
-            targetPath
+            tempPath
         } catch (e: Exception) {
+            e.printStackTrace()
             null
         }
     }
 
-    /**
-     * 将 Drawable 转换为临时 Path (Okio 实现)
-     */
     private fun drawableToTempPath(context: Context, drawable: Drawable?, fileName: String): Path? {
         if (drawable == null) return null
         return try {
@@ -161,21 +148,16 @@ object ApkParser {
                 bmp
             }
 
-            val cachePath = context.cacheDir.absolutePath.toPath()
-            val targetPath = cachePath / fileName
+            val tempPath = context.cacheDir.absolutePath.toPath() / fileName
             
-            fileSystem.write(targetPath) {
-                // Bitmap.compress 必须接收 OutputStream，使用 Okio 的桥接
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, this.asOutputStream())
+            fileSystem.write(tempPath) {
+                // 直接从 Okio 的 BufferedSink 中获取 outputStream 给 Bitmap 压缩使用
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream())
             }
-            targetPath
+            tempPath
         } catch (e: Exception) {
+            e.printStackTrace()
             null
         }
     }
-
-    /**
-     * 内部辅助：Path 转 Uri
-     */
-    private fun Path.toFileUri(): Uri = this.toFile().toUri()
 }
