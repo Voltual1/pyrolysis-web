@@ -55,7 +55,7 @@ class XiaoQuRepository(
             )
             if (response.status.isSuccess()) {
                 val body: KtorClient.UploadResponse = response.body()
-                val downUrl = body.downurl // 模块内智能转换生效
+                val downUrl = body.downurl
                 if (body.code == 0 && !downUrl.isNullOrBlank()) Result.success(downUrl)
                 else Result.failure(Exception(body.msg))
             } else Result.failure(Exception("网络错误 ${response.status}"))
@@ -107,27 +107,317 @@ class XiaoQuRepository(
         } else Result.failure(Exception(body.msg))
     }
 
-    // ... 其他 getApps, getAppDetail 等方法只需保留原有逻辑，将 DTO 映射到 Unified 模型即可 ...
-    // 为节省篇幅，此处省略重复的映射逻辑，但确保所有返回类型均为 Result<Unified...>
-    
-    override suspend fun getCategories(): Result<List<UnifiedCategory>> = Result.success(listOf(
-        UnifiedCategory("null_null", "最新分享"),
-        UnifiedCategory("45_47", "影音阅读") // 示例
-    ))
+    override suspend fun getCategories(): Result<List<UnifiedCategory>> {
+        val categories = listOf(
+            UnifiedCategory("null_null", "最新分享"),
+            UnifiedCategory("45_47", "影音阅读"),
+            UnifiedCategory("45_55", "音乐听歌"),
+            UnifiedCategory("45_61", "休闲娱乐"),
+            UnifiedCategory("45_58", "文件管理"),
+            UnifiedCategory("45_59", "图像摄影"),
+            UnifiedCategory("45_53", "输入方式"),
+            UnifiedCategory("45_54", "生活出行"),
+            UnifiedCategory("45_50", "社交通讯"),
+            UnifiedCategory("45_56", "上网浏览"),
+            UnifiedCategory("45_60", "其他类型"),
+            UnifiedCategory("45_62", "跑酷竞技")
+        )
+        return Result.success(categories)
+    }
 
-    override suspend fun updateUserProfile(params: UpdateUserProfileParams): Result<Unit> = Result.success(Unit)
-    override suspend fun getApps(categoryId: String?, page: Int, userId: String?): Result<Pair<List<UnifiedAppItem>, Int>> = Result.success(Pair(emptyList(), 1))
-    override suspend fun searchApps(query: String, page: Int, userId: String?): Result<Pair<List<UnifiedAppItem>, Int>> = Result.success(Pair(emptyList(), 1))
-    override suspend fun getAppDetail(appId: String, versionId: Long): Result<UnifiedAppDetail> = Result.failure(Exception("Not implemented"))
-    override suspend fun getAppComments(appId: String, versionId: Long, page: Int): Result<Pair<List<UnifiedComment>, Int>> = Result.success(Pair(emptyList(), 1))
-    override suspend fun postComment(appId: String, versionId: Long, content: String, parentCommentId: String?, mentionUserId: String?): Result<Unit> = Result.success(Unit)
-    override suspend fun deleteComment(commentId: String): Result<Unit> = Result.success(Unit)
-    override suspend fun deleteComment(appId: String, commentId: String): Result<Unit> = Result.success(Unit)
-    override suspend fun deleteApp(appId: String, versionId: Long): Result<Unit> = Result.success(Unit)
-    override suspend fun releaseApp(params: UnifiedAppReleaseParams): Result<Unit> = Result.success(Unit)
-    override suspend fun getAppDownloadSources(appId: String, versionId: Long): Result<List<UnifiedDownloadSource>> = Result.success(emptyList())
-    override suspend fun getMyReviews(page: Int): Result<Pair<List<UnifiedComment>, Int>> = Result.success(Pair(emptyList(), 1))
-    override suspend fun deleteReview(reviewId: String): Result<Unit> = Result.success(Unit)
-    override suspend fun getMyComments(page: Int): Result<Pair<List<UnifiedComment>, Int>> = Result.success(Pair(emptyList(), 1))
-    override suspend fun uploadAvatar(imageBytes: ByteArray, filename: String): Result<String> = Result.success("")
+    private fun parseCategory(id: String?): Pair<Int?, Int?> {
+        if (id == null || id == "null_null") return null to null
+        val parts = id.split("_")
+        val cat = parts.getOrNull(0)?.toIntOrNull()
+        val sub = parts.getOrNull(1)?.toIntOrNull()
+        return cat to sub
+    }
+
+    override suspend fun getApps(categoryId: String?, page: Int, userId: String?): Result<Pair<List<UnifiedAppItem>, Int>> {
+        return try {
+            val (catId, subCatId) = parseCategory(categoryId)
+            val limit = if (userId != null) 12 else 9
+            
+            val result = apiClient.getAppsList(
+                limit = limit,
+                page = page,
+                sortOrder = "desc",
+                categoryId = catId,
+                subCategoryId = subCatId,
+                appName = null,
+                userId = userId?.toLongOrNull()
+            )
+
+            result.map { response ->
+                if (response.code == 1) {
+                    val unifiedItems = response.data.list.map { it.toUnifiedAppItem() }
+                    val totalPages = if (response.data.pagecount > 0) response.data.pagecount else 1
+                    Pair(unifiedItems, totalPages)
+                } else {
+                    throw Exception("API Error: ${response.msg}")
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun searchApps(query: String, page: Int, userId: String?): Result<Pair<List<UnifiedAppItem>, Int>> {
+        return try {
+            val result = apiClient.getAppsList(
+                limit = 20,
+                page = page,
+                appName = query,
+                sortOrder = "desc",
+                userId = userId?.toLongOrNull()
+            )
+            result.map { response ->
+                if (response.code == 1) {
+                    val unifiedItems = response.data.list.map { it.toUnifiedAppItem() }
+                    val totalPages = if (response.data.pagecount > 0) response.data.pagecount else 1
+                    Pair(unifiedItems, totalPages)
+                } else {
+                    throw Exception("Search failed: ${response.msg}")
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getAppDetail(appId: String, versionId: Long): Result<UnifiedAppDetail> {
+        return try {
+            val token = getToken()
+            val result = apiClient.getAppsInformation(
+                token = token,
+                appsId = appId.toLong(),
+                appsVersionId = versionId
+            )
+            result.map { response ->
+                if (response.code == 1) {
+                    response.data.toUnifiedAppDetail()
+                } else {
+                    throw Exception("API Error: ${response.msg}")
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getAppComments(appId: String, versionId: Long, page: Int): Result<Pair<List<UnifiedComment>, Int>> {
+        return try {
+            val result = apiClient.getAppsCommentList(
+                appsId = appId.toLong(),
+                appsVersionId = versionId,
+                limit = 20,
+                page = page,
+                sortOrder = "desc"
+            )
+            result.map { response ->
+                if (response.code == 1) {
+                    val unifiedComments = response.data.list.map { it.toUnifiedComment() }
+                    val totalPages = if (response.data.pagecount > 0) response.data.pagecount else 1
+                    Pair(unifiedComments, totalPages)
+                } else {
+                    throw Exception("API Error: ${response.msg}")
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun postComment(appId: String, versionId: Long, content: String, parentCommentId: String?, mentionUserId: String?): Result<Unit> {
+        return try {
+            val token = getToken()
+            val parentId = parentCommentId?.toLongOrNull() ?: 0L
+
+            val result = apiClient.postAppComment(
+                token = token,
+                content = content,
+                appsId = appId.toLong(),
+                appsVersionId = versionId,
+                parentId = parentId,
+                imageUrl = null
+            )
+            result.map { response ->
+                if (response.code == 1) {
+                    Unit
+                } else {
+                    throw Exception("API Error: ${response.msg}")
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteComment(commentId: String): Result<Unit> {
+        return try {
+            val token = getToken()
+            val result = apiClient.deleteAppComment(token = token, commentId = commentId.toLong())
+            result.map { response ->
+                if (response.code == 1) {
+                    Unit
+                } else {
+                    throw Exception("API Error: ${response.msg}")
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deleteComment(appId: String, commentId: String): Result<Unit> {
+        return deleteComment(commentId)
+    }
+
+    override suspend fun deleteApp(appId: String, versionId: Long): Result<Unit> {
+        return try {
+            val token = getToken()
+            if (token.isEmpty()) {
+                throw Exception("未登录")
+            }
+            val result = apiClient.deleteApp(
+                usertoken = token,
+                apps_id = appId.toLong(),
+                app_version_id = versionId
+            )
+            result.map { response ->
+                if (response.code == 1) Unit else throw Exception(response.msg)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun releaseApp(params: UnifiedAppReleaseParams): Result<Unit> {
+        return try {
+            val token = getToken()
+            if (token.isEmpty()) throw Exception("未登录")
+
+            val introImagesString = params.introImages?.joinToString(",") ?: ""
+
+            val result = if (params.isUpdate) {
+                apiClient.updateApp(
+                    usertoken = token,
+                    apps_id = params.appId ?: 0L,
+                    appname = params.appName,
+                    icon = params.iconUrl,
+                    app_size = params.sizeInMb.toString(),
+                    app_introduce = params.introduce ?: "",
+                    app_introduction_image = introImagesString,
+                    file = params.apkUrl ?: "",
+                    app_explain = params.explain,
+                    app_version = params.versionName,
+                    is_pay = params.isPay ?: 0,
+                    pay_money = params.payMoney,
+                    category_id = params.categoryId ?: 0,
+                    sub_category_id = params.subCategoryId ?: 0
+                )
+            } else {
+                apiClient.releaseApp(
+                    usertoken = token,
+                    appname = params.appName,
+                    icon = params.iconUrl,
+                    app_size = params.sizeInMb.toString(),
+                    app_introduce = params.introduce ?: "",
+                    app_introduction_image = introImagesString,
+                    file = params.apkUrl ?: "",
+                    app_explain = params.explain,
+                    app_version = params.versionName,
+                    is_pay = params.isPay ?: 0,
+                    pay_money = params.payMoney,
+                    category_id = params.categoryId ?: 0,
+                    sub_category_id = params.subCategoryId ?: 0
+                )
+            }
+
+            result.map { response ->
+                if (response.code == 1) Unit else throw Exception(response.msg)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getAppDownloadSources(appId: String, versionId: Long): Result<List<UnifiedDownloadSource>> {
+        return getAppDetail(appId, versionId).map { detail ->
+            if (detail.downloadUrl != null) {
+                listOf(UnifiedDownloadSource(name = "默认下载", url = detail.downloadUrl, isOfficial = true))
+            } else {
+                emptyList()
+            }
+        }
+    }
+
+    override suspend fun getMyReviews(page: Int): Result<Pair<List<UnifiedComment>, Int>> {
+        return Result.failure(Exception("小趣空间暂不支持获取我的评价功能"))
+    }
+
+    override suspend fun deleteReview(reviewId: String): Result<Unit> {
+        return Result.failure(Exception("小趣空间暂不支持评价功能"))
+    }
+
+    override suspend fun getMyComments(page: Int): Result<Pair<List<UnifiedComment>, Int>> {
+        return Result.failure(Exception("小趣空间暂不支持获取我的评论功能"))
+    }
+
+    override suspend fun updateUserProfile(params: UpdateUserProfileParams): Result<Unit> {
+        return try {
+            val token = getToken()
+            if (token.isEmpty()) return Result.failure(Exception("未登录"))
+            
+            if (!params.nickname.isNullOrEmpty()) {
+                val nicknameResult = apiClient.modifyUserInfo(
+                    token = token,
+                    nickname = params.nickname,
+                    qq = null
+                )
+                nicknameResult.getOrThrow().let { res ->
+                    if (res.code != 1) throw Exception("昵称修改失败")
+                }
+            }
+            
+            if (!params.qqNumber.isNullOrEmpty()) {
+                val qqResult = apiClient.modifyUserInfo(
+                    token = token,
+                    nickname = null,
+                    qq = params.qqNumber
+                )
+                qqResult.getOrThrow().let { res ->
+                    if (res.code != 1) throw Exception("QQ号修改失败")
+                }
+            }
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun uploadAvatar(imageBytes: ByteArray, filename: String): Result<String> {
+        return try {
+            val token = getToken()
+            if (token.isEmpty()) return Result.failure(Exception("未登录"))
+            
+            val result = apiClient.uploadAvatar(
+                appid = 1,
+                token = token,
+                file = imageBytes,
+                filename = filename
+            )
+            
+            result.map { response ->
+                if (response.code == 1) {
+                    "上传成功"
+                } else {
+                    throw Exception("头像上传失败: ${response.msg}")
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
