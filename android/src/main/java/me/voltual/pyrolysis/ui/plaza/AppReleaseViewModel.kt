@@ -22,10 +22,6 @@ import me.voltual.pyrolysis.feature.store.repository.XiaoQuRepository
 import me.voltual.pyrolysis.data.unified.UnifiedAppReleaseParams
 import me.voltual.pyrolysis.core.utils.ApkInfo
 import me.voltual.pyrolysis.core.utils.ApkParser
-import io.ktor.client.call.*
-import io.ktor.client.request.forms.*
-import io.ktor.http.*
-import io.ktor.utils.io.core.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +34,7 @@ import okio.Path
 import okio.Path.Companion.toPath
 import okio.buffer
 import okio.source
+import kotlinx.datetime.Clock
 
 // 小趣空间分类模型
 data class AppCategory(
@@ -165,7 +162,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
     fun parseAndUploadApk(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             _processFeedback.value = Result.success("正在解析APK...")
-            // 注意：此处 ApkParser 需更新为返回 Path 的版本
             val parsedInfo: ApkInfo? = ApkParser.parse(context, uri)
 
             if (parsedInfo == null) {
@@ -180,7 +176,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                 versionCode.value = parsedInfo.versionCode
                 appSize.value = parsedInfo.sizeInMb.toString()
                 
-                // 此时 tempApkPath 已经是 okio.Path
                 tempApkPath.value = parsedInfo.tempApkPath
                 tempIconPath.value = parsedInfo.tempIconPath
                 localIconUri.value = parsedInfo.tempIconFileUri
@@ -197,7 +192,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                         ApkUploadService.KEYUN -> "KEYUN"
                         ApkUploadService.WANYUEYUN -> "WANYUEYUN"
                     }
-                    // 修复点：直接传递 Path
                     val apkResult = xiaoQuRepo.uploadApk(parsedInfo.tempApkPath, serviceType)
                     apkResult.onSuccess { url ->
                         apkDownloadUrl.value = url
@@ -210,7 +204,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                 parsedInfo.tempIconPath?.let { iconPath ->
                     uploadJobs += launch {
                         isIconUploading.value = true
-                        // 修复点：直接传递 Path
                         val imageResult = xiaoQuRepo.uploadImage(iconPath, "icon")
                         imageResult.onSuccess { url ->
                             iconUrl.value = url
@@ -271,6 +264,11 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
             fileSystem.write(tempPath) { writeAll(source) }
             tempPath
         } catch (e: Exception) { null }
+    }
+
+    // 恢复被遗漏的方法
+    fun removeIntroductionImage(url: String) {
+        introductionImageUrls.remove(url)
     }
 
     fun releaseApp(onSuccess: () -> Unit) {

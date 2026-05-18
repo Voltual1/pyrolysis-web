@@ -11,7 +11,9 @@ package me.voltual.pyrolysis.feature.store.repository
 import io.ktor.client.call.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
-import io.ktor.utils.io.streams.asInput
+import io.ktor.utils.io.writer
+import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.AuthManager
@@ -20,13 +22,12 @@ import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.data.unified.*
 import okio.FileSystem
 import okio.Path
-import okio.asInputStream
-import okio.buffer
+import okio.Buffer
 import org.koin.core.annotation.Single
 
 /**
  * 小趣空间数据仓库实现。
- * 已移除 java.io 依赖，全面转向 Okio。
+ * 完全由 Okio 和 Ktor Coroutine Channels 驱动。
  */
 @Single
 class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStoreRepository {
@@ -38,7 +39,6 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
         return AuthManager.getCredentials(BBQApplication.instance).first()?.token ?: ""
     }
     
-    // 获取当前用户详情
     override suspend fun getCurrentUserDetail(): Result<UnifiedUserDetail> {
         return try {
             val token = getToken()
@@ -69,7 +69,6 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
         }
     }
     
-    // 更新用户资料
     override suspend fun updateUserProfile(params: UpdateUserProfileParams): Result<Unit> {
         return try {
             val token = getToken()
@@ -93,7 +92,6 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
         }
     }
     
-    // 上传头像
     override suspend fun uploadAvatar(imageBytes: ByteArray, filename: String): Result<String> {
         return try {
             val token = getToken()
@@ -290,7 +288,7 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
             val response = KtorClient.uploadHttpClient.submitFormWithBinaryData(
                 url = "api.php",
                 formData = formData {
-                    append("file", createPathInputProvider(path), Headers.build {
+                    append("file", createChannelProvider(path), Headers.build {
                         append(HttpHeaders.ContentType, "image/*")
                         append(HttpHeaders.ContentDisposition, "filename=\"${path.name}\"")
                     })
@@ -329,7 +327,7 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
             val response = KtorClient.uploadHttpClient.submitFormWithBinaryData(
                 url = "api.php",
                 formData = formData {
-                    append("file", createPathInputProvider(path), Headers.build {
+                    append("file", createChannelProvider(path), Headers.build {
                         append(HttpHeaders.ContentType, "application/octet-stream")
                         append(HttpHeaders.ContentDisposition, "filename=\"${path.name}\"")
                     })
@@ -357,7 +355,7 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
                 url = "upload",
                 formData = formData {
                     append("Api", "小趣API")
-                    append("file", createPathInputProvider(path), Headers.build {
+                    append("file", createChannelProvider(path), Headers.build {
                         append(HttpHeaders.ContentType, "application/vnd.android.package-archive")
                         append(HttpHeaders.ContentDisposition, "filename=\"${path.name}\"")
                     })
@@ -379,9 +377,21 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
         }
     }
 
-    private fun createPathInputProvider(path: Path): InputProvider {
-        return InputProvider { 
-            fileSystem.source(path).buffer().asInputStream().asInput() 
+    /**
+     * 终极无 Java IO 的上传提供器。
+     * 直接利用 Kotlin 协程的 Channel 架构搭配 Okio 流传输数据！
+     */
+    private fun createChannelProvider(path: Path): ChannelProvider {
+        return ChannelProvider { size -> // Ktor 的 ChannelProvider 接口预留了 size，但在此忽略使用协程直接流式写入
+            writer(Dispatchers.IO) {
+                fileSystem.source(path).use { source ->
+                    val okioBuffer = Buffer()
+                    // 每次读取 8KB 然后发射至 Ktor 的 ByteChannel
+                    while (source.read(okioBuffer, 8192) != -1L) {
+                        channel.writeFully(okioBuffer.readByteArray())
+                    }
+                }
+            }.channel
         }
     }
     
