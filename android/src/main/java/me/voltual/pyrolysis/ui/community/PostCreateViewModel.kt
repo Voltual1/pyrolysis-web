@@ -2,6 +2,7 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
@@ -9,57 +10,55 @@
 package me.voltual.pyrolysis.ui.community
 
 import android.app.Application
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
 import android.net.Uri
+import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.AndroidViewModel
-import io.ktor.client.call.*
 import androidx.lifecycle.viewModelScope
-import me.voltual.pyrolysis.AuthManager
-import me.voltual.pyrolysis.KtorClient
-import me.voltual.pyrolysis.data.PostDraftDataStore
-import me.voltual.pyrolysis.core.database.PostDraftRepository
-import me.voltual.pyrolysis.core.utils.FileUtil
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.utils.io.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import me.voltual.pyrolysis.core.proto.UserCredentialsKt
-import io.ktor.client.plugins.*
-import io.ktor.client.request.forms.*
-import io.ktor.http.*
-import io.ktor.utils.io.*
-import io.ktor.http.content.*
-import io.ktor.client.statement.bodyAsText
-import io.ktor.client.statement.HttpResponse
-import androidx.compose.material3.SnackbarHostState
-import kotlinx.coroutines.flow.Flow 
+import me.voltual.pyrolysis.AuthManager
+import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.core.database.PostDraftRepository
+import me.voltual.pyrolysis.data.PostDraftDataStore
+import okio.Buffer
+import okio.FileSystem
+import okio.Path
+import okio.Path.Companion.toPath
+import okio.buffer
+import okio.source
 import org.koin.android.annotation.KoinViewModel
+import kotlin.time.Clock
 
 @KoinViewModel
 class PostCreateViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val fileSystem = FileSystem.SYSTEM
     private val draftRepository = PostDraftRepository()
     private val draftDataStore = PostDraftDataStore(application)
 
     private val _uiState = MutableStateFlow(PostCreateUiState())
     val uiState: StateFlow<PostCreateUiState> = _uiState.asStateFlow()
 
-    // 偏好设置状态
     private val _preferencesState = MutableStateFlow(DraftPreferencesState())
     val preferencesState: StateFlow<DraftPreferencesState> = _preferencesState.asStateFlow()
 
     private val _postStatus = MutableStateFlow<PostStatus>(PostStatus.Idle)
     val postStatus: StateFlow<PostStatus> = _postStatus.asStateFlow()
 
-    // 对话框状态
     private val _showRestoreDialog = MutableStateFlow(false)
     val showRestoreDialog: StateFlow<Boolean> = _showRestoreDialog.asStateFlow()
 
-    // Snackbar 回调
     private var _snackbarHostState: SnackbarHostState? = null
+
     fun setSnackbarHostState(snackbarHostState: SnackbarHostState) {
         _snackbarHostState = snackbarHostState
     }
@@ -74,14 +73,12 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
                 )
             }
 
-            // 检查是否有草稿并决定是否显示对话框
-            draftRepository.draftFlow.first().let { draft ->
-                if (draft != null && (draft.title.isNotBlank() || draft.content.isNotBlank() || draft.imageUrls.isNotBlank())) {
+            // 检查草稿
+            draftRepository.draftFlow.first()?.let { draft ->
+                if (draft.title.isNotBlank() || draft.content.isNotBlank() || draft.imageUrls.isNotBlank()) {
                     if (_preferencesState.value.autoRestoreDraft) {
-                        // 自动恢复草稿
                         restoreDraft(draft)
                     } else {
-                        // 显示恢复对话框
                         _showRestoreDialog.value = true
                     }
                 }
@@ -96,19 +93,14 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
                 title = draft.title,
                 content = draft.content,
                 imageUrls = draft.imageUrls,
-                // imageUriToUrlMap 不再从草稿中恢复，它是在上传图片时构建的
                 selectedSubsectionId = draft.subsectionId
             )
         }
     }
 
-
-    // 处理对话框操作
     fun onRestoreDialogConfirm() {
         viewModelScope.launch {
-            draftRepository.draftFlow.first()?.let { draft ->
-                restoreDraft(draft)
-            }
+            draftRepository.draftFlow.first()?.let { restoreDraft(it) }
             _showRestoreDialog.value = false
         }
     }
@@ -117,7 +109,6 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
         _showRestoreDialog.value = false
     }
 
-    // 更新偏好设置
     fun setAutoRestoreDraft(enabled: Boolean) {
         viewModelScope.launch {
             draftDataStore.setAutoRestoreDraft(enabled)
@@ -129,37 +120,20 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             draftDataStore.setNoStoreDraft(enabled)
             _preferencesState.value = _preferencesState.value.copy(noStoreDraft = enabled)
-
-            // 如果不存储草稿，立即清除当前草稿
-            if (enabled) {
-                draftRepository.clearDraft()
-            }
+            if (enabled) draftRepository.clearDraft()
         }
     }
 
-    // --- Event Handlers ---
     fun onTitleChange(newTitle: String) {
-        if (!_preferencesState.value.noStoreDraft) {
-            _uiState.update { it.copy(title = newTitle) }
-        }
+        _uiState.update { it.copy(title = newTitle) }
     }
 
     fun onContentChange(newContent: String) {
-        if (!_preferencesState.value.noStoreDraft) {
-            _uiState.update { it.copy(content = newContent) }
-        }
+        _uiState.update { it.copy(content = newContent) }
     }
 
     fun onSubsectionChange(newId: Int) {
-        if (!_preferencesState.value.noStoreDraft) {
-            _uiState.update { it.copy(selectedSubsectionId = newId) }
-        }
-    }
-
-    fun onImageUrlsChange(urls: String) {
-        if (!_preferencesState.value.noStoreDraft) {
-            _uiState.update { it.copy(imageUrls = urls) }
-        }
+        _uiState.update { it.copy(selectedSubsectionId = newId) }
     }
 
     fun uploadImage(uri: Uri) {
@@ -169,94 +143,104 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(showProgressDialog = true, progressMessage = "上传图片中...") }
+            _uiState.update { it.copy(showProgressDialog = true, progressMessage = "正在处理图片...") }
 
-            val realPath = withContext(Dispatchers.IO) {
-                // 显式转换为 Application 类型
-                val context: Application = getApplication()
-                FileUtil.getRealPathFromURI(context, uri)
+            // 使用 Okio 将 URI 转换为临时 Path，彻底移除 FileUtil
+            val tempPath = withContext(Dispatchers.IO) {
+                uriToTempPath(uri)
             }
 
-            if (realPath == null) {
+            if (tempPath == null) {
                 _uiState.update { it.copy(showProgressDialog = false) }
-                showSnackbar("无法获取图片路径")
+                showSnackbar("无法读取图片文件")
                 return@launch
             }
 
-            try {
-                val file = File(realPath)
-                val bytes = file.readBytes()
-                val uploadResult = uploadImageKtor(bytes, file.name)
+            _uiState.update { it.copy(progressMessage = "正在上传图片...") }
 
-                if (uploadResult.isSuccess) {
-                    uploadResult.getOrNull()?.let { imageUrl ->
-                        _uiState.update { currentState ->
-                            // 构建新的 imageUriToUrlMap
-                            val newUrlMap = currentState.imageUriToUrlMap + (uri to imageUrl)
-                            val newUrls = newUrlMap.values.joinToString(",")
-                            currentState.copy(
-                                imageUrls = newUrls,
-                                imageUriToUrlMap = newUrlMap,
-                                showProgressDialog = false
-                            )
-                        }
-                        showSnackbar("图片上传成功")
-                    }
-                } else {
-                    showSnackbar("上传失败: ${uploadResult.exceptionOrNull()?.message}")
-                    _uiState.update { it.copy(showProgressDialog = false) }
+            uploadImageKtor(tempPath).onSuccess { imageUrl ->
+                _uiState.update { currentState ->
+                    val newUrlMap = currentState.imageUriToUrlMap + (uri to imageUrl)
+                    currentState.copy(
+                        imageUrls = newUrlMap.values.joinToString(","),
+                        imageUriToUrlMap = newUrlMap,
+                        showProgressDialog = false
+                    )
                 }
-            } catch (e: Exception) {
-                showSnackbar("上传错误: ${e.message}")
-                _uiState.update { it.copy(showProgressDialog = false) }
-            } finally {
+                showSnackbar("图片上传成功")
+            }.onFailure { e ->
+                showSnackbar("上传失败: ${e.message}")
                 _uiState.update { it.copy(showProgressDialog = false) }
             }
         }
     }
-    
 
-    private suspend fun uploadImageKtor(fileBytes: ByteArray, fileName: String): Result<String> {
-    return withContext(Dispatchers.IO) {
+    /**
+     * 纯 Okio 实现的 URI 转 Path
+     */
+    private fun uriToTempPath(uri: Uri): Path? {
+        return try {
+            val context = getApplication<Application>()
+            val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() ?: return null
+            @OptIn(kotlin.time.ExperimentalTime::class)
+            val fileName = "upload_${Clock.System.now().toEpochMilliseconds()}.jpg"
+            val tempPath = context.cacheDir.absolutePath.toPath() / fileName
+            
+            fileSystem.write(tempPath) {
+                writeAll(source)
+            }
+            tempPath
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private suspend fun uploadImageKtor(path: Path): Result<String> = withContext(Dispatchers.IO) {
         try {
             val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
                 setBody(
                     MultiPartFormDataContent(
                         formData {
-                            append("file", fileBytes, Headers.build {
+                            append("file", createChannelProvider(path), Headers.build {
                                 append(HttpHeaders.ContentType, "image/jpeg")
-                                append(HttpHeaders.ContentDisposition, "filename=\"$fileName\"")
+                                append(HttpHeaders.ContentDisposition, "filename=\"${path.name}\"")
                             })
                         }
                     )
                 )
             }
 
-            // 使用数据类解析响应
             val responseBody: KtorClient.UploadResponse = response.body()
-            
-            // 使用 downurl 字段，与 AppReleaseViewModel 保持一致
             if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
                 Result.success(responseBody.downurl)
             } else {
-                Result.failure(Throwable("上传失败: ${responseBody.msg}"))
+                Result.failure(Exception("上传失败: ${responseBody.msg}"))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-}
+
+    private fun createChannelProvider(path: Path): ChannelProvider {
+        return ChannelProvider {
+            writer(Dispatchers.IO) {
+                fileSystem.source(path).use { source ->
+                    val buffer = Buffer()
+                    while (source.read(buffer, 8192L) != -1L) {
+                        channel.writeFully(buffer.readByteArray())
+                    }
+                }
+            }.channel
+        }
+    }
 
     fun removeImage(uri: Uri) {
-        if (!_preferencesState.value.noStoreDraft) {
-            _uiState.update { currentState ->
-                val newUrlMap = currentState.imageUriToUrlMap - uri
-                val newUrls = newUrlMap.values.joinToString(",")
-                currentState.copy(
-                    imageUrls = newUrls,
-                    imageUriToUrlMap = newUrlMap
-                )
-            }
+        _uiState.update { currentState ->
+            val newUrlMap = currentState.imageUriToUrlMap - uri
+            currentState.copy(
+                imageUrls = newUrlMap.values.joinToString(","),
+                imageUriToUrlMap = newUrlMap
+            )
         }
     }
 
@@ -275,73 +259,50 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             _postStatus.value = PostStatus.Loading
 
-            try {
-                // 显式转换为 Application 类型
-                val context: Application = getApplication()
-                // 显式指定类型
-                val userCredentialsFlow = AuthManager.getCredentials(context)
-                val userCredentials = userCredentialsFlow.first()
-                if (userCredentials.userId == 0L || userCredentials.token.isEmpty()) {
-                    _postStatus.value = PostStatus.Error("请先登录")
-                    showSnackbar("请先登录")
-                    return@launch
-                }
+            val credentials = AuthManager.getCredentials(getApplication()).first()
+            if (credentials.userId == 0L || credentials.token.isEmpty()) {
+                _postStatus.value = PostStatus.Error("请先登录")
+                showSnackbar("请先登录")
+                return@launch
+            }
 
-                val token = userCredentials.token
+            val videoPart = if (bvNumber.isNotBlank()) "【视频：$bvNumber】" else ""
+            val finalContent = if (mode == "refund") {
+                """
+                ${_uiState.value.content}
 
-                val finalContent = if (mode == "refund") {
-                    val videoPart = if (bvNumber.isNotBlank()) "【视频：$bvNumber】" else ""
-                    """
-                    ${_uiState.value.content}
+                问题类型:$selectedRefundReason
+                系统定制商：${android.os.Build.BRAND.uppercase()}
+                设备型号：${android.os.Build.MODEL}
+                退还金额:$refundPayMoney
+                资源id:$refundAppId
+                资源版本:$refundVersionId 機型：$tempDeviceName｜$videoPart
+                """.trimIndent()
+            } else {
+                "${_uiState.value.content} 機型：$tempDeviceName｜$videoPart"
+            }
 
+            val finalSubsectionId = if (mode == "refund") 21 else subsectionId
 
-                    问题类型:$selectedRefundReason
-                    系统定制商：${android.os.Build.BRAND.uppercase()}
-                    设备型号：${android.os.Build.MODEL}
-                    退还金额:$refundPayMoney
-                    资源id:$refundAppId
-                    资源版本:$refundVersionId 機型：$tempDeviceName｜$videoPart
-                    """.trimIndent()
-                } else {
-                    val videoPart = if (bvNumber.isNotBlank()) "【视频：$bvNumber】" else ""
-                    "${_uiState.value.content} 機型：$tempDeviceName｜$videoPart"
-                }
-
-                val finalSubsectionId = if (mode == "refund") 21 else subsectionId
-
-                val createPostResult = KtorClient.ApiServiceImpl.createPost(
-                    appid = 1,
-                    token = token,
-                    title = title,
-                    content = finalContent,
-                    sectionId = finalSubsectionId,
-                    imageUrls = if (imageUrls.isNotBlank()) imageUrls else null
-                )
-
-                if (createPostResult.isSuccess) {
-                    _postStatus.value = PostStatus.Success
-                    // 发帖成功后清除草稿
-                    if (!_preferencesState.value.noStoreDraft) {
-                        draftRepository.clearDraft()
-                    }
-                    showSnackbar("发帖成功")
-                } else {
-                    val errorMsg = createPostResult.exceptionOrNull()?.message ?: "发帖失败"
-                    _postStatus.value = PostStatus.Error(errorMsg)
-                    showSnackbar("发帖失败: $errorMsg")
-                }
-            } catch (e: Exception) {
-                val errorMsg = "网络错误: ${e.message}"
-                _postStatus.value = PostStatus.Error(errorMsg)
-                showSnackbar(errorMsg)
+            KtorClient.ApiServiceImpl.createPost(
+                token = credentials.token,
+                title = title,
+                content = finalContent,
+                sectionId = finalSubsectionId,
+                imageUrls = imageUrls.ifBlank { null }
+            ).onSuccess {
+                _postStatus.value = PostStatus.Success
+                if (!_preferencesState.value.noStoreDraft) draftRepository.clearDraft()
+                showSnackbar("发帖成功")
+            }.onFailure { e ->
+                _postStatus.value = PostStatus.Error(e.message ?: "发帖失败")
+                showSnackbar("发帖失败: ${e.message}")
             }
         }
     }
 
     fun clearDraft() {
-        viewModelScope.launch {
-            draftRepository.clearDraft()
-        }
+        viewModelScope.launch { draftRepository.clearDraft() }
     }
 
     fun resetPostStatus() {
@@ -353,17 +314,14 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
         _uiState
             .debounce(1000)
             .onEach { state ->
-                // 如果不存储草稿，跳过自动保存
-                if (_preferencesState.value.noStoreDraft) {
-                    return@onEach
-                }
+                if (_preferencesState.value.noStoreDraft) return@onEach
 
                 if (state.title.isNotBlank() || state.content.isNotBlank() || state.imageUrls.isNotBlank()) {
                     draftRepository.saveDraft(
                         PostDraftRepository.DraftDto(
                             title = state.title,
                             content = state.content,
-                            imageUris = emptyList(), // 修改
+                            imageUris = emptyList(),
                             imageUrls = state.imageUrls,
                             subsectionId = state.selectedSubsectionId
                         )
@@ -373,7 +331,6 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
             .launchIn(viewModelScope)
     }
 
-    // 新增：显示 Snackbar 的方法
     private fun showSnackbar(message: String) {
         viewModelScope.launch {
             _snackbarHostState?.showSnackbar(message)
@@ -386,21 +343,19 @@ data class PostCreateUiState(
     val content: String = "",
     val selectedSubsectionId: Int = 11,
     val imageUrls: String = "",
-    // 将 imageUriToUrlMap 移到 UI 状态中
     val imageUriToUrlMap: Map<Uri, String> = emptyMap(),
     val showProgressDialog: Boolean = false,
     val progressMessage: String = ""
 )
 
-// 偏好设置状态
 data class DraftPreferencesState(
     val autoRestoreDraft: Boolean = false,
     val noStoreDraft: Boolean = false
 )
 
 sealed class PostStatus {
-    object Idle : PostStatus()
-    object Loading : PostStatus()
-    object Success : PostStatus()
+    data object Idle : PostStatus()
+    data object Loading : PostStatus()
+    data object Success : PostStatus()
     data class Error(val message: String) : PostStatus()
 }
