@@ -214,8 +214,5 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
         
         // 开启显式备用字段特性
         freeCompilerArgs.add("-XXLanguage:+ExplicitBackingFields")
-
-        // 全局允许 kotlinx.datetime 的实验性扩展，让 KSP 和 Room 能够正常解析
-        freeCompilerArgs.add("-opt-in=kotlinx.datetime.ExperimentalKotlinDateTimeExtensions")
     }
 }
