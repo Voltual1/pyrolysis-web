@@ -8,11 +8,6 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.user
 
-import android.app.Activity
-import android.content.Context
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -27,26 +22,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.rememberAsyncImagePainter
-import com.github.dhaval2404.imagepicker.ImagePicker
-import kotlinx.coroutines.Dispatchers
+import io.github.vinceglb.filekit.compose.rememberFileKitPickerLauncher
+import io.github.vinceglb.filekit.core.FileKitType
+import io.github.vinceglb.filekit.core.PlatformFile
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.core.ui.components.MarkDownText
 import me.voltual.pyrolysis.core.ui.theme.*
 import me.voltual.pyrolysis.data.DeviceConfig
 import me.voltual.pyrolysis.data.unified.UpdateUserProfileParams
-import okio.FileSystem
-import okio.Path
-import okio.Path.Companion.toPath
-import okio.buffer
-import okio.source
-import kotlin.time.Clock
 
 @Composable
 fun AccountProfileScreen(
@@ -55,7 +43,6 @@ fun AccountProfileScreen(
     modifier: Modifier = Modifier,
     viewModel: UserProfileViewModel
 ) {
-    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -112,17 +99,9 @@ fun AccountProfileScreen(
             
             AvatarSection(
                 currentUrl = state.userDetail?.avatarUrl,
-                onImageSelected = { uri ->
-                    coroutineScope.launch(Dispatchers.IO) {
-                        // 使用 Okio 替代 FileUtil
-                        val tempPath = uriToTempPath(context, uri)
-                        if (tempPath != null) {
-                            viewModel.uploadAvatar(store, tempPath) { _, msg ->
-                                coroutineScope.launch { snackbarHostState.showSnackbar(msg) }
-                            }
-                        } else {
-                            coroutineScope.launch { snackbarHostState.showSnackbar("无法处理图片文件") }
-                        }
+                onImageSelected = { platformFile ->
+                    viewModel.uploadAvatar(store, platformFile) { _, msg ->
+                        coroutineScope.launch { snackbarHostState.showSnackbar(msg) }
                     }
                 }
             )
@@ -175,29 +154,6 @@ fun AccountProfileScreen(
                 }
             }
         }
-    }
-}
-
-/**
- * 纯 Okio 实现：将 Android Uri 转换为临时 Path
- */
-private fun uriToTempPath(context: Context, uri: Uri): Path? {
-    return try {
-        val fileSystem = FileSystem.SYSTEM
-        // 利用 Okio 的 source() 扩展函数
-        val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() ?: return null
-        
-        @OptIn(kotlin.time.ExperimentalTime::class)
-        val now = Clock.System.now().toEpochMilliseconds()
-        val cacheDir = context.cacheDir.absolutePath.toPath()
-        val tempPath = cacheDir / "avatar_upload_$now.jpg"
-        
-        fileSystem.write(tempPath) {
-            writeAll(source)
-        }
-        tempPath
-    } catch (e: Exception) {
-        null
     }
 }
 
@@ -403,15 +359,14 @@ fun ImportConfigDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
 @Composable
 fun AvatarSection(
     currentUrl: String?,
-    onImageSelected: (Uri) -> Unit
+    onImageSelected: (PlatformFile) -> Unit
 ) {
-    val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.data?.let { onImageSelected(it) }
-        }
+    // 使用 FileKit 提供的 Picker Launcher
+    val launcher = rememberFileKitPickerLauncher(
+        type = FileKitType.Image,
+        title = "选择头像"
+    ) { platformFile ->
+        platformFile?.let { onImageSelected(it) }
     }
 
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -442,13 +397,7 @@ fun AvatarSection(
             }
 
             SmallFloatingActionButton(
-                onClick = {
-                    ImagePicker.with(context as Activity)
-                        .cropSquare()
-                        .compress(1024)
-                        .maxResultSize(512, 512)
-                        .createIntent { launcher.launch(it) }
-                },
+                onClick = { launcher.launch() },
                 shape = CircleShape,
                 containerColor = MaterialTheme.colorScheme.primary
             ) {

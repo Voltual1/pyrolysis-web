@@ -9,13 +9,9 @@
 @file:Suppress("DEPRECATION")
 package me.voltual.pyrolysis.ui.community.compose
 
-import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -49,20 +45,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
-import com.github.dhaval2404.imagepicker.ImagePicker
-import io.ktor.client.call.*
-import io.ktor.client.request.*
-import io.ktor.client.request.forms.*
-import io.ktor.client.statement.* // 修复：必须导入以支持 HttpResponse 和 status
-import io.ktor.http.*
-import io.ktor.utils.io.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import io.github.vinceglb.filekit.compose.rememberFileKitPickerLauncher
+import io.github.vinceglb.filekit.core.FileKitType
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.R
@@ -74,13 +62,6 @@ import me.voltual.pyrolysis.ui.community.PostDetailViewModel
 import me.voltual.pyrolysis.core.ui.components.LinkifyText
 import me.voltual.pyrolysis.core.ui.theme.*
 import me.voltual.pyrolysis.core.utils.cleanUrl
-import okio.Buffer
-import okio.FileSystem
-import okio.Path
-import okio.Path.Companion.toPath
-import okio.buffer
-import okio.source
-import kotlin.time.Clock
 
 @Composable
 fun PostDetailScreen(
@@ -93,17 +74,17 @@ fun PostDetailScreen(
     val navigator = LocalNavigator.current
     val context = LocalContext.current
 
-    val postDetail by viewModel.postDetail.collectAsState()
-    val comments by viewModel.comments.collectAsState()
-    val isLiked by viewModel.isLiked.collectAsState()
-    val likeCount by viewModel.likeCount.collectAsState()
-    val commentCount by viewModel.commentCount.collectAsState()
-    val showCommentDialog by viewModel.showCommentDialog.collectAsState()
-    val showReplyDialog by viewModel.showReplyDialog.collectAsState()
-    val currentReplyComment by viewModel.currentReplyComment.collectAsState()
-    val errorMessage by viewModel.errorMessage.collectAsState()
-    val isLoadingComments by viewModel.isLoadingComments.collectAsState()
-    val hasMoreComments by viewModel.hasMoreComments.collectAsState()
+    val postDetail by viewModel.postDetail.collectAsStateWithLifecycle()
+    val comments by viewModel.comments.collectAsStateWithLifecycle()
+    val isLiked by viewModel.isLiked.collectAsStateWithLifecycle()
+    val likeCount by viewModel.likeCount.collectAsStateWithLifecycle()
+    val commentCount by viewModel.commentCount.collectAsStateWithLifecycle()
+    val showCommentDialog by viewModel.showCommentDialog.collectAsStateWithLifecycle()
+    val showReplyDialog by viewModel.showReplyDialog.collectAsStateWithLifecycle()
+    val currentReplyComment by viewModel.currentReplyComment.collectAsStateWithLifecycle()
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val isLoadingComments by viewModel.isLoadingComments.collectAsStateWithLifecycle()
+    val hasMoreComments by viewModel.hasMoreComments.collectAsStateWithLifecycle()
 
     val clipboardManager = remember {
         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -132,7 +113,7 @@ fun PostDetailScreen(
         }
     }
 
-    val deleteSuccess by viewModel.deleteSuccess.collectAsState()
+    val deleteSuccess by viewModel.deleteSuccess.collectAsStateWithLifecycle()
     if (deleteSuccess) {
         LaunchedEffect(Unit) {
             onPostDeleted()
@@ -411,20 +392,14 @@ fun PostDetailScreen(
         CommentDialog(
             hint = "输入评论内容...",
             onDismiss = { viewModel.closeCommentDialog() },
-            context = context,
-            onSubmit = { content, imageUrl ->
-                viewModel.submitComment(content, imageUrl)
-            }
+            viewModel = viewModel
         )
     }
     if (showReplyDialog && currentReplyComment != null) {
         CommentDialog(
             hint = "回复 @${currentReplyComment?.nickname}",
             onDismiss = { viewModel.closeReplyDialog() },
-            context = context,
-            onSubmit = { content, imageUrl ->
-                viewModel.submitComment(content, imageUrl)
-            }
+            viewModel = viewModel
         )
     }
 
@@ -440,83 +415,22 @@ fun PostDetailScreen(
 fun CommentDialog(
     hint: String,
     onDismiss: () -> Unit,
-    onSubmit: (String, String?) -> Unit,
-    context: Context
+    viewModel: PostDetailViewModel
 ) {
-    val fileSystem = FileSystem.SYSTEM
     var commentText by remember { mutableStateOf("") }
     var includeImage by remember { mutableStateOf(false) }
-    var imageUrl by remember { mutableStateOf<String?>(null) }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var showProgressDialog by remember { mutableStateOf(false) }
-    var isSubmitting by remember { mutableStateOf(false) }
-    var progressMessage by remember { mutableStateOf("") }
+    val imageUrl by viewModel.commentImageUrl.collectAsStateWithLifecycle()
+    val isUploading by viewModel.isUploadingImage.collectAsStateWithLifecycle()
+    
     val focusRequester = remember { FocusRequester() }
-    val coroutineScope = rememberCoroutineScope()
+    var isSubmitting by remember { mutableStateOf(false) }
 
-    fun uploadImage(uri: Uri, onSuccess: (String) -> Unit) {
-        showProgressDialog = true
-        progressMessage = "上传图片中..."
-
-        coroutineScope.launch(Dispatchers.IO) {
-            runCatching {
-                val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() 
-                    ?: throw Exception("无法读取图片")
-                
-                @OptIn(kotlin.time.ExperimentalTime::class)
-                val tempPath = context.cacheDir.absolutePath.toPath() / "upload_${Clock.System.now().toEpochMilliseconds()}.jpg"
-                
-                fileSystem.write(tempPath) {
-                    writeAll(source)
-                }
-
-                val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
-                    setBody(
-                        MultiPartFormDataContent(
-                            formData {
-                                append("file", ChannelProvider {
-                                    coroutineScope.writer(Dispatchers.IO) {
-                                        fileSystem.source(tempPath).use { s ->
-                                            val buffer = Buffer()
-                                            while (s.read(buffer, 8192L) != -1L) {
-                                                channel.writeFully(buffer.readByteArray())
-                                            }
-                                        }
-                                    }.channel
-                                }, Headers.build {
-                                    append(HttpHeaders.ContentType, "image/jpeg")
-                                    append(HttpHeaders.ContentDisposition, "filename=\"${tempPath.name}\"")
-                                })
-                            }
-                        )
-                    )
-                }
-
-                if (response.status.isSuccess()) {
-                    val responseBody: KtorClient.UploadResponse = response.body()
-                    if ((responseBody.code == 1 || responseBody.code == 0) && !responseBody.downurl.isNullOrBlank()) {
-                        withContext(Dispatchers.Main) {
-                            onSuccess(responseBody.downurl)
-                        }
-                    }
-                }
-            }.also {
-                withContext(Dispatchers.Main) {
-                    showProgressDialog = false
-                }
-            }
-        }
-    }
-
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.data?.let { uri ->
-                selectedImageUri = uri
-                uploadImage(uri) { url -> imageUrl = url }
-            }
-        }
+    // 使用 FileKit 选择器
+    val imagePickerLauncher = rememberFileKitPickerLauncher(
+        type = FileKitType.Image,
+        title = "选择评论图片"
+    ) { platformFile ->
+        platformFile?.let { viewModel.uploadCommentImage(it) }
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -557,7 +471,10 @@ fun CommentDialog(
                     SwitchWithText(
                         text = "添加图片",
                         checked = includeImage,
-                        onCheckedChange = { includeImage = it },
+                        onCheckedChange = { 
+                            includeImage = it 
+                            if (!it) viewModel.clearCommentImage()
+                        },
                         modifier = Modifier.padding(top = 12.dp)
                     )
 
@@ -565,16 +482,20 @@ fun CommentDialog(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            selectedImageUri?.let { uri ->
-                                Image(
-                                    painter = rememberAsyncImagePainter(model = uri),
+                            if (isUploading) {
+                                Box(modifier = Modifier.size(64.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                }
+                            } else if (imageUrl != null) {
+                                AsyncImage(
+                                    model = imageUrl?.cleanUrl(),
                                     contentDescription = "预览图片",
                                     modifier = Modifier
                                         .size(64.dp)
                                         .clip(RoundedCornerShape(8.dp)),
                                     contentScale = ContentScale.Crop
                                 )
-                            } ?: run {
+                            } else {
                                 Box(
                                     modifier = Modifier
                                         .size(64.dp)
@@ -589,24 +510,16 @@ fun CommentDialog(
 
                             Column {
                                 Button(
-                                    onClick = {
-                                        ImagePicker.with(context as Activity)
-                                            .galleryOnly()
-                                            .createIntent { intent ->
-                                                imagePickerLauncher.launch(intent)
-                                            }
-                                    },
-                                    modifier = Modifier.width(120.dp)
+                                    onClick = { imagePickerLauncher.launch() },
+                                    modifier = Modifier.width(120.dp),
+                                    enabled = !isUploading
                                 ) {
                                     Text("选择图片")
                                 }
 
-                                if (selectedImageUri != null) {
+                                if (imageUrl != null) {
                                     TextButton(
-                                        onClick = {
-                                            selectedImageUri = null
-                                            imageUrl = null
-                                        },
+                                        onClick = { viewModel.clearCommentImage() },
                                         colors = ButtonDefaults.textButtonColors(
                                             contentColor = MaterialTheme.colorScheme.error
                                         )
@@ -630,9 +543,9 @@ fun CommentDialog(
                     Button(
                         onClick = {
                             isSubmitting = true
-                            onSubmit(commentText, if (includeImage) imageUrl else null)
+                            viewModel.submitComment(commentText)
                         },
-                        enabled = commentText.isNotEmpty() && !isSubmitting
+                        enabled = commentText.isNotEmpty() && !isSubmitting && !isUploading
                     ) {
                         Text(if (isSubmitting) "发送中..." else "提交")
                     }
@@ -641,20 +554,9 @@ fun CommentDialog(
         }
     }
 
-    if (showProgressDialog) {
-        AlertDialog(
-            onDismissRequest = { },
-            title = { Text("上传中") },
-            shape = AppShapes.medium,
-            text = { Text(progressMessage) },
-            confirmButton = { }
-        )
-    }
-
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    val detailViewModel: PostDetailViewModel = viewModel()
-    val errorMsg by detailViewModel.errorMessage.collectAsState()
+    val errorMsg by viewModel.errorMessage.collectAsStateWithLifecycle()
     LaunchedEffect(errorMsg) {
         if (errorMsg.isNotEmpty()) isSubmitting = false
     }

@@ -7,10 +7,6 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>。
 package me.voltual.pyrolysis.ui.community
 
-import android.app.Activity
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -25,17 +21,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import coil3.compose.rememberAsyncImagePainter
-import com.github.dhaval2404.imagepicker.ImagePicker
+import io.github.vinceglb.filekit.compose.rememberFileKitPickerLauncher
+import io.github.vinceglb.filekit.core.FileKitType
 import kotlinx.coroutines.flow.first
-import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.data.DeviceNameDataStore
-import me.voltual.pyrolysis.ui.*               // 提供 LocalNavigator, ImagePreview 等
+import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.theme.*
 
 private const val MODE_CREATE = "create"
 private const val MODE_REFUND = "refund"
-private const val MAX_IMAGE_COUNT = 20  // 添加图片数量限制常量
+private const val MAX_IMAGE_COUNT = 20
 
 data class Subsection(val id: Int, val name: String)
 
@@ -64,7 +59,7 @@ val REFUND_REASONS = listOf(
 @Composable
 fun PostCreateScreen(
     viewModel: PostCreateViewModel,
-    onBackClick: () -> Unit,                     // 返回回调，通常为 LocalNavigator.current.goBack()
+    onBackClick: () -> Unit,
     mode: String,
     refundAppName: String,
     refundAppId: Long,
@@ -73,7 +68,6 @@ fun PostCreateScreen(
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
-    // 获取 Navigation 3 的导航器
     val navigator = LocalNavigator.current
 
     val isRefundMode = mode == MODE_REFUND
@@ -82,7 +76,6 @@ fun PostCreateScreen(
     val preferencesState by viewModel.preferencesState.collectAsState()
     val showRestoreDialog by viewModel.showRestoreDialog.collectAsState()
 
-    // 本地 UI 状态
     var bvNumber by rememberSaveable { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     var tempDeviceName by rememberSaveable { mutableStateOf("") }
@@ -90,15 +83,12 @@ fun PostCreateScreen(
     var selectedRefundReason by rememberSaveable { mutableStateOf(REFUND_REASONS.first().name) }
 
     val context = LocalContext.current
-    val activity = context as? Activity
     val deviceNameDataStore = remember { DeviceNameDataStore(context) }
 
-    // 设置 SnackbarHostState
     LaunchedEffect(Unit) {
         viewModel.setSnackbarHostState(snackbarHostState)
     }
 
-    // 处理发帖状态
     LaunchedEffect(postStatus) {
         when (postStatus) {
             is PostStatus.Success -> {
@@ -112,18 +102,14 @@ fun PostCreateScreen(
         }
     }
 
-    // 在 Composable 首次进入时，根据模式初始化标题和设备名
     LaunchedEffect(Unit) {
         if (isRefundMode) {
             viewModel.onTitleChange("$refundAppName  【应用退币申请】")
         }
-        
-        // 从 DataStore 获取当前选中的设备别名
         val currentConfig = deviceNameDataStore.currentConfigFlow.first()
         tempDeviceName = currentConfig.alias
     }
 
-    // 草稿恢复对话框
     if (showRestoreDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.onRestoreDialogDismiss() },
@@ -143,21 +129,21 @@ fun PostCreateScreen(
         )
     }
 
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) { 
-            result.data?.data?.let { uri ->
-                if (uiState.imageUriToUrlMap.size < MAX_IMAGE_COUNT) {
-                    viewModel.uploadImage(uri)
-                }
+    // 使用 FileKit 选择器
+    val imagePickerLauncher = rememberFileKitPickerLauncher(
+        type = FileKitType.Image,
+        title = "选择图片"
+    ) { platformFile ->
+        platformFile?.let { file ->
+            if (uiState.imageFileToUrlMap.size < MAX_IMAGE_COUNT) {
+                viewModel.uploadImage(file)
             }
         }
-    }    
+    }
 
     if (uiState.showProgressDialog) {
         AlertDialog(
-            onDismissRequest = { /* 不允许取消 */ },
+            onDismissRequest = { },
             title = { Text("上传中") },
             text = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -170,10 +156,9 @@ fun PostCreateScreen(
         )
     }
 
-    // 加载状态对话框
     if (postStatus is PostStatus.Loading) {
         AlertDialog(
-            onDismissRequest = { /* 不允许取消 */ },
+            onDismissRequest = { },
             title = { Text("发帖中") },
             text = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -268,7 +253,6 @@ fun PostCreateScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 草稿偏好设置选项
         DraftPreferencesSection(
             autoRestoreDraft = preferencesState.autoRestoreDraft,
             noStoreDraft = preferencesState.noStoreDraft,
@@ -278,7 +262,6 @@ fun PostCreateScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 图片上传区
         Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
             Text(
                 "图片上传 (最多 $MAX_IMAGE_COUNT 张)",
@@ -286,31 +269,23 @@ fun PostCreateScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(uiState.imageUriToUrlMap.values.toList()) { imageUrl ->
+                items(uiState.imageFileToUrlMap.entries.toList()) { entry ->
                     ImagePreviewItem(
-                        imageUrl = imageUrl,
+                        imageUrl = entry.value,
                         onRemoveClick = {
-                            val uriToRemove = uiState.imageUriToUrlMap.entries
-                                .firstOrNull { it.value == imageUrl }?.key
-                            if (uriToRemove != null) {
-                                viewModel.removeImage(uriToRemove)
-                            }
+                            viewModel.removeImage(entry.key)
                         },
                         onImageClick = {
-                            // Navigation 3 类型安全导航
-                            navigator.navigate(ImagePreview(imageUrl))
+                            navigator.navigate(ImagePreview(entry.value))
                         }
                     )
                 }
-                if (uiState.imageUriToUrlMap.size < MAX_IMAGE_COUNT) {
+                if (uiState.imageFileToUrlMap.size < MAX_IMAGE_COUNT) {
                     item {
-                        OutlinedButton(onClick = {ImagePicker.with(context as Activity)
-                                            .crop()
-//                                            .compress(1024)
-//                                            .maxResultSize(1080, 1080)
-                                            .createIntent { intent ->
-                                                imagePickerLauncher.launch(intent)
-                                            }}, modifier = Modifier.size(80.dp)) {
+                        OutlinedButton(
+                            onClick = { imagePickerLauncher.launch() }, 
+                            modifier = Modifier.size(80.dp)
+                        ) {
                             Icon(Icons.Default.Add, "添加图片")
                         }
                     }
@@ -353,11 +328,9 @@ fun PostCreateScreen(
 
         Button(
             onClick = {
-                if (uiState.title.isBlank()) {
-                    // 错误提示已在 ViewModel 中处理
-                } else if (uiState.content.isBlank()) {
-                } else if (isRefundMode && uiState.content.length < 12) {
-                } else {
+                if (uiState.title.isNotBlank() && uiState.content.isNotBlank()) {
+                    if (isRefundMode && uiState.content.length < 12) return@Button
+                    
                     val uploadedUrlsList = uiState.imageUrls.split(",").filter { it.isNotBlank() }
                     val manualUrlsList = manualImageUrls.split(",").filter { it.isNotBlank() }
                     val allImageUrls = (uploadedUrlsList + manualUrlsList).distinct().joinToString(",")
@@ -384,7 +357,6 @@ fun PostCreateScreen(
     }
 }
 
-// 草稿偏好设置组件
 @Composable
 private fun DraftPreferencesSection(
     autoRestoreDraft: Boolean,

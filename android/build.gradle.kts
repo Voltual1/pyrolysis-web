@@ -50,8 +50,6 @@ android {
         }
     }
 
-    // 注意：在 AGP 8.0+ 中建议使用更现代的方式处理输出文件名
-    // 但保留你的逻辑并修正类型转换
     applicationVariants.all {
         val variant = this
         variant.outputs.all {
@@ -111,11 +109,10 @@ dependencies {
     coreLibraryDesugaring(libs.android.desugar)
     implementation(libs.google.material)
     implementation(libs.okhttp)
-//    implementation(libs.photoview)
-//    implementation(project(":shared"))
     implementation(libs.fragment)
     implementation(libs.biometric)
     implementation(libs.simple.storage)
+    
     // Compose
     implementation(platform(libs.compose.bom))
     implementation(libs.androidx.ui)
@@ -124,26 +121,27 @@ dependencies {
     implementation(libs.androidx.icons.extended)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-//    implementation(libs.androidx.navigation.compose)Nav2再见！
     implementation(libs.compose.navigation3)
-    implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0") // 请根据版本调整
-        implementation(libs.zxing.core)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0")
+    implementation(libs.zxing.core)
     implementation(libs.compose.navigation3.ui)
     implementation(libs.compose.adaptive)
     implementation(libs.compose.adaptive.layout)
     implementation(libs.compose.adaptive.navigation)
 
-
     // 图片与异步
     implementation(libs.coil.compose)
     implementation(libs.coil.network.ktor)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.imagepicker)
+    
+    // FileKit 替代 imagepicker
+    implementation(libs.filekit.core)
+    implementation(libs.filekit.dialogs)
+    implementation(libs.filekit.dialogs.compose)
 
     // 播放器与 UI
     implementation(libs.ijkplayer)
     implementation(project(":DanmakuFlameMaster"))
-//    implementation(libs.androidx.palette)
     implementation(libs.markdown)
 
     // 存储
@@ -181,7 +179,6 @@ dependencies {
     implementation(libs.ktor.io)
     implementation(libs.ktor.client.logging)
     implementation(libs.kotlinx.serialization.json)
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1") // 建议使用最新版本
 
     // 安全与数据
     implementation(libs.tink.android)
@@ -202,7 +199,6 @@ protobuf {
             task.builtins {
                 create("java")
                 create("kotlin")
-                //孩子们，不要说我没有警告你，本项目owner实战经验发现用lite版本会被r8混淆导致发行版ggԾ‸ Ծ 
             }
         }
     }
@@ -211,8 +207,6 @@ protobuf {
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        
-        // 开启显式备用字段特性
         freeCompilerArgs.add("-XXLanguage:+ExplicitBackingFields")
     }
 }

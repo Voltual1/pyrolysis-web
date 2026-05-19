@@ -10,16 +10,15 @@
 package me.voltual.pyrolysis.ui.community
 
 import android.app.Application
-import android.net.Uri
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.vinceglb.filekit.core.PlatformFile
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.utils.io.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
@@ -29,19 +28,11 @@ import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.core.database.PostDraftRepository
 import me.voltual.pyrolysis.data.PostDraftDataStore
-import okio.Buffer
-import okio.FileSystem
-import okio.Path
-import okio.Path.Companion.toPath
-import okio.buffer
-import okio.source
 import org.koin.android.annotation.KoinViewModel
-import kotlin.time.Clock
 
 @KoinViewModel
 class PostCreateViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val fileSystem = FileSystem.SYSTEM
     private val draftRepository = PostDraftRepository()
     private val draftDataStore = PostDraftDataStore(application)
 
@@ -134,33 +125,21 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
         _uiState.update { it.copy(selectedSubsectionId = newId) }
     }
 
-    fun uploadImage(uri: Uri) {
+    fun uploadImage(file: PlatformFile) {
         if (_preferencesState.value.noStoreDraft) {
             showSnackbar("草稿存储已禁用")
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(showProgressDialog = true, progressMessage = "正在处理图片...") }
+            _uiState.update { it.copy(showProgressDialog = true, progressMessage = "正在上传图片...") }
 
-            val tempPath = withContext(Dispatchers.IO) {
-                uriToTempPath(uri)
-            }
-
-            if (tempPath == null) {
-                _uiState.update { it.copy(showProgressDialog = false) }
-                showSnackbar("无法读取图片文件")
-                return@launch
-            }
-
-            _uiState.update { it.copy(progressMessage = "正在上传图片...") }
-
-            uploadImageKtor(tempPath).onSuccess { imageUrl ->
+            uploadImageKtor(file).onSuccess { imageUrl ->
                 _uiState.update { currentState ->
-                    val newUrlMap = currentState.imageUriToUrlMap + (uri to imageUrl)
+                    val newUrlMap = currentState.imageFileToUrlMap + (file to imageUrl)
                     currentState.copy(
                         imageUrls = newUrlMap.values.joinToString(","),
-                        imageUriToUrlMap = newUrlMap,
+                        imageFileToUrlMap = newUrlMap,
                         showProgressDialog = false
                     )
                 }
@@ -172,33 +151,18 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    private fun uriToTempPath(uri: Uri): Path? {
-        return try {
-            val context = getApplication<Application>()
-            val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() ?: return null
-            @OptIn(kotlin.time.ExperimentalTime::class)
-            val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
-            val fileName = "upload_${now}.jpg"
-            val tempPath = context.cacheDir.absolutePath.toPath() / fileName
-            
-            fileSystem.write(tempPath) {
-                writeAll(source)
-            }
-            tempPath
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private suspend fun uploadImageKtor(path: Path): Result<String> = withContext(Dispatchers.IO) {
+    private suspend fun uploadImageKtor(file: PlatformFile): Result<String> = withContext(Dispatchers.IO) {
         try {
+            // 直接读取字节进行上传
+            val fileBytes = file.readBytes()
+            
             val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
                 setBody(
                     MultiPartFormDataContent(
                         formData {
-                            append("file", createChannelProvider(path), Headers.build {
+                            append("file", fileBytes, Headers.build {
                                 append(HttpHeaders.ContentType, "image/jpeg")
-                                append(HttpHeaders.ContentDisposition, "filename=\"${path.name}\"")
+                                append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
                             })
                         }
                     )
@@ -216,29 +180,12 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    /**
-     * 修复后的 ChannelProvider。
-     * 使用 viewModelScope.writer 明确协程作用域。
-     */
-    private fun createChannelProvider(path: Path): ChannelProvider {
-        return ChannelProvider {
-            viewModelScope.writer(Dispatchers.IO) {
-                fileSystem.source(path).use { source ->
-                    val buffer = Buffer()
-                    while (source.read(buffer, 8192L) != -1L) {
-                        channel.writeFully(buffer.readByteArray())
-                    }
-                }
-            }.channel
-        }
-    }
-
-    fun removeImage(uri: Uri) {
+    fun removeImage(file: PlatformFile) {
         _uiState.update { currentState ->
-            val newUrlMap = currentState.imageUriToUrlMap - uri
+            val newUrlMap = currentState.imageFileToUrlMap - file
             currentState.copy(
                 imageUrls = newUrlMap.values.joinToString(","),
-                imageUriToUrlMap = newUrlMap
+                imageFileToUrlMap = newUrlMap
             )
         }
     }
@@ -342,7 +289,7 @@ data class PostCreateUiState(
     val content: String = "",
     val selectedSubsectionId: Int = 11,
     val imageUrls: String = "",
-    val imageUriToUrlMap: Map<Uri, String> = emptyMap(),
+    val imageFileToUrlMap: Map<PlatformFile, String> = emptyMap(),
     val showProgressDialog: Boolean = false,
     val progressMessage: String = ""
 )

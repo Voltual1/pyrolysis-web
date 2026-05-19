@@ -4,12 +4,18 @@
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.community
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.vinceglb.filekit.core.PlatformFile
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.core.database.BrowseHistoryRepository
@@ -19,6 +25,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 
 @KoinViewModel
 class PostDetailViewModel(application: Application) : AndroidViewModel(application) {
@@ -34,9 +42,6 @@ class PostDetailViewModel(application: Application) : AndroidViewModel(applicati
 
     private val _deleteSuccess = MutableStateFlow(false)
     val deleteSuccess: StateFlow<Boolean> = _deleteSuccess.asStateFlow()
-
-    private val _deleteCommentSuccess = MutableStateFlow(false)
-    val deleteCommentSuccess: StateFlow<Boolean> = _deleteCommentSuccess.asStateFlow()
 
     private val _isLiked = MutableStateFlow(false)
     val isLiked: StateFlow<Boolean> = _isLiked.asStateFlow()
@@ -70,6 +75,13 @@ class PostDetailViewModel(application: Application) : AndroidViewModel(applicati
 
     private val _hasMoreComments = MutableStateFlow(true)
     val hasMoreComments: StateFlow<Boolean> = _hasMoreComments.asStateFlow()
+
+    // 新增：评论图片处理状态
+    private val _commentImageUrl = MutableStateFlow<String?>(null)
+    val commentImageUrl: StateFlow<String?> = _commentImageUrl.asStateFlow()
+
+    private val _isUploadingImage = MutableStateFlow(false)
+    val isUploadingImage: StateFlow<Boolean> = _isUploadingImage.asStateFlow()
 
     private val browseHistoryRepository = BrowseHistoryRepository()
 
@@ -219,15 +231,18 @@ class PostDetailViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun openCommentDialog() {
+        _commentImageUrl.value = null
         _showCommentDialog.value = true
         _currentReplyComment.value = null
     }
 
     fun closeCommentDialog() {
         _showCommentDialog.value = false
+        _commentImageUrl.value = null
     }
 
     fun openReplyDialog(comment: KtorClient.Comment) {
+        _commentImageUrl.value = null
         _currentReplyComment.value = comment
         _showReplyDialog.value = true
     }
@@ -235,9 +250,49 @@ class PostDetailViewModel(application: Application) : AndroidViewModel(applicati
     fun closeReplyDialog() {
         _showReplyDialog.value = false
         _currentReplyComment.value = null
+        _commentImageUrl.value = null
     }
 
-    fun submitComment(content: String, imageUrl: String? = null) {
+    /**
+     * 新增：使用 FileKit 处理评论图片上传
+     */
+    fun uploadCommentImage(file: PlatformFile) {
+        viewModelScope.launch {
+            _isUploadingImage.value = true
+            try {
+                val bytes = file.readBytes()
+                val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
+                    setBody(
+                        MultiPartFormDataContent(
+                            formData {
+                                append("file", bytes, Headers.build {
+                                    append(HttpHeaders.ContentType, "image/jpeg")
+                                    append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
+                                })
+                            }
+                        )
+                    )
+                }
+
+                val responseBody: KtorClient.UploadResponse = response.body()
+                if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
+                    _commentImageUrl.value = responseBody.downurl
+                } else {
+                    _errorMessage.value = "图片上传失败: ${responseBody.msg}"
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "图片上传错误: ${e.message}"
+            } finally {
+                _isUploadingImage.value = false
+            }
+        }
+    }
+
+    fun clearCommentImage() {
+        _commentImageUrl.value = null
+    }
+
+    fun submitComment(content: String) {
         viewModelScope.launch {
             try {
                  val context = getApplication<Application>().applicationContext
@@ -251,7 +306,7 @@ class PostDetailViewModel(application: Application) : AndroidViewModel(applicati
                     content = content,
                     postId = postId,
                     parentId = parentId,
-                    imageUrl = imageUrl
+                    imageUrl = _commentImageUrl.value
                 )
 
                 if (result.isSuccess) {

@@ -10,6 +10,7 @@ package me.voltual.pyrolysis.ui.user
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.vinceglb.filekit.core.PlatformFile
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
@@ -18,8 +19,6 @@ import me.voltual.pyrolysis.data.DeviceNameDataStore
 import me.voltual.pyrolysis.data.unified.UnifiedUserDetail
 import me.voltual.pyrolysis.data.unified.UpdateUserProfileParams
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
-import okio.FileSystem
-import okio.Path
 import org.koin.android.annotation.KoinViewModel
 
 @KoinViewModel
@@ -96,20 +95,18 @@ class UserProfileViewModel(
 
     /**
      * 上传头像逻辑
-     * 使用 okio.Path 和 okio.FileSystem.SYSTEM 替代 java.io.File 及其字节读取方法
+     * 使用 FileKit 的 PlatformFile 替代原始 Path 处理
      */
-    fun uploadAvatar(store: AppStore, imagePath: Path, onResult: (Boolean, String) -> Unit) {
+    fun uploadAvatar(store: AppStore, file: PlatformFile, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             _uiState.update { it.copy(isUploading = true) }
             try {
                 val repository = repositories[store] ?: return@launch onResult(false, "不支持的平台")
                 
-                // 使用 Okio 纯 Kotlin 方式读取字节
-                val bytes = FileSystem.SYSTEM.read(imagePath) {
-                    readByteArray()
-                }
+                // FileKit 提供的跨平台字节读取
+                val bytes = file.readBytes()
                 
-                val result = repository.uploadAvatar(bytes, imagePath.name)
+                val result = repository.uploadAvatar(bytes, file.name)
                 if (result.isSuccess) {
                     loadUserProfile(store)
                     onResult(true, "头像上传成功")
