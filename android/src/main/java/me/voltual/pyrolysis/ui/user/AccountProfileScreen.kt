@@ -395,10 +395,7 @@ fun ImportConfigDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
             Button(onClick = { onConfirm(text) }, enabled = text.isNotBlank()) { Text("导入") }
         },
         dismissButton = {
-            TextButton(onClick = { onDismiss(text) }) { // 修正：onDismiss 逻辑
-                onDismiss()
-                Text("取消")
-            }
+            TextButton(onClick = onDismiss) { Text("取消") }
         }
     )
 }
