@@ -14,12 +14,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.KtorClient
-import java.io.IOException
-import org.koin.android.annotation.KoinViewModel
 import me.voltual.pyrolysis.data.UserFilterDataStore
+import org.koin.android.annotation.KoinViewModel
 
 @KoinViewModel
 class MyPostsViewModel(private val userFilterDataStore: UserFilterDataStore) : ViewModel() {
+    
     private val _posts = MutableStateFlow<List<KtorClient.Post>>(emptyList())
     val posts: StateFlow<List<KtorClient.Post>> = _posts.asStateFlow()
     
@@ -35,28 +35,22 @@ class MyPostsViewModel(private val userFilterDataStore: UserFilterDataStore) : V
     private val _totalPages = MutableStateFlow(1)
     val totalPages: StateFlow<Int> = _totalPages.asStateFlow()
     
-    // 添加状态跟踪，避免重复初始化
     private var _currentUserId: Long? = null
     private var _isInitialized = false
     
-    // 设置用户ID
     fun setUserId(userId: Long) {
         setUserInfo(userId, "用户")
     }
     
-    // 修改接收 nickname
     fun setUserInfo(userId: Long, nickname: String) {
-        // 只有当用户ID真正改变时才重置状态
         if (_currentUserId != userId || _nickname != nickname) {
             _currentUserId = userId
             _nickname = nickname
             _isInitialized = false
             resetState()
             
-            // 将用户筛选信息存储到 DataStore - 修复这里的方法名
             viewModelScope.launch {
                 userFilterDataStore.addOrUpdateUserFilter(userId, nickname)
-                // 同时设置为激活用户
                 userFilterDataStore.setActiveUserFilter(userId)
             }
             
@@ -71,7 +65,6 @@ class MyPostsViewModel(private val userFilterDataStore: UserFilterDataStore) : V
         _errorMessage.value = ""
     }
     
-    // 只在需要时加载数据
     private fun loadDataIfNeeded() {
         if (!_isInitialized && _currentUserId != null && !_isLoading.value) {
             _isInitialized = true
@@ -80,7 +73,7 @@ class MyPostsViewModel(private val userFilterDataStore: UserFilterDataStore) : V
     }
     
     fun jumpToPage(page: Int) {
-        if (page in 1..totalPages.value) {
+        if (page in 1.._totalPages.value) {
             _posts.value = emptyList()
             currentPage = page
             loadMyPosts()
@@ -88,67 +81,55 @@ class MyPostsViewModel(private val userFilterDataStore: UserFilterDataStore) : V
     }
     
     fun loadNextPage() {
-        if (currentPage < totalPages.value && !_isLoading.value) {
+        if (currentPage < _totalPages.value && !_isLoading.value) {
             currentPage++
             loadMyPosts()
         }
     }
     
     fun refresh() {
-        // 刷新时重置页面但不重置初始化状态
         currentPage = 1
         loadMyPosts()
     }
     
+    /**
+     * 加载帖子列表
+     * 使用 Kotlin 风格的 Result 处理，彻底移除 java.io 依赖
+     */
     private fun loadMyPosts() {
-        if (_isLoading.value || _currentUserId == null) return
+        val userId = _currentUserId ?: return
+        if (_isLoading.value) return
         
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = ""
             
-            try {
-                val myPostsResult = KtorClient.ApiServiceImpl.getPostsList(
-                    limit = PAGE_SIZE,
-                    page = currentPage,
-                    userId = _currentUserId!!
-                )
-                
-                if (myPostsResult.isSuccess) {
-                    myPostsResult.getOrNull()?.let { response ->
-                        if (response.code == 1) {
-                            val data = response.data
-                            _totalPages.value = data.pagecount
-                            
-                            val newPosts = if (currentPage == 1) {
-                                data.list
-                            } else {
-                                _posts.value + data.list
-                            }
-                            
-                            // 数据去重
-                            val distinctPosts = newPosts.distinctBy { it.postid }
-                            _posts.value = distinctPosts
-                            _errorMessage.value = ""
-                        } else {
-                            _errorMessage.value = "操作失败: ${if (response.msg.isNotEmpty()) response.msg else "服务器错误"}"
-                        }
-                    } ?: run {
-                        _errorMessage.value = "加载失败: 响应为空"
-                    }
+            KtorClient.ApiServiceImpl.getPostsList(
+                limit = PAGE_SIZE,
+                page = currentPage,
+                userId = userId
+            ).onSuccess { response ->
+                if (response.code == 1) {
+                    val data = response.data
+                    _totalPages.value = data.pagecount
+                    
+                    val currentList = if (currentPage == 1) emptyList() else _posts.value
+                    // 数据合并与去重
+                    _posts.value = (currentList + data.list).distinctBy { it.postid }
+                    _errorMessage.value = ""
                 } else {
-                    val exceptionMessage = myPostsResult.exceptionOrNull()?.message
-                    _errorMessage.value = "加载失败: ${exceptionMessage ?: "未知错误"}"
+                    _errorMessage.value = "操作失败: ${response.msg.ifEmpty { "服务器错误" }}"
                 }
-            } catch (e: IOException) {
-                _errorMessage.value = "网络异常: ${e.message ?: "未知错误"}"
-            } finally {
-                _isLoading.value = false
+            }.onFailure { exception ->
+                // 此时 exception 可能是 PyrolysisNetworkException 或其他 Kotlin 异常
+                _errorMessage.value = "加载失败: ${exception.message ?: "未知错误"}"
             }
+            
+            _isLoading.value = false
         }
     }
     
-    companion object {
-        private const val PAGE_SIZE = 10
+    private companion object {
+        const val PAGE_SIZE = 10
     }
 }
