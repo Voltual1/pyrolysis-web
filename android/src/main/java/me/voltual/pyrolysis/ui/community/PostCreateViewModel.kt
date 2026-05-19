@@ -136,7 +136,8 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
 
             uploadImageKtor(file).onSuccess { imageUrl ->
                 _uiState.update { currentState ->
-                    val newUrlMap = currentState.imageFileToUrlMap + (file to imageUrl)
+                    val newUrlMap = currentState.imageFileToUrlMap.toMutableMap()
+                    newUrlMap[file] = imageUrl
                     currentState.copy(
                         imageUrls = newUrlMap.values.joinToString(","),
                         imageFileToUrlMap = newUrlMap,
@@ -153,7 +154,6 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
 
     private suspend fun uploadImageKtor(file: PlatformFile): Result<String> = withContext(Dispatchers.IO) {
         try {
-            // 直接读取字节进行上传
             val fileBytes = file.readBytes()
             
             val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
@@ -182,7 +182,8 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
 
     fun removeImage(file: PlatformFile) {
         _uiState.update { currentState ->
-            val newUrlMap = currentState.imageFileToUrlMap - file
+            val newUrlMap = currentState.imageFileToUrlMap.toMutableMap()
+            newUrlMap.remove(file)
             currentState.copy(
                 imageUrls = newUrlMap.values.joinToString(","),
                 imageFileToUrlMap = newUrlMap

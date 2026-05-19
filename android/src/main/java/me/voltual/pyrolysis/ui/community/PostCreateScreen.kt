@@ -21,8 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import io.github.vinceglb.filekit.compose.rememberFileKitPickerLauncher
 import io.github.vinceglb.filekit.core.FileKitType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFileKitPickerLauncher
 import kotlinx.coroutines.flow.first
 import me.voltual.pyrolysis.data.DeviceNameDataStore
 import me.voltual.pyrolysis.ui.*
@@ -129,7 +129,6 @@ fun PostCreateScreen(
         )
     }
 
-    // 使用 FileKit 选择器
     val imagePickerLauncher = rememberFileKitPickerLauncher(
         type = FileKitType.Image,
         title = "选择图片"

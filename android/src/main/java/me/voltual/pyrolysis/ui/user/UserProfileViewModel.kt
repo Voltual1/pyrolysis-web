@@ -93,17 +93,12 @@ class UserProfileViewModel(
         }
     }
 
-    /**
-     * 上传头像逻辑
-     * 使用 FileKit 的 PlatformFile 替代原始 Path 处理
-     */
     fun uploadAvatar(store: AppStore, file: PlatformFile, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             _uiState.update { it.copy(isUploading = true) }
             try {
                 val repository = repositories[store] ?: return@launch onResult(false, "不支持的平台")
                 
-                // FileKit 提供的跨平台字节读取
                 val bytes = file.readBytes()
                 
                 val result = repository.uploadAvatar(bytes, file.name)

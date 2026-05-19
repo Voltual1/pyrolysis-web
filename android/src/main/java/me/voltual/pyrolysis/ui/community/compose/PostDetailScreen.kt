@@ -13,7 +13,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -47,10 +46,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import coil3.compose.rememberAsyncImagePainter
-import io.github.vinceglb.filekit.compose.rememberFileKitPickerLauncher
+import io.github.vinceglb.filekit.core.PlatformFile
 import io.github.vinceglb.filekit.core.FileKitType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFileKitPickerLauncher
+import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.R
@@ -392,14 +397,20 @@ fun PostDetailScreen(
         CommentDialog(
             hint = "输入评论内容...",
             onDismiss = { viewModel.closeCommentDialog() },
-            viewModel = viewModel
+            context = context,
+            onSubmit = { content, imageUrl ->
+                viewModel.submitComment(content, imageUrl)
+            }
         )
     }
     if (showReplyDialog && currentReplyComment != null) {
         CommentDialog(
             hint = "回复 @${currentReplyComment?.nickname}",
             onDismiss = { viewModel.closeReplyDialog() },
-            viewModel = viewModel
+            context = context,
+            onSubmit = { content, imageUrl ->
+                viewModel.submitComment(content, imageUrl)
+            }
         )
     }
 
@@ -415,22 +426,64 @@ fun PostDetailScreen(
 fun CommentDialog(
     hint: String,
     onDismiss: () -> Unit,
-    viewModel: PostDetailViewModel
+    onSubmit: (String, String?) -> Unit,
+    context: Context
 ) {
     var commentText by remember { mutableStateOf("") }
     var includeImage by remember { mutableStateOf(false) }
-    val imageUrl by viewModel.commentImageUrl.collectAsStateWithLifecycle()
-    val isUploading by viewModel.isUploadingImage.collectAsStateWithLifecycle()
-    
-    val focusRequester = remember { FocusRequester() }
+    var imageUrl by remember { mutableStateOf<String?>(null) }
+    var selectedImageFile by remember { mutableStateOf<PlatformFile?>(null) }
+    var showProgressDialog by remember { mutableStateOf(false) }
     var isSubmitting by remember { mutableStateOf(false) }
+    var progressMessage by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    val coroutineScope = rememberCoroutineScope()
 
-    // 使用 FileKit 选择器
+    fun uploadImage(file: PlatformFile, onSuccess: (String) -> Unit) {
+        showProgressDialog = true
+        progressMessage = "上传图片中..."
+
+        coroutineScope.launch(Dispatchers.IO) {
+            runCatching {
+                val bytes = file.readBytes()
+
+                val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
+                    setBody(
+                        MultiPartFormDataContent(
+                            formData {
+                                append("file", bytes, Headers.build {
+                                    append(HttpHeaders.ContentType, "image/jpeg")
+                                    append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
+                                })
+                            }
+                        )
+                    )
+                }
+
+                if (response.status.isSuccess()) {
+                    val responseBody: KtorClient.UploadResponse = response.body()
+                    if ((responseBody.code == 1 || responseBody.code == 0) && !responseBody.downurl.isNullOrBlank()) {
+                        withContext(Dispatchers.Main) {
+                            onSuccess(responseBody.downurl)
+                        }
+                    }
+                }
+            }.also {
+                withContext(Dispatchers.Main) {
+                    showProgressDialog = false
+                }
+            }
+        }
+    }
+
     val imagePickerLauncher = rememberFileKitPickerLauncher(
         type = FileKitType.Image,
-        title = "选择评论图片"
+        title = "选择图片"
     ) { platformFile ->
-        platformFile?.let { viewModel.uploadCommentImage(it) }
+        platformFile?.let { file ->
+            selectedImageFile = file
+            uploadImage(file) { url -> imageUrl = url }
+        }
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -471,10 +524,7 @@ fun CommentDialog(
                     SwitchWithText(
                         text = "添加图片",
                         checked = includeImage,
-                        onCheckedChange = { 
-                            includeImage = it 
-                            if (!it) viewModel.clearCommentImage()
-                        },
+                        onCheckedChange = { includeImage = it },
                         modifier = Modifier.padding(top = 12.dp)
                     )
 
@@ -482,20 +532,26 @@ fun CommentDialog(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (isUploading) {
-                                Box(modifier = Modifier.size(64.dp), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            selectedImageFile?.let { file ->
+                                var imageBytes by remember { mutableStateOf<ByteArray?>(null) }
+                                LaunchedEffect(file) {
+                                    imageBytes = file.readBytes()
                                 }
-                            } else if (imageUrl != null) {
-                                AsyncImage(
-                                    model = imageUrl?.cleanUrl(),
-                                    contentDescription = "预览图片",
-                                    modifier = Modifier
-                                        .size(64.dp)
-                                        .clip(RoundedCornerShape(8.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
+                                if (imageBytes != null) {
+                                    AsyncImage(
+                                        model = imageBytes,
+                                        contentDescription = "预览图片",
+                                        modifier = Modifier
+                                            .size(64.dp)
+                                            .clip(RoundedCornerShape(8.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Box(modifier = Modifier.size(64.dp), contentAlignment = Alignment.Center) {
+                                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                    }
+                                }
+                            } ?: run {
                                 Box(
                                     modifier = Modifier
                                         .size(64.dp)
@@ -511,15 +567,17 @@ fun CommentDialog(
                             Column {
                                 Button(
                                     onClick = { imagePickerLauncher.launch() },
-                                    modifier = Modifier.width(120.dp),
-                                    enabled = !isUploading
+                                    modifier = Modifier.width(120.dp)
                                 ) {
                                     Text("选择图片")
                                 }
 
-                                if (imageUrl != null) {
+                                if (selectedImageFile != null) {
                                     TextButton(
-                                        onClick = { viewModel.clearCommentImage() },
+                                        onClick = {
+                                            selectedImageFile = null
+                                            imageUrl = null
+                                        },
                                         colors = ButtonDefaults.textButtonColors(
                                             contentColor = MaterialTheme.colorScheme.error
                                         )
@@ -543,9 +601,9 @@ fun CommentDialog(
                     Button(
                         onClick = {
                             isSubmitting = true
-                            viewModel.submitComment(commentText)
+                            onSubmit(commentText, if (includeImage) imageUrl else null)
                         },
-                        enabled = commentText.isNotEmpty() && !isSubmitting && !isUploading
+                        enabled = commentText.isNotEmpty() && !isSubmitting
                     ) {
                         Text(if (isSubmitting) "发送中..." else "提交")
                     }
@@ -554,12 +612,17 @@ fun CommentDialog(
         }
     }
 
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-
-    val errorMsg by viewModel.errorMessage.collectAsStateWithLifecycle()
-    LaunchedEffect(errorMsg) {
-        if (errorMsg.isNotEmpty()) isSubmitting = false
+    if (showProgressDialog) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("上传中") },
+            shape = AppShapes.medium,
+            text = { Text(progressMessage) },
+            confirmButton = { }
+        )
     }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }
 
 @Composable
