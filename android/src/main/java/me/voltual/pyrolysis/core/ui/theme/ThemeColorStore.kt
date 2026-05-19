@@ -11,7 +11,6 @@ package me.voltual.pyrolysis.core.ui.theme
 import android.content.Context
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore 
@@ -90,61 +89,60 @@ data class ColorSet(
         }
     }
 
-companion object {
-    fun defaultLight() = ColorSet(
-        primary = primaryLight,
-        onPrimary = onPrimaryLight,
-        primaryContainer = primaryContainerLight,
-        onPrimaryContainer = onPrimaryContainerLight,
-        secondary = secondaryLight,
-        onSecondary = onSecondaryLight,
-        secondaryContainer = secondaryContainerLight,
-        onSecondaryContainer = onSecondaryContainerLight,
-        surface = surfaceLight,
-        onSurface = onSurfaceLight,
-        surfaceVariant = surfaceVariantLight,
-        onSurfaceVariant = onSurfaceVariantLight,
-        outline = outlineLight,
-        error = errorLight,
-        onError = onErrorLight,
-        background = backgroundLight,
-        onBackground = onBackgroundLight,
-        messageLikeBg = message_like_bg,
-        messageCommentBg = message_comment_bg,
-        messageDefaultBg = message_default_bg,
-        billingIncome = billing_income,
-        billingExpense = billing_expense
-    )
+    companion object {
+        fun defaultLight() = ColorSet(
+            primary = primaryLight,
+            onPrimary = onPrimaryLight,
+            primaryContainer = primaryContainerLight,
+            onPrimaryContainer = onPrimaryContainerLight,
+            secondary = secondaryLight,
+            onSecondary = onSecondaryLight,
+            secondaryContainer = secondaryContainerLight,
+            onSecondaryContainer = onSecondaryContainerLight,
+            surface = surfaceLight,
+            onSurface = onSurfaceLight,
+            surfaceVariant = surfaceVariantLight,
+            onSurfaceVariant = onSurfaceVariantLight,
+            outline = outlineLight,
+            error = errorLight,
+            onError = onErrorLight,
+            background = backgroundLight,
+            onBackground = onBackgroundLight,
+            messageLikeBg = message_like_bg,
+            messageCommentBg = message_comment_bg,
+            messageDefaultBg = message_default_bg,
+            billingIncome = billing_income,
+            billingExpense = billing_expense
+        )
 
-    fun defaultDark() = ColorSet(
-        primary = primaryDark,
-        onPrimary = onPrimaryDark,
-        primaryContainer = primaryContainerDark,
-        onPrimaryContainer = onPrimaryContainerDark,
-        secondary = secondaryDark,
-        onSecondary = onSecondaryDark,
-        secondaryContainer = secondaryContainerDark,
-        onSecondaryContainer = onSecondaryContainerDark,
-        surface = surfaceDark,
-        onSurface = onSurfaceDark,
-        surfaceVariant = surfaceVariantDark,
-        onSurfaceVariant = onSurfaceVariantDark,
-        outline = outlineDark,
-        error = errorDark,
-        onError = onErrorDark,
-        background = backgroundDark,
-        onBackground = onBackgroundDark,
-        messageLikeBg = message_like_bg_dark,
-        messageCommentBg = message_comment_bg_dark,
-        messageDefaultBg = message_default_bg_dark,
-        billingIncome = billing_income_dark,
-        billingExpense = billing_expense_dark
-    )
-}
+        fun defaultDark() = ColorSet(
+            primary = primaryDark,
+            onPrimary = onPrimaryDark,
+            primaryContainer = primaryContainerDark,
+            onPrimaryContainer = onPrimaryContainerDark,
+            secondary = secondaryDark,
+            onSecondary = onSecondaryDark,
+            secondaryContainer = secondaryContainerDark,
+            onSecondaryContainer = onSecondaryContainerDark,
+            surface = surfaceDark,
+            onSurface = onSurfaceDark,
+            surfaceVariant = surfaceVariantDark,
+            onSurfaceVariant = onSurfaceVariantDark,
+            outline = outlineDark,
+            error = errorDark,
+            onError = onErrorDark,
+            background = backgroundDark,
+            onBackground = onBackgroundDark,
+            messageLikeBg = message_like_bg_dark,
+            messageCommentBg = message_comment_bg_dark,
+            messageDefaultBg = message_default_bg_dark,
+            billingIncome = billing_income_dark,
+            billingExpense = billing_expense_dark
+        )
+    }
 }
 
 object ThemeColorStore {
-    // 直接使用默认函数创建默认颜色集
     val DEFAULT_COLORS = CustomColorSet(
         lightSet = ColorSet.defaultLight(),
         darkSet = ColorSet.defaultDark()
@@ -170,9 +168,7 @@ object ThemeColorStore {
     private val FONT_SIZE_KEY = floatPreferencesKey("font_size")
     private val DRAWER_HEADER_LIGHT_BG_URI_KEY = stringPreferencesKey("drawer_header_light_bg_uri")
     private val DRAWER_HEADER_DARK_BG_URI_KEY = stringPreferencesKey("drawer_header_dark_bg_uri")
-
     private val GLOBAL_BACKGROUND_URI_KEY = stringPreferencesKey("global_background_uri")
-
 
     suspend fun saveGlobalBackgroundUri(context: Context, uri: String?) {
         context.themeSettingsDataStore.edit { preferences ->
@@ -196,35 +192,11 @@ object ThemeColorStore {
         }
     }
 
-    // 注意：load 方法保持 runBlocking，因为它们需要在 Activity 初始化（非 suspend 上下文）时同步加载
-    // ThemeColorStore.kt
-
     fun loadColors(context: Context): CustomColorSet {
         return runBlocking {
             val preferences = context.themeSettingsDataStore.data.first()
-
-            val lightSet: ColorSet = try {
-                // 优先尝试从图片主题加载
-                preferences[IMAGE_THEME_LIGHT_URI_KEY]?.let { uriString ->
-                    val uri = Uri.parse(uriString)
-                    val bitmap = ColorUtils.getBitmapFromUri(context, uri)
-                    ColorUtils.extractColorsFromBitmap(bitmap)
-                } ?: loadColorSet(preferences, LIGHT_COLOR_KEYS, DEFAULT_COLORS.lightSet)
-            } catch (e: Exception) {
-                // 如果图片主题加载失败，回退到手动设置的颜色
-                loadColorSet(preferences, LIGHT_COLOR_KEYS, DEFAULT_COLORS.lightSet)
-            }
-
-            val darkSet: ColorSet = try {
-                preferences[IMAGE_THEME_DARK_URI_KEY]?.let { uriString ->
-                    val uri = Uri.parse(uriString)
-                    val bitmap = ColorUtils.getBitmapFromUri(context, uri)
-                    ColorUtils.extractColorsFromBitmap(bitmap)
-                } ?: loadColorSet(preferences, DARK_COLOR_KEYS, DEFAULT_COLORS.darkSet)
-            } catch (e: Exception) {
-                loadColorSet(preferences, DARK_COLOR_KEYS, DEFAULT_COLORS.darkSet)
-            }
-
+            val lightSet = loadColorSet(preferences, LIGHT_COLOR_KEYS, DEFAULT_COLORS.lightSet)
+            val darkSet = loadColorSet(preferences, DARK_COLOR_KEYS, DEFAULT_COLORS.darkSet)
             CustomColorSet(lightSet, darkSet)
         }
     }
@@ -299,50 +271,14 @@ object ThemeColorStore {
         return context.themeSettingsDataStore.data.map { it[DRAWER_HEADER_DARK_BG_URI_KEY] }
     }
 
-    private val IMAGE_THEME_LIGHT_URI_KEY = stringPreferencesKey("image_theme_light_uri")
-    private val IMAGE_THEME_DARK_URI_KEY = stringPreferencesKey("image_theme_dark_uri")
-
-    suspend fun saveImageThemeLightUri(context: Context, uri: String?) {
-        context.themeSettingsDataStore.edit { preferences ->
-            if (uri != null) preferences[IMAGE_THEME_LIGHT_URI_KEY] = uri
-            else preferences.remove(IMAGE_THEME_LIGHT_URI_KEY)
-        }
-    }
-
-    fun getImageThemeLightUriFlow(context: Context): Flow<String?> {
-        return context.themeSettingsDataStore.data.map { it[IMAGE_THEME_LIGHT_URI_KEY] }
-    }
-
-    suspend fun saveImageThemeDarkUri(context: Context, uri: String?) {
-        context.themeSettingsDataStore.edit { preferences ->
-            if (uri != null) preferences[IMAGE_THEME_DARK_URI_KEY] = uri
-            else preferences.remove(IMAGE_THEME_DARK_URI_KEY)
-        }
-    }
-
-    fun getImageThemeDarkUriFlow(context: Context): Flow<String?> {
-        return context.themeSettingsDataStore.data.map { it[IMAGE_THEME_DARK_URI_KEY] }
-    }
-
-    // 是否启用自定义 DPI 的 DataStore 键
     private val CUSTOM_DPI_ENABLED_KEY = booleanPreferencesKey("custom_dpi_enabled")
-
-    // 圆屏相关 DataStore 键
     private val ROUND_SCREEN_ENABLED_KEY = booleanPreferencesKey("round_screen_enabled")
     private val ROUND_SCREEN_LEFT_PADDING_KEY = floatPreferencesKey("round_screen_left_padding")
     private val ROUND_SCREEN_TOP_PADDING_KEY = floatPreferencesKey("round_screen_top_padding")
     private val ROUND_SCREEN_RIGHT_PADDING_KEY = floatPreferencesKey("round_screen_right_padding")
     private val ROUND_SCREEN_BOTTOM_PADDING_KEY = floatPreferencesKey("round_screen_bottom_padding")
 
-    // 保存圆屏 padding
-    suspend fun saveRoundScreenPaddings(
-        context: Context,
-        enabled: Boolean,
-        left: Float,
-        top: Float,
-        right: Float,
-        bottom: Float
-    ) {
+    suspend fun saveRoundScreenPaddings(context: Context, enabled: Boolean, left: Float, top: Float, right: Float, bottom: Float) {
         context.themeSettingsDataStore.edit { prefs ->
             prefs[ROUND_SCREEN_ENABLED_KEY] = enabled
             prefs[ROUND_SCREEN_LEFT_PADDING_KEY] = left
@@ -352,14 +288,7 @@ object ThemeColorStore {
         }
     }
 
-    // 加载圆屏 padding（同步，用于初始化）
-    data class RoundScreenPaddings(
-        val enabled: Boolean,
-        val left: Float,
-        val top: Float,
-        val right: Float,
-        val bottom: Float
-    )
+    data class RoundScreenPaddings(val enabled: Boolean, val left: Float, val top: Float, val right: Float, val bottom: Float)
 
     fun loadRoundScreenPaddings(context: Context): RoundScreenPaddings {
         return runBlocking {
@@ -374,7 +303,6 @@ object ThemeColorStore {
         }
     }
 
-    // Flow：实时获取 RoundScreenPaddings
     fun getRoundScreenPaddingFlow(context: Context): Flow<RoundScreenPaddings> {
         return context.themeSettingsDataStore.data.map { prefs ->
             RoundScreenPaddings(
@@ -387,29 +315,10 @@ object ThemeColorStore {
         }
     }
 
-    // 重置函数（新增到 reset 逻辑中）
-    suspend fun resetRoundScreenPaddings(context: Context) {
-        context.themeSettingsDataStore.edit { prefs ->
-            prefs.remove(ROUND_SCREEN_ENABLED_KEY)
-            prefs.remove(ROUND_SCREEN_LEFT_PADDING_KEY)
-            prefs.remove(ROUND_SCREEN_TOP_PADDING_KEY)
-            prefs.remove(ROUND_SCREEN_RIGHT_PADDING_KEY)
-            prefs.remove(ROUND_SCREEN_BOTTOM_PADDING_KEY)
-        }
-    }
-
-
-    // 保存是否启用自定义 DPI 的偏好
     suspend fun saveCustomDpiEnabled(context: Context, enabled: Boolean) {
         context.themeSettingsDataStore.edit { it[CUSTOM_DPI_ENABLED_KEY] = enabled }
     }
 
-    // 获取是否启用自定义 DPI 的 Flow
-    fun getCustomDpiEnabledFlow(context: Context): Flow<Boolean> {
-        return context.themeSettingsDataStore.data.map { it[CUSTOM_DPI_ENABLED_KEY] ?: false }
-    }
-
-    // 同步加载是否启用自定义 DPI 的偏好
     fun loadCustomDpiEnabled(context: Context): Boolean {
         return runBlocking { context.themeSettingsDataStore.data.first()[CUSTOM_DPI_ENABLED_KEY] ?: false }
     }

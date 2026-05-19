@@ -1,11 +1,3 @@
-//Copyright (C) 2025 Voltual
-// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
-//（或任意更新的版本）的条款重新分发和/或修改它。
-//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
-//
-// 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.core.ui.theme
 
 import android.app.Activity
@@ -44,8 +36,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
-import me.voltual.pyrolysis.core.ui.theme.CustomColorSet
-import me.voltual.pyrolysis.core.ui.theme.ThemeManager
 import me.voltual.pyrolysis.restartMainActivity 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,89 +55,39 @@ fun ThemeCustomizeScreen(
 
     var dpi by remember { mutableStateOf(ThemeColorStore.loadDpi(context)) }
     var fontSize by remember { mutableStateOf(ThemeColorStore.loadFontSize(context)) }
-
-    // 是否启用自定义 DPI 的状态
     var customDpiEnabled by remember { mutableStateOf(ThemeColorStore.loadCustomDpiEnabled(context)) }
     
     val roundScreenPaddings = remember { ThemeColorStore.loadRoundScreenPaddings(context) }
-var roundScreenEnabled by remember { mutableStateOf(roundScreenPaddings.enabled) }
-var roundLeft by remember { mutableStateOf(roundScreenPaddings.left) }
-var roundTop by remember { mutableStateOf(roundScreenPaddings.top) }
-var roundRight by remember { mutableStateOf(roundScreenPaddings.right) }
-var roundBottom by remember { mutableStateOf(roundScreenPaddings.bottom) }
+    var roundScreenEnabled by remember { mutableStateOf(roundScreenPaddings.enabled) }
+    var roundLeft by remember { mutableStateOf(roundScreenPaddings.left) }
+    var roundTop by remember { mutableStateOf(roundScreenPaddings.top) }
+    var roundRight by remember { mutableStateOf(roundScreenPaddings.right) }
+    var roundBottom by remember { mutableStateOf(roundScreenPaddings.bottom) }
 
-
-    // 翻译状态
     var translate by remember { mutableStateOf(false) }
 
-    // 分离各种图片选择器启动器
     val globalBackgroundPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let {
             context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            scope.launch {
-                ThemeColorStore.saveGlobalBackgroundUri(context, it.toString())
-            }
+            scope.launch { ThemeColorStore.saveGlobalBackgroundUri(context, it.toString()) }
         }
     }
 
-    // 日间模式图片主题选择器
-    val lightImageThemePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        uri?.let {
-            context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            scope.launch {
-                ThemeColorStore.saveImageThemeLightUri(context, it.toString())
-                // 提取颜色并更新 lightColors
-                val bitmap = ColorUtils.getBitmapFromUri(context, it)
-                val colorSet = ColorUtils.extractColorsFromBitmap(bitmap)
-                colorSet?.let { newColors ->
-                    lightColors = newColors
-                }
-            }
-        }
-    }
-
-    // 夜间模式图片主题选择器
-    val darkImageThemePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        uri?.let {
-            context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            scope.launch {
-                ThemeColorStore.saveImageThemeDarkUri(context, it.toString())
-                // 提取颜色并更新 darkColors
-                val bitmap = ColorUtils.getBitmapFromUri(context, it)
-                val colorSet = ColorUtils.extractColorsFromBitmap(bitmap)
-                colorSet?.let { newColors ->
-                    darkColors = newColors
-                }
-            }
-        }
-    }
-
-    // 日间模式侧边栏背景选择器
     val lightDrawerBgPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let {
             context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            scope.launch {
-                ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, it.toString())
-            }
+            scope.launch { ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, it.toString()) }
         }
     }
 
-    // 夜间模式侧边栏背景选择器
     val darkDrawerBgPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let {
             context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            scope.launch {
-                ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, it.toString())
-            }
+            scope.launch { ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, it.toString()) }
         }
     }
 
-    // 状态收集 - 使用正确的 Flow
     val globalBackgroundUri by ThemeColorStore.getGlobalBackgroundUriFlow(context).collectAsState(initial = null)
-
-    val lightImageThemeUri by ThemeColorStore.getImageThemeLightUriFlow(context).collectAsState(initial = null)
-    val darkImageThemeUri by ThemeColorStore.getImageThemeDarkUriFlow(context).collectAsState(initial = null)
-
     val lightDrawerBgUri by ThemeColorStore.getDrawerHeaderLightBackgroundUriFlow(context).collectAsState(initial = null)
     val darkDrawerBgUri by ThemeColorStore.getDrawerHeaderDarkBackgroundUriFlow(context).collectAsState(initial = null)
 
@@ -169,280 +109,104 @@ var roundBottom by remember { mutableStateOf(roundScreenPaddings.bottom) }
                 Button(
                     onClick = {
                         scope.launch {
-                            // 重置所有颜色
                             lightColors = ThemeColorStore.DEFAULT_COLORS.lightSet
                             darkColors = ThemeColorStore.DEFAULT_COLORS.darkSet
                             dpi = 1.0f
                             fontSize = 1.0f
-                            customDpiEnabled = false // 重置为不启用自定义 DPI
-
-                            // 清除所有图片 URI
+                            customDpiEnabled = false
                             ThemeColorStore.saveGlobalBackgroundUri(context, null)
-                            ThemeColorStore.saveImageThemeLightUri(context, null)
-                            ThemeColorStore.saveImageThemeDarkUri(context, null)
                             ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, null)
                             ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, null)
                         }
                         showResetDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    }
                 ) { Text("恢复") }
             },
             dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text("取消") } }
         )
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
+    Box(modifier = modifier.fillMaxSize().padding(16.dp)) {
+        Column(modifier = Modifier.fillMaxSize()) {
             if (showSavedMessage) {
                 Text(
                     text = "主题已保存！正在应用...",
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     textAlign = TextAlign.Center
                 )
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically // 垂直居中对齐
-            ) {
-                IconButton(onClick = { showResetDialog = true }) {
-                    Icon(Icons.Filled.Refresh, "恢复默认设置")
-                }
-
-                // 翻译按钮
-                IconButton(onClick = { translate = !translate }) {
-                    Icon(Icons.Filled.Language, "翻译")
-                }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { showResetDialog = true }) { Icon(Icons.Filled.Refresh, "恢复默认设置") }
+                IconButton(onClick = { translate = !translate }) { Icon(Icons.Filled.Language, "翻译") }
             }
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                // 全局背景设置（独立于主题模式）
+            LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 80.dp)) {
                 item {
                     GlobalBackgroundEditor(
                         title = "主页背景图片",
                         backgroundUri = globalBackgroundUri,
                         onSelectImage = { globalBackgroundPickerLauncher.launch(arrayOf("image/*")) },
-                        onReset = {
-                            scope.launch {
-                                ThemeColorStore.saveGlobalBackgroundUri(context, null)
-                            }
-                        }
+                        onReset = { scope.launch { ThemeColorStore.saveGlobalBackgroundUri(context, null) } }
                     )
                 }
 
-                item {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-                }
+                item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
 
-                item {
-                    Text(
-                        text = "显示设置",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                }
-                item {
-    SwitchWithText(
-        text = "启用圆屏适配",
-        checked = roundScreenEnabled,
-        onCheckedChange = { roundScreenEnabled = it },
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-    )
-}
-item {
-    OutlinedTextField(
-        value = roundLeft.toString(),
-        onValueChange = { roundLeft = it.toFloatOrNull() ?: roundLeft },
-        label = { Text("左内边距 (dp)") },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        enabled = roundScreenEnabled
-    )
-}
-item {
-    OutlinedTextField(
-        value = roundTop.toString(),
-        onValueChange = { roundTop = it.toFloatOrNull() ?: roundTop },
-        label = { Text("上内边距 (dp)") },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        enabled = roundScreenEnabled
-    )
-}
-item {
-    OutlinedTextField(
-        value = roundRight.toString(),
-        onValueChange = { roundRight = it.toFloatOrNull() ?: roundRight },
-        label = { Text("右内边距 (dp)") },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        enabled = roundScreenEnabled
-    )
-}
-item {
-    OutlinedTextField(
-        value = roundBottom.toString(),
-        onValueChange = { roundBottom = it.toFloatOrNull() ?: roundBottom },
-        label = { Text("下内边距 (dp)") },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        enabled = roundScreenEnabled
-    )
-}
-                item {
-                    SwitchWithText(
-                        text = "启用自定义屏幕密度和字体大小",
-                        checked = customDpiEnabled,
-                        onCheckedChange = { customDpiEnabled = it },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                }
-                item {
-                    OutlinedTextField(
-                        value = dpi.toString(),
-                        onValueChange = { dpi = it.toFloatOrNull() ?: dpi },
-                        label = { Text("屏幕密度 (DPI 缩放)") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        enabled = customDpiEnabled // 只有在启用自定义 DPI 时才可编辑
-                    )
-                }
-                item {
-                    OutlinedTextField(
-                        value = fontSize.toString(),
-                        onValueChange = { fontSize = it.toFloatOrNull() ?: fontSize },
-                        label = { Text("字体大小 (倍数)") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        enabled = customDpiEnabled // 只有在启用自定义 DPI 时才可编辑
-                    )
-                }
+                item { Text(text = "显示设置", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
+                item { SwitchWithText(text = "启用圆屏适配", checked = roundScreenEnabled, onCheckedChange = { roundScreenEnabled = it }, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
+                item { OutlinedTextField(value = roundLeft.toString(), onValueChange = { roundLeft = it.toFloatOrNull() ?: roundLeft }, label = { Text("左内边距 (dp)") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), enabled = roundScreenEnabled) }
+                item { OutlinedTextField(value = roundTop.toString(), onValueChange = { roundTop = it.toFloatOrNull() ?: roundTop }, label = { Text("上内边距 (dp)") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), enabled = roundScreenEnabled) }
+                item { OutlinedTextField(value = roundRight.toString(), onValueChange = { roundRight = it.toFloatOrNull() ?: roundRight }, label = { Text("右内边距 (dp)") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), enabled = roundScreenEnabled) }
+                item { OutlinedTextField(value = roundBottom.toString(), onValueChange = { roundBottom = it.toFloatOrNull() ?: roundBottom }, label = { Text("下内边距 (dp)") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), enabled = roundScreenEnabled) }
+                
+                item { SwitchWithText(text = "启用自定义屏幕密度和字体大小", checked = customDpiEnabled, onCheckedChange = { customDpiEnabled = it }, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
+                item { OutlinedTextField(value = dpi.toString(), onValueChange = { dpi = it.toFloatOrNull() ?: dpi }, label = { Text("屏幕密度 (DPI 缩放)") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), enabled = customDpiEnabled) }
+                item { OutlinedTextField(value = fontSize.toString(), onValueChange = { fontSize = it.toFloatOrNull() ?: fontSize }, label = { Text("字体大小 (倍数)") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), enabled = customDpiEnabled) }
+                
                 item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
 
                 item {
-                    // 使用 PrimaryTabRow 替代弃用的 TabRow
-                    PrimaryTabRow(
-                        selectedTabIndex = selectedTab,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.primary
-                    ) {
+                    PrimaryTabRow(selectedTabIndex = selectedTab, modifier = Modifier.padding(horizontal = 16.dp)) {
                         Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("日间模式") })
                         Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("夜间模式") })
                     }
                 }
 
                 when (selectedTab) {
-                    0 -> { // 日间模式
-                        item {
-                            ImageThemeEditor(
-                                title = "图片主题 (日间)",
-                                description = "从此图片提取颜色生成日间主题",
-                                imageUri = lightImageThemeUri,
-                                onSelectImage = { lightImageThemePickerLauncher.launch(arrayOf("image/*")) },
-                                onReset = {
-                                    scope.launch {
-                                        ThemeColorStore.saveImageThemeLightUri(context, null)
-                                        lightColors = ThemeColorStore.DEFAULT_COLORS.lightSet
-                                    }
-                                }
-                            )
-                        }
-                        item {
-                            HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
-                        }
+                    0 -> {
                         item {
                             DrawerBackgroundEditor(
                                 title = "侧边栏背景 (日间)",
                                 description = "仅修改侧边栏头部背景图片",
                                 backgroundUri = lightDrawerBgUri,
                                 onSelectImage = { lightDrawerBgPickerLauncher.launch(arrayOf("image/*")) },
-                                onReset = {
-                                    scope.launch {
-                                        ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, null)
-                                    }
-                                }
+                                onReset = { scope.launch { ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, null) } }
                             )
                         }
-                        item {
-                            HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
-                        }
+                        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) }
                         items(lightColors.toList(), key = { "light_" + it.first }) { (name, color) ->
                             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                ColorEditItem(
-                                    colorName = name,
-                                    currentColor = color,
-                                    onColorChange = { newColor ->
-                                        lightColors = lightColors.copyWith(
-                                            name,
-                                            newColor
-                                        )
-                                    },
-                                    translate = translate // 传递 translate 状态
-                                )
+                                ColorEditItem(colorName = name, currentColor = color, onColorChange = { newColor -> lightColors = lightColors.copyWith(name, newColor) }, translate = translate)
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             }
                         }
                     }
-                    1 -> { // 夜间模式
-                        item {
-                            ImageThemeEditor(
-                                title = "图片主题 (夜间)",
-                                description = "从此图片提取颜色生成夜间主题",
-                                imageUri = darkImageThemeUri,
-                                onSelectImage = { darkImageThemePickerLauncher.launch(arrayOf("image/*")) },
-                                onReset = {
-                                    scope.launch {
-                                        ThemeColorStore.saveImageThemeDarkUri(context, null)
-                                        darkColors = ThemeColorStore.DEFAULT_COLORS.darkSet
-                                    }
-                                }
-                            )
-                        }
-                        item {
-                            HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
-                        }
+                    1 -> {
                         item {
                             DrawerBackgroundEditor(
                                 title = "侧边栏背景 (夜间)",
                                 description = "仅修改侧边栏头部背景图片",
                                 backgroundUri = darkDrawerBgUri,
                                 onSelectImage = { darkDrawerBgPickerLauncher.launch(arrayOf("image/*")) },
-                                onReset = {
-                                    scope.launch {
-                                        ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, null)
-                                    }
-                                }
+                                onReset = { scope.launch { ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, null) } }
                             )
                         }
-                        item {
-                            HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
-                        }
+                        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) }
                         items(darkColors.toList(), key = { "dark_" + it.first }) { (name, color) ->
                             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                ColorEditItem(
-                                    colorName = name,
-                                    currentColor = color,
-                                    onColorChange = { newColor ->
-                                        darkColors = darkColors.copyWith(
-                                            name,
-                                            newColor
-                                        )
-                                    },
-                                    translate = translate // 传递 translate 状态
-                                )
+                                ColorEditItem(colorName = name, currentColor = color, onColorChange = { newColor -> darkColors = darkColors.copyWith(name, newColor) }, translate = translate)
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             }
                         }
@@ -460,79 +224,17 @@ item {
                     fontScale = fontSize,
                     customDpiEnabled = customDpiEnabled,
                     roundScreenEnabled = roundScreenEnabled,  
-    roundLeft = roundLeft,                  
-    roundTop = roundTop,                    
-    roundRight = roundRight,
-    roundBottom = roundBottom                             
+                    roundLeft = roundLeft,                  
+                    roundTop = roundTop,                    
+                    roundRight = roundRight,
+                    roundBottom = roundBottom                             
                 )
                 showSavedMessage = true
             },
             icon = { Icon(Icons.Filled.Save, "保存") },
             text = { Text("保存并应用") },
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp)
         )
-    }
-}
-
-// 全局背景图片编辑器
-@Composable
-private fun GlobalBackgroundEditor(
-    title: String,
-    backgroundUri: String?,
-    onSelectImage: () -> Unit,
-    onReset: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            if (backgroundUri != null) {
-                Image(
-                    painter = rememberAsyncImagePainter(model = backgroundUri),
-                    contentDescription = "Global Background Preview",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Text(
-                        text = "未选择图片",
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(onClick = onSelectImage, modifier = Modifier.weight(1f)) {
-                Text("选择图片")
-            }
-            OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) {
-                Text("恢复默认")
-            }
-        }
     }
 }
 
@@ -618,71 +320,6 @@ private fun DrawerBackgroundEditor(
                 modifier = Modifier.fillMaxSize(),
                 backgroundUri = backgroundUri
             )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(onClick = onSelectImage, modifier = Modifier.weight(1f)) {
-                Text("选择图片")
-            }
-            OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) {
-                Text("恢复默认")
-            }
-        }
-    }
-}
-
-// 图片主题编辑器
-@Composable
-private fun ImageThemeEditor(
-    title: String,
-    description: String,
-    imageUri: String?,
-    onSelectImage: () -> Unit,
-    onReset: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-        )
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            if (imageUri != null) {
-                Image(
-                    painter = rememberAsyncImagePainter(model = imageUri),
-                    contentDescription = "Image Theme Preview",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Text(
-                        text = "未选择图片",
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
         }
         Row(
             modifier = Modifier
