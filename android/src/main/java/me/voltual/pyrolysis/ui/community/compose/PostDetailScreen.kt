@@ -56,6 +56,7 @@ import com.github.dhaval2404.imagepicker.ImagePicker
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
+import io.ktor.client.statement.* // 修复：必须导入以支持 HttpResponse 和 status
 import io.ktor.http.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.CoroutineScope
@@ -453,16 +454,12 @@ fun CommentDialog(
     val focusRequester = remember { FocusRequester() }
     val coroutineScope = rememberCoroutineScope()
 
-    /**
-     * 去 Java 化后的图片上传逻辑
-     */
     fun uploadImage(uri: Uri, onSuccess: (String) -> Unit) {
         showProgressDialog = true
         progressMessage = "上传图片中..."
 
         coroutineScope.launch(Dispatchers.IO) {
             runCatching {
-                // 1. 使用 Okio 将 URI 写入临时 Path
                 val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() 
                     ?: throw Exception("无法读取图片")
                 
@@ -473,13 +470,11 @@ fun CommentDialog(
                     writeAll(source)
                 }
 
-                // 2. 发起 Ktor 请求，使用 writer 模式流式传输
                 val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
                     setBody(
                         MultiPartFormDataContent(
                             formData {
                                 append("file", ChannelProvider {
-                                    // 在此作用域内调用 writer
                                     coroutineScope.writer(Dispatchers.IO) {
                                         fileSystem.source(tempPath).use { s ->
                                             val buffer = Buffer()

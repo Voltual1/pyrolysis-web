@@ -27,46 +27,7 @@ import kotlin.time.Clock
 
 private val Context.dataStore by preferencesDataStore(name = "payment_requests")
 
-/**
- * 支付类型密封类
- */
-enum class PaymentType {
-    APP_PURCHASE,
-    POST_REWARD
-}
-
-/**
- * 支付状态数据对象
- */
-sealed class PaymentStatus {
-    data object INITIAL : PaymentStatus()
-    data object PROCESSING : PaymentStatus()
-    data object SUCCESS : PaymentStatus()
-    data object FAILED : PaymentStatus()
-}
-
-/**
- * 支付信息模型
- */
-data class PaymentInfo(
-    val type: PaymentType,
-    val appId: Long = 0L,
-    val appName: String = "",
-    val versionId: Long = 0L,
-    val price: Int = 0,
-    val postId: Long = 0L,
-    val postTitle: String = "",
-    val locked: Boolean = true,
-    val iconUrl: String = "",
-    val previewContent: String = "",
-    val authorName: String = "",
-    val authorAvatar: String = "",
-    val postTime: String = ""
-)
-
-/**
- * 统一的下载事件
- */
+// 定义一个简单的包装类，传递下载所需信息
 data class DownloadEvent(
     val url: String,
     val fileName: String,
