@@ -493,6 +493,63 @@ fun HsvColorPickerDialog(
 }
 
 @Composable
+private fun GlobalBackgroundEditor(
+    title: String,
+    backgroundUri: String?,
+    onSelectImage: () -> Unit,
+    onReset: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            if (backgroundUri != null) {
+                Image(
+                    painter = rememberAsyncImagePainter(model = backgroundUri),
+                    contentDescription = "Global Background Preview",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Text(
+                        text = "未选择图片",
+                        modifier = Modifier.align(Alignment.Center),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(onClick = onSelectImage, modifier = Modifier.weight(1f)) {
+                Text("选择图片")
+            }
+            OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) {
+                Text("恢复默认")
+            }
+        }
+    }
+}
+
+@Composable
 private fun DrawerHeaderPreview(modifier: Modifier = Modifier, backgroundUri: String?) {
     Box(
         modifier = modifier
