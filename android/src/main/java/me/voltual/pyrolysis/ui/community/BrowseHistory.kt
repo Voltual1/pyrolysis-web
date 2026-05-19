@@ -32,10 +32,12 @@ data class BrowseHistory(
         // 使用 TimeZone.currentSystemDefault()
         @OptIn(kotlin.time.ExperimentalTime::class) val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
         
+        //'val dayOfMonth: Int is deprecated. Use the 'day' property instead.     
+        //val monthNumber: Int' is deprecated. Use the 'month' property instead.
         return with(localDateTime) {
             val yearStr = year.toString()
-            val monthStr = monthNumber.toString().padStart(2, '0')
-            val dayStr = dayOfMonth.toString().padStart(2, '0')
+            val monthStr = month.toString().padStart(2, '0')
+            val dayStr = day.toString().padStart(2, '0')
             val hourStr = hour.toString().padStart(2, '0')
             val minuteStr = minute.toString().padStart(2, '0')
             
