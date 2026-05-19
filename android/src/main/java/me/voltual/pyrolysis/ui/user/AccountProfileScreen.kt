@@ -26,8 +26,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.rememberAsyncImagePainter
-import io.github.vinceglb.filekit.core.PlatformFile
-import io.github.vinceglb.filekit.core.FileKitType
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileKitPickerLauncher
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore

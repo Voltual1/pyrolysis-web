@@ -10,7 +10,7 @@ package me.voltual.pyrolysis.ui.user
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.vinceglb.filekit.core.PlatformFile
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
