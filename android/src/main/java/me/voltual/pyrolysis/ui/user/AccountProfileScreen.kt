@@ -9,6 +9,7 @@
 package me.voltual.pyrolysis.ui.user
 
 import android.app.Activity
+import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,9 +19,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,16 +32,21 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import me.voltual.pyrolysis.AppStore
-import me.voltual.pyrolysis.data.DeviceConfig
-import me.voltual.pyrolysis.data.unified.UpdateUserProfileParams
-import me.voltual.pyrolysis.core.ui.components.MarkDownText // 导入 MarkDownText
-import me.voltual.pyrolysis.core.ui.theme.* import me.voltual.pyrolysis.core.utils.FileUtil
 import coil3.compose.rememberAsyncImagePainter
 import com.github.dhaval2404.imagepicker.ImagePicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.File
+import me.voltual.pyrolysis.AppStore
+import me.voltual.pyrolysis.core.ui.components.MarkDownText
+import me.voltual.pyrolysis.core.ui.theme.*
+import me.voltual.pyrolysis.data.DeviceConfig
+import me.voltual.pyrolysis.data.unified.UpdateUserProfileParams
+import okio.FileSystem
+import okio.Path
+import okio.Path.Companion.toPath
+import okio.buffer
+import okio.source
+import kotlin.time.Clock
 
 @Composable
 fun AccountProfileScreen(
@@ -62,7 +68,6 @@ fun AccountProfileScreen(
     var alias by remember { mutableStateOf("") }
     
     var showImportDialog by remember { mutableStateOf(false) }
-    // 新增：Guise 信息弹窗状态
     var showGuiseInfoDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.userDetail, state.currentDevice) {
@@ -80,7 +85,6 @@ fun AccountProfileScreen(
         viewModel.loadUserProfile(store)
     }
 
-    // Guise 信息弹窗
     if (showGuiseInfoDialog) {
         GuiseInfoDialog(onDismiss = { showGuiseInfoDialog = false })
     }
@@ -110,11 +114,14 @@ fun AccountProfileScreen(
                 currentUrl = state.userDetail?.avatarUrl,
                 onImageSelected = { uri ->
                     coroutineScope.launch(Dispatchers.IO) {
-                        val path = FileUtil.getRealPathFromURI(context, uri)
-                        if (path != null) {
-                            viewModel.uploadAvatar(store, File(path)) { _, msg ->
+                        // 使用 Okio 替代 FileUtil
+                        val tempPath = uriToTempPath(context, uri)
+                        if (tempPath != null) {
+                            viewModel.uploadAvatar(store, tempPath) { _, msg ->
                                 coroutineScope.launch { snackbarHostState.showSnackbar(msg) }
                             }
+                        } else {
+                            coroutineScope.launch { snackbarHostState.showSnackbar("无法处理图片文件") }
                         }
                     }
                 }
@@ -138,7 +145,7 @@ fun AccountProfileScreen(
                 currentDevice = state.currentDevice,
                 onDeviceSelect = { viewModel.switchDevice(it) },
                 onImportClick = { showImportDialog = true },
-                onHelpClick = { showGuiseInfoDialog = true } // 传递点击事件
+                onHelpClick = { showGuiseInfoDialog = true }
             )
 
             Button(
@@ -171,6 +178,29 @@ fun AccountProfileScreen(
     }
 }
 
+/**
+ * 纯 Okio 实现：将 Android Uri 转换为临时 Path
+ */
+private fun uriToTempPath(context: Context, uri: Uri): Path? {
+    return try {
+        val fileSystem = FileSystem.SYSTEM
+        // 利用 Okio 的 source() 扩展函数
+        val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() ?: return null
+        
+        @OptIn(kotlin.time.ExperimentalTime::class)
+        val now = Clock.System.now().toEpochMilliseconds()
+        val cacheDir = context.cacheDir.absolutePath.toPath()
+        val tempPath = cacheDir / "avatar_upload_$now.jpg"
+        
+        fileSystem.write(tempPath) {
+            writeAll(source)
+        }
+        tempPath
+    } catch (e: Exception) {
+        null
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileFields(
@@ -189,7 +219,7 @@ fun ProfileFields(
     currentDevice: DeviceConfig,
     onDeviceSelect: (DeviceConfig) -> Unit,
     onImportClick: () -> Unit,
-    onHelpClick: () -> Unit // 新增回调
+    onHelpClick: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -228,7 +258,6 @@ fun ProfileFields(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("设备伪装库（仅本地）", style = MaterialTheme.typography.titleMedium)
-                // 添加问号按钮
                 IconButton(onClick = onHelpClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.HelpOutline,
@@ -366,7 +395,10 @@ fun ImportConfigDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
             Button(onClick = { onConfirm(text) }, enabled = text.isNotBlank()) { Text("导入") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = { onDismiss(text) }) { // 修正：onDismiss 逻辑
+                onDismiss()
+                Text("取消")
+            }
         }
     )
 }
