@@ -25,8 +25,8 @@ android {
         applicationId = "me.voltual.pyrolysis"
         minSdk = 24
         targetSdk = 36
-        versionCode = 510
-        versionName = "22.0"
+        versionCode = 511
+        versionName = "22.1"
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         resourceConfigurations += listOf("zh")
@@ -143,7 +143,7 @@ dependencies {
     // 播放器与 UI
     implementation(libs.ijkplayer)
     implementation(project(":DanmakuFlameMaster"))
-    implementation(libs.androidx.palette)
+//    implementation(libs.androidx.palette)
     implementation(libs.markdown)
 
     // 存储
