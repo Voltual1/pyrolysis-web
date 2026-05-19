@@ -12,6 +12,7 @@ package me.voltual.pyrolysis.ui.community
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlin.time.Clock
+import kotlin.time.Clock.System
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -21,14 +22,13 @@ data class BrowseHistory(
     @PrimaryKey val postId: Long,
     val title: String,
     val previewContent: String,
-    // 显式指定 kotlinx.datetime.Clock.System 避免与 java.lang.System 冲突
-    val timestamp: Long = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+    val timestamp: Long = kotlin.time.Clock.System.now().toEpochMilliseconds()
 ) {
     /**
      * 格式化时间字符串
      */
     fun formattedTime(): String {
-        val instant = Instant.fromEpochMilliseconds(timestamp)
+        @OptIn(kotlin.time.ExperimentalTime::class) val instant = Instant.fromEpochMilliseconds(timestamp)
         // 使用 TimeZone.currentSystemDefault()
         @OptIn(kotlin.time.ExperimentalTime::class) val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
         
