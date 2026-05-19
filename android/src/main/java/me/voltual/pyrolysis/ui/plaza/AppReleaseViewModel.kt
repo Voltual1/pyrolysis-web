@@ -6,6 +6,7 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+@file:OptIn(kotlin.time.ExperimentalTime::class)
 package me.voltual.pyrolysis.ui.plaza
 
 import android.app.Application
@@ -36,7 +37,7 @@ import okio.buffer
 import okio.source
 import kotlin.time.Clock
 import kotlin.time.Clock.System
-//注意kotlinx.datetime.Clock.System，kotlinx.datetime.Clock，kotlinx.datetime.Instant在kotlin2.1都被收编进标准库了
+//注意kotlinx.datetime.Clock.System，kotlinx.datetime.Clock，kotlinx.datetime.Instant等在kotlin2.1都被收编进标准库了
 
 // 小趣空间分类模型
 data class AppCategory(
