@@ -30,8 +30,7 @@ data class BrowseHistory(
     fun formattedTime(): String {
         val instant = Instant.fromEpochMilliseconds(timestamp)
         // 使用 TimeZone.currentSystemDefault()
-        @file:OptIn(kotlin.time.ExperimentalTime::class)'
-        val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+        @kotlin.time.ExperimentalTime val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
         
         return with(localDateTime) {
             val yearStr = year.toString()
