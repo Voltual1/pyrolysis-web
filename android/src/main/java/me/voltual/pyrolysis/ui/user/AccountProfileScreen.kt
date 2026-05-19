@@ -23,12 +23,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.rememberAsyncImagePainter
-import io.github.vinceglb.filekit.dialogs.compose.rememberFileKitPickerLauncher
-import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.core.ui.components.MarkDownText
@@ -99,8 +100,8 @@ fun AccountProfileScreen(
             
             AvatarSection(
                 currentUrl = state.userDetail?.avatarUrl,
-                onImageSelected = { platformFile ->
-                    viewModel.uploadAvatar(store, platformFile) { _, msg ->
+                onImageSelected = { file ->
+                    viewModel.uploadAvatar(store, file) { _, msg ->
                         coroutineScope.launch { snackbarHostState.showSnackbar(msg) }
                     }
                 }
@@ -361,12 +362,13 @@ fun AvatarSection(
     currentUrl: String?,
     onImageSelected: (PlatformFile) -> Unit
 ) {
-    val launcher = rememberFileKitPickerLauncher(
+    // 使用 FileKit 提供的 Compose 启动器
+    val launcher = rememberFilePickerLauncher(
         type = FileKitType.Image,
-        title = "选择头像"
-    ) { platformFile: PlatformFile? ->
-        platformFile?.let { onImageSelected(it) }
-    }
+        onResult = { file ->
+            file?.let { onImageSelected(it) }
+        }
+    )
 
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Box(contentAlignment = Alignment.BottomEnd) {

@@ -1,8 +1,15 @@
+//Copyright (C) 2025 Voltual
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//（或任意更新的版本）的条款重新分发和/或修改它。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.user
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
@@ -11,6 +18,7 @@ import me.voltual.pyrolysis.data.DeviceNameDataStore
 import me.voltual.pyrolysis.data.unified.UnifiedUserDetail
 import me.voltual.pyrolysis.data.unified.UpdateUserProfileParams
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
+import io.github.vinceglb.filekit.PlatformFile
 import org.koin.android.annotation.KoinViewModel
 
 @KoinViewModel
@@ -19,7 +27,6 @@ class UserProfileViewModel(
     private val deviceNameDataStore: DeviceNameDataStore
 ) : ViewModel() {
 
-    // ... (保持其它不变) ...
     data class UserProfileUiState(
         val isLoading: Boolean = false,
         val userDetail: UnifiedUserDetail? = null,
@@ -86,12 +93,19 @@ class UserProfileViewModel(
         }
     }
 
+    /**
+     * 上传头像逻辑
+     * 使用 FileKit 的 PlatformFile 替代 okio.Path
+     */
     fun uploadAvatar(store: AppStore, file: PlatformFile, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             _uiState.update { it.copy(isUploading = true) }
             try {
                 val repository = repositories[store] ?: return@launch onResult(false, "不支持的平台")
+                
+                // 直接从 PlatformFile 读取字节
                 val bytes = file.readBytes()
+                
                 val result = repository.uploadAvatar(bytes, file.name)
                 if (result.isSuccess) {
                     loadUserProfile(store)

@@ -13,6 +13,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -44,11 +45,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import coil3.compose.rememberAsyncImagePainter
 import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.FileKitType
-import io.github.vinceglb.filekit.dialogs.compose.rememberFileKitPickerLauncher
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
@@ -79,17 +82,17 @@ fun PostDetailScreen(
     val navigator = LocalNavigator.current
     val context = LocalContext.current
 
-    val postDetail by viewModel.postDetail.collectAsStateWithLifecycle()
-    val comments by viewModel.comments.collectAsStateWithLifecycle()
-    val isLiked by viewModel.isLiked.collectAsStateWithLifecycle()
-    val likeCount by viewModel.likeCount.collectAsStateWithLifecycle()
-    val commentCount by viewModel.commentCount.collectAsStateWithLifecycle()
-    val showCommentDialog by viewModel.showCommentDialog.collectAsStateWithLifecycle()
-    val showReplyDialog by viewModel.showReplyDialog.collectAsStateWithLifecycle()
-    val currentReplyComment by viewModel.currentReplyComment.collectAsStateWithLifecycle()
-    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
-    val isLoadingComments by viewModel.isLoadingComments.collectAsStateWithLifecycle()
-    val hasMoreComments by viewModel.hasMoreComments.collectAsStateWithLifecycle()
+    val postDetail by viewModel.postDetail.collectAsState()
+    val comments by viewModel.comments.collectAsState()
+    val isLiked by viewModel.isLiked.collectAsState()
+    val likeCount by viewModel.likeCount.collectAsState()
+    val commentCount by viewModel.commentCount.collectAsState()
+    val showCommentDialog by viewModel.showCommentDialog.collectAsState()
+    val showReplyDialog by viewModel.showReplyDialog.collectAsState()
+    val currentReplyComment by viewModel.currentReplyComment.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val isLoadingComments by viewModel.isLoadingComments.collectAsState()
+    val hasMoreComments by viewModel.hasMoreComments.collectAsState()
 
     val clipboardManager = remember {
         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -118,7 +121,7 @@ fun PostDetailScreen(
         }
     }
 
-    val deleteSuccess by viewModel.deleteSuccess.collectAsStateWithLifecycle()
+    val deleteSuccess by viewModel.deleteSuccess.collectAsState()
     if (deleteSuccess) {
         LaunchedEffect(Unit) {
             onPostDeleted()
@@ -432,7 +435,7 @@ fun CommentDialog(
     var commentText by remember { mutableStateOf("") }
     var includeImage by remember { mutableStateOf(false) }
     var imageUrl by remember { mutableStateOf<String?>(null) }
-    var selectedImageFile by remember { mutableStateOf<PlatformFile?>(null) }
+    var selectedFile by remember { mutableStateOf<PlatformFile?>(null) }
     var showProgressDialog by remember { mutableStateOf(false) }
     var isSubmitting by remember { mutableStateOf(false) }
     var progressMessage by remember { mutableStateOf("") }
@@ -445,13 +448,12 @@ fun CommentDialog(
 
         coroutineScope.launch(Dispatchers.IO) {
             runCatching {
-                val bytes = file.readBytes()
-
+                val fileBytes = file.readBytes()
                 val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
                     setBody(
                         MultiPartFormDataContent(
                             formData {
-                                append("file", bytes, Headers.build {
+                                append("file", fileBytes, Headers.build {
                                     append(HttpHeaders.ContentType, "image/jpeg")
                                     append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
                                 })
@@ -476,15 +478,16 @@ fun CommentDialog(
         }
     }
 
-    val imagePickerLauncher = rememberFileKitPickerLauncher(
+    // 使用 FileKit 替代原有的 ImagePicker
+    val imagePickerLauncher = rememberFilePickerLauncher(
         type = FileKitType.Image,
-        title = "选择图片"
-    ) { platformFile ->
-        platformFile?.let { file ->
-            selectedImageFile = file
-            uploadImage(file) { url -> imageUrl = url }
+        onResult = { file ->
+            file?.let {
+                selectedFile = it
+                uploadImage(it) { url -> imageUrl = url }
+            }
         }
-    }
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -532,25 +535,15 @@ fun CommentDialog(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            selectedImageFile?.let { file ->
-                                var imageBytes by remember { mutableStateOf<ByteArray?>(null) }
-                                LaunchedEffect(file) {
-                                    imageBytes = file.readBytes()
-                                }
-                                if (imageBytes != null) {
-                                    AsyncImage(
-                                        model = imageBytes,
-                                        contentDescription = "预览图片",
-                                        modifier = Modifier
-                                            .size(64.dp)
-                                            .clip(RoundedCornerShape(8.dp)),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    Box(modifier = Modifier.size(64.dp), contentAlignment = Alignment.Center) {
-                                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                                    }
-                                }
+                            selectedFile?.let { file ->
+                                Image(
+                                    painter = rememberAsyncImagePainter(model = file),
+                                    contentDescription = "预览图片",
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
                             } ?: run {
                                 Box(
                                     modifier = Modifier
@@ -572,10 +565,10 @@ fun CommentDialog(
                                     Text("选择图片")
                                 }
 
-                                if (selectedImageFile != null) {
+                                if (selectedFile != null) {
                                     TextButton(
                                         onClick = {
-                                            selectedImageFile = null
+                                            selectedFile = null
                                             imageUrl = null
                                         },
                                         colors = ButtonDefaults.textButtonColors(
@@ -623,6 +616,12 @@ fun CommentDialog(
     }
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    val detailViewModel: PostDetailViewModel = viewModel()
+    val errorMsg by detailViewModel.errorMessage.collectAsState()
+    LaunchedEffect(errorMsg) {
+        if (errorMsg.isNotEmpty()) isSubmitting = false
+    }
 }
 
 @Composable

@@ -21,12 +21,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import io.github.vinceglb.filekit.dialogs.compose.rememberFileKitPickerLauncher
 import io.github.vinceglb.filekit.dialogs.FileKitType
-import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import kotlinx.coroutines.flow.first
 import me.voltual.pyrolysis.data.DeviceNameDataStore
-import me.voltual.pyrolysis.ui.*
+import me.voltual.pyrolysis.ui.*               // 提供 LocalNavigator, ImagePreview 等
 import me.voltual.pyrolysis.core.ui.theme.*
 
 private const val MODE_CREATE = "create"
@@ -130,16 +129,17 @@ fun PostCreateScreen(
         )
     }
 
-    val imagePickerLauncher = rememberFileKitPickerLauncher(
+    // FileKit 图片选择器
+    val imagePickerLauncher = rememberFilePickerLauncher(
         type = FileKitType.Image,
-        title = "选择图片"
-    ) { platformFile: PlatformFile? ->
-        platformFile?.let { file: PlatformFile ->
-            if (uiState.imageFileToUrlMap.size < MAX_IMAGE_COUNT) {
-                viewModel.uploadImage(file)
+        onResult = { file ->
+            file?.let {
+                if (uiState.imageUriToUrlMap.size < MAX_IMAGE_COUNT) {
+                    viewModel.uploadImage(it)
+                }
             }
         }
-    }
+    )
 
     if (uiState.showProgressDialog) {
         AlertDialog(
@@ -269,18 +269,20 @@ fun PostCreateScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(uiState.imageFileToUrlMap.entries.toList()) { entry ->
+                items(uiState.imageUriToUrlMap.entries.toList()) { entry ->
+                    val file = entry.key
+                    val imageUrl = entry.value
                     ImagePreviewItem(
-                        imageUrl = entry.value,
+                        imageUrl = imageUrl,
                         onRemoveClick = {
-                            viewModel.removeImage(entry.key)
+                            viewModel.removeImage(file)
                         },
                         onImageClick = {
-                            navigator.navigate(ImagePreview(entry.value))
+                            navigator.navigate(ImagePreview(imageUrl))
                         }
                     )
                 }
-                if (uiState.imageFileToUrlMap.size < MAX_IMAGE_COUNT) {
+                if (uiState.imageUriToUrlMap.size < MAX_IMAGE_COUNT) {
                     item {
                         OutlinedButton(
                             onClick = { imagePickerLauncher.launch() }, 

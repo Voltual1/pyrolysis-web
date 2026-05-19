@@ -136,10 +136,10 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
 
             uploadImageKtor(file).onSuccess { imageUrl ->
                 _uiState.update { currentState ->
-                    val newUrlMap = currentState.imageFileToUrlMap + (file to imageUrl)
+                    val newUrlMap = currentState.imageUriToUrlMap + (file to imageUrl)
                     currentState.copy(
                         imageUrls = newUrlMap.values.joinToString(","),
-                        imageFileToUrlMap = newUrlMap,
+                        imageUriToUrlMap = newUrlMap,
                         showProgressDialog = false
                     )
                 }
@@ -154,7 +154,6 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
     private suspend fun uploadImageKtor(file: PlatformFile): Result<String> = withContext(Dispatchers.IO) {
         try {
             val fileBytes = file.readBytes()
-            
             val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
                 setBody(
                     MultiPartFormDataContent(
@@ -181,10 +180,10 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
 
     fun removeImage(file: PlatformFile) {
         _uiState.update { currentState ->
-            val newUrlMap = currentState.imageFileToUrlMap - file
+            val newUrlMap = currentState.imageUriToUrlMap - file
             currentState.copy(
                 imageUrls = newUrlMap.values.joinToString(","),
-                imageFileToUrlMap = newUrlMap
+                imageUriToUrlMap = newUrlMap
             )
         }
     }
@@ -288,7 +287,7 @@ data class PostCreateUiState(
     val content: String = "",
     val selectedSubsectionId: Int = 11,
     val imageUrls: String = "",
-    val imageFileToUrlMap: Map<PlatformFile, String> = emptyMap(),
+    val imageUriToUrlMap: Map<PlatformFile, String> = emptyMap(),
     val showProgressDialog: Boolean = false,
     val progressMessage: String = ""
 )
