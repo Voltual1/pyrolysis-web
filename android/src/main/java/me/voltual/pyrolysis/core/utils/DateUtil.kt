@@ -8,20 +8,28 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.core.utils
 
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import kotlin.time.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
-/**
- * 格式化时间戳为可读日期字符串
- * @param timestamp Unix 时间戳（毫秒）
- * @return 格式化后的日期字符串，如 "2025-12-01 14:39:23"
- */
+@OptIn(kotlin.time.ExperimentalTime::class)
 fun formatTimestamp(timestamp: Long): String {
     return try {
-        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        sdf.format(Date(timestamp))
+        val instant = Instant.fromEpochMilliseconds(timestamp)
+        val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+        
+        with(localDateTime) {
+            val yearStr = year.toString()
+            val monthStr = month.toString().padStart(2, '0')
+            val dayStr = day.toString().padStart(2, '0')
+            val hourStr = hour.toString().padStart(2, '0')
+            val minuteStr = minute.toString().padStart(2, '0')
+            val secondStr = second.toString().padStart(2, '0')
+            
+            "$yearStr-$monthStr-$dayStr $hourStr:$minuteStr:$secondStr"
+        }
     } catch (e: Exception) {
-        timestamp.toString()  // 出错时返回原始时间戳
+        // 出错时通过 Kotlin 方式安全返回原始时间戳字符串
+        timestamp.toString()
     }
 }
