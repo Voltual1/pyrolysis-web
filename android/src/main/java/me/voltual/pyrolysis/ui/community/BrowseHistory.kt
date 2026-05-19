@@ -11,12 +11,10 @@ package me.voltual.pyrolysis.ui.community
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.*
 
 @Entity(tableName = "browse_history")
+@OptIn(kotlinx.datetime.ExperimentalKotlinDateTimeExtensions::class)
 data class BrowseHistory(
     @PrimaryKey val postId: Long,
     val title: String,

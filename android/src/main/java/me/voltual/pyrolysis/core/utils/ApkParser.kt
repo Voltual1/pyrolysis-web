@@ -17,7 +17,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
-import kotlinx.datetime.Clock
+import kotlinx.datetime.*
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
@@ -43,7 +43,7 @@ object ApkParser {
     private val fileSystem = FileSystem.SYSTEM
 
     private fun generateUniqueFileName(prefix: String, extension: String): String {
-        val timestamp = Clock.System.now().toEpochMilliseconds()
+        val timestamp = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
         val randomSuffix = (100..999).random()
         return "${prefix}_${timestamp}_${randomSuffix}.$extension"
     }
