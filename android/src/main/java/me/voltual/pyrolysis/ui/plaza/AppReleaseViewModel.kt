@@ -36,6 +36,7 @@ import okio.buffer
 import okio.source
 import kotlin.time.Clock
 import kotlin.time.Clock.System
+//注意kotlinx.datetime.Clock.System，kotlinx.datetime.Clock，kotlinx.datetime.Instant在kotlin2.1都被收编进标准库了
 
 // 小趣空间分类模型
 data class AppCategory(
@@ -145,8 +146,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
         
         viewModelScope.launch(Dispatchers.IO) {
             urisToUpload.forEach { uri ->
-                // 显式指定 kotlinx.datetime.Clock.System
-                val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                val now = kotlin.datetime.Clock.System.now().toEpochMilliseconds()
                 val path = uriToTempPath(context, uri, "screenshot_${now}.png")
                 path?.let { tempScreenshotPaths.add(it) }
             }
@@ -239,7 +239,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
 
             val uploadJobs = urisToUpload.map { uri ->
                 launch {
-                	val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+                	val now = kotlin.datetime.Clock.System.now().toEpochMilliseconds()
                     val tempFileName = "intro_${now}.jpg"
                     val path = uriToTempPath(context, uri, tempFileName)
                     path?.let {

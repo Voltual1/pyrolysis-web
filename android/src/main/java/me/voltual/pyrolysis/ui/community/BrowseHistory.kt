@@ -22,7 +22,7 @@ data class BrowseHistory(
     @PrimaryKey val postId: Long,
     val title: String,
     val previewContent: String,
-    val timestamp: Long = kotlin.time.Clock.System.now().toEpochMilliseconds()
+    @OptIn(kotlin.time.ExperimentalTime::class) val timestamp: Long = kotlin.time.Clock.System.now().toEpochMilliseconds()
 ) {
     /**
      * 格式化时间字符串
