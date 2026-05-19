@@ -65,7 +65,6 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
 
     init {
         viewModelScope.launch {
-            // 加载偏好设置
             draftDataStore.preferencesFlow.first().let { preferences ->
                 _preferencesState.value = DraftPreferencesState(
                     autoRestoreDraft = preferences.autoRestoreDraft,
@@ -73,7 +72,6 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
                 )
             }
 
-            // 检查草稿
             draftRepository.draftFlow.first()?.let { draft ->
                 if (draft.title.isNotBlank() || draft.content.isNotBlank() || draft.imageUrls.isNotBlank()) {
                     if (_preferencesState.value.autoRestoreDraft) {
@@ -145,7 +143,6 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             _uiState.update { it.copy(showProgressDialog = true, progressMessage = "正在处理图片...") }
 
-            // 使用 Okio 将 URI 转换为临时 Path，彻底移除 FileUtil
             val tempPath = withContext(Dispatchers.IO) {
                 uriToTempPath(uri)
             }
@@ -175,15 +172,13 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    /**
-     * 纯 Okio 实现的 URI 转 Path
-     */
     private fun uriToTempPath(uri: Uri): Path? {
         return try {
             val context = getApplication<Application>()
             val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() ?: return null
             @OptIn(kotlin.time.ExperimentalTime::class)
-            val fileName = "upload_${Clock.System.now().toEpochMilliseconds()}.jpg"
+            val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
+            val fileName = "upload_${now}.jpg"
             val tempPath = context.cacheDir.absolutePath.toPath() / fileName
             
             fileSystem.write(tempPath) {
@@ -221,9 +216,13 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    /**
+     * 修复后的 ChannelProvider。
+     * 使用 viewModelScope.writer 明确协程作用域。
+     */
     private fun createChannelProvider(path: Path): ChannelProvider {
         return ChannelProvider {
-            writer(Dispatchers.IO) {
+            viewModelScope.writer(Dispatchers.IO) {
                 fileSystem.source(path).use { source ->
                     val buffer = Buffer()
                     while (source.read(buffer, 8192L) != -1L) {
