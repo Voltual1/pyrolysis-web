@@ -11,8 +11,8 @@ package me.voltual.pyrolysis.ui.community
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import kotlin.datetime.Clock.System
-import kotlin.datetime.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
