@@ -1,3 +1,11 @@
+// Copyright (C) 2025 Voltual
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//（或任意更新的版本）的条款重新分发和/或修改它。
+// 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.home
 
 import android.content.Context
@@ -13,8 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer 
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import me.voltual.pyrolysis.core.ui.components.MarkDownText
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -22,7 +28,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color // 必须导入
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -33,11 +38,15 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.BuildConfig
 import me.voltual.pyrolysis.R
+import me.voltual.pyrolysis.core.ui.components.MarkDownText
 import java.security.MessageDigest
-import java.util.Calendar
+import kotlin.time.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 /**
  * 获取当前应用签名的 SHA-256 指纹
+ * 按照要求：保留 java.security.MessageDigest 逻辑，仅针对 Android 签名自检。
  */
 fun getAppSignatureSha256(context: Context): String {
     return try {
@@ -60,7 +69,6 @@ fun getAppSignatureSha256(context: Context): String {
                 null
             }
         } else {
-            // 针对旧版本，通过注解或局部抑制来处理
             @Suppress("DEPRECATION")
             val packageInfo = packageManager.getPackageInfo(
                 packageName,
@@ -93,7 +101,11 @@ fun AboutScreen(
     val versionCode = BuildConfig.VERSION_CODE
     val scope = rememberCoroutineScope() 
     
-    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+    // 使用 kotlinx-datetime 0.7.1 替代 java.util.Calendar
+    @OptIn(kotlin.time.ExperimentalTime::class)
+    val currentYear = kotlin.time.Clock.System.now()
+        .toLocalDateTime(TimeZone.currentSystemDefault())
+        .year
     val copyrightText = if (currentYear > 2025) "2025 - $currentYear" else "2025"
 
     Column(
@@ -135,15 +147,12 @@ fun AboutScreen(
         
         LicenseCard(
             onLicenseClick = {
-                try {
+                runCatching {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://gitee.com/Voltula/bbq/blob/master/LICENSE"))
                     context.startActivity(intent)
-                } catch (e: Exception) {
+                }.onFailure {
                     scope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = "无法打开浏览器",
-                            duration = SnackbarDuration.Short
-                        )
+                        snackbarHostState.showSnackbar(message = "无法打开浏览器")
                     }
                 }
             }
@@ -153,23 +162,19 @@ fun AboutScreen(
         
         OpenSourceCard(
             onGiteeClick = {
-                try {
+                runCatching {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://gitee.com/Voltula/bbq"))
                     context.startActivity(intent)
-                } catch (e: Exception) {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(message = "无法打开浏览器")
-                    }
+                }.onFailure {
+                    scope.launch { snackbarHostState.showSnackbar(message = "无法打开浏览器") }
                 }
             },
             onReleasesClick = {
-                try {
+                runCatching {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://gitee.com/Voltula/bbq/releases/"))
                     context.startActivity(intent)
-                } catch (e: Exception) {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(message = "无法打开浏览器")
-                    }
+                }.onFailure {
+                    scope.launch { snackbarHostState.showSnackbar(message = "无法打开浏览器") }
                 }
             }
         )
@@ -327,7 +332,6 @@ fun ClickableTextItem(text: String, onClick: () -> Unit) {
 fun SignatureVerificationCard(context: Context) {
     val OFFICIAL_SHA256 = "81:91:BD:71:15:7E:A7:04:1C:55:1D:1A:BA:C6:B7:DF:24:78:44:96:A7:3E:F3:46:0A:19:5F:1F:4B:B4:07:8C" 
     
-    // 使用 remember 缓存签名获取结果，避免重组时重复计算性能损耗
     val currentSignature = remember(context) { getAppSignatureSha256(context) }
     val isOfficial = currentSignature.equals(OFFICIAL_SHA256, ignoreCase = true)
 
@@ -347,8 +351,8 @@ fun SignatureVerificationCard(context: Context) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = if (isOfficial) androidx.compose.material.icons.Icons.Default.CheckCircle 
-                                 else androidx.compose.material.icons.Icons.Default.Warning,
+                    imageVector = if (isOfficial) Icons.Default.CheckCircle 
+                                 else Icons.Default.Warning,
                     contentDescription = null,
                     tint = if (isOfficial) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
@@ -370,7 +374,6 @@ fun SignatureVerificationCard(context: Context) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            // 使用 SelectionContainer 让用户可以长按复制签名
             SelectionContainer {
                 Text(
                     text = currentSignature,
@@ -434,10 +437,9 @@ fun AcknowledgmentsCard() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
                 onClickCitation = { url ->
-                    try {
+                    runCatching {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         context.startActivity(intent)
-                    } catch (e: Exception) {
                     }
                 }
             )
