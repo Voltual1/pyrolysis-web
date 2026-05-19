@@ -6,6 +6,7 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+@file:Suppress("DEPRECATION")
 package me.voltual.pyrolysis.ui.community.compose
 
 import android.app.Activity
@@ -31,7 +32,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -45,7 +45,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -58,6 +57,7 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
+import io.ktor.utils.io.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -73,7 +73,13 @@ import me.voltual.pyrolysis.ui.community.PostDetailViewModel
 import me.voltual.pyrolysis.core.ui.components.LinkifyText
 import me.voltual.pyrolysis.core.ui.theme.*
 import me.voltual.pyrolysis.core.utils.cleanUrl
-import java.io.File
+import okio.Buffer
+import okio.FileSystem
+import okio.Path
+import okio.Path.Companion.toPath
+import okio.buffer
+import okio.source
+import kotlin.time.Clock
 
 @Composable
 fun PostDetailScreen(
@@ -83,10 +89,7 @@ fun PostDetailScreen(
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
-    // Navigation 3 导航器
     val navigator = LocalNavigator.current
-
-    //val viewModel: PostDetailViewModel = viewModel()
     val context = LocalContext.current
 
     val postDetail by viewModel.postDetail.collectAsState()
@@ -151,9 +154,7 @@ fun PostDetailScreen(
 
     val slideDistance = rememberSlideDistance()
 
-    Box(
-        modifier = modifier.fillMaxSize()
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -161,7 +162,6 @@ fun PostDetailScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             state = listState
         ) {
-            // 使用 AnimatedVisibility 包裹帖子内容卡片
             item {
                 AnimatedVisibility(
                     visible = postDetail != null,
@@ -178,9 +178,7 @@ fun PostDetailScreen(
                                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp)
-                            ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.padding(bottom = 16.dp)
@@ -192,10 +190,7 @@ fun PostDetailScreen(
                                             .size(48.dp)
                                             .clip(CircleShape)
                                             .clickable {
-                                                detail.userid.let { userId ->
-                                                    // 类型安全导航到用户详情
-                                                    navigator.navigate(UserDetail(userId))
-                                                }
+                                                navigator.navigate(UserDetail(detail.userid))
                                             },
                                         contentScale = ContentScale.Crop
                                     )
@@ -214,9 +209,7 @@ fun PostDetailScreen(
 
                                     Spacer(Modifier.weight(1f))
                                     Box {
-                                        IconButton(
-                                            onClick = { showMoreOptions = true }
-                                        ) {
+                                        IconButton(onClick = { showMoreOptions = true }) {
                                             Icon(Icons.Default.MoreVert, "更多")
                                         }
 
@@ -242,7 +235,6 @@ fun PostDetailScreen(
                                                 text = { Text("投币") },
                                                 onClick = {
                                                     showMoreOptions = false
-                                                    // 类型安全导航到打赏页面
                                                     navigator.navigate(
                                                         PaymentForPost(
                                                             postId = detail.id,
@@ -275,29 +267,22 @@ fun PostDetailScreen(
                                 }
                                 Spacer(Modifier.height(8.dp))
 
-                                LinkifyText(
-                                    text = detail.content,
-//                                    navigator = navigator   // 适配 LinkifyText 使用 Navigator
-                                )
+                                LinkifyText(text = detail.content)
 
-                                // 使用安全调用符处理 img_url
-                                postDetail?.img_url?.let { imgUrls ->
-                                    imgUrls.forEach { imageUrl ->
-                                        Spacer(Modifier.height(16.dp))
-                                        AsyncImage(
-                                            model = imageUrl.cleanUrl(),
-                                            contentDescription = "帖子图片",
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(200.dp)
-                                                .clip(MaterialTheme.shapes.medium)
-                                                .clickable {
-                                                    // 导航到图片预览
-                                                    navigator.navigate(ImagePreview(imageUrl))
-                                                },
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    }
+                                detail.img_url?.forEach { imageUrl ->
+                                    Spacer(Modifier.height(16.dp))
+                                    AsyncImage(
+                                        model = imageUrl.cleanUrl(),
+                                        contentDescription = "帖子图片",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(200.dp)
+                                            .clip(MaterialTheme.shapes.medium)
+                                            .clickable {
+                                                navigator.navigate(ImagePreview(imageUrl))
+                                            },
+                                        contentScale = ContentScale.Crop
+                                    )
                                 }
                                 Row(
                                     modifier = Modifier
@@ -379,7 +364,6 @@ fun PostDetailScreen(
             }
         }
 
-        // 评论浮动按钮
         FloatingActionButton(
             onClick = { viewModel.openCommentDialog() },
             containerColor = MaterialTheme.colorScheme.primary,
@@ -392,7 +376,6 @@ fun PostDetailScreen(
         }
     }
 
-    // 分享对话框
     if (showShareDialog) {
         val shareText = "http://apk.xiaoqu.online/post/${postDetail?.id}.html"
         AlertDialog(
@@ -444,7 +427,6 @@ fun PostDetailScreen(
         )
     }
 
-    // Snackbar 宿主
     Box(modifier = Modifier.fillMaxSize()) {
         BBQSnackbarHost(
             hostState = internalSnackbarHostState,
@@ -460,6 +442,7 @@ fun CommentDialog(
     onSubmit: (String, String?) -> Unit,
     context: Context
 ) {
+    val fileSystem = FileSystem.SYSTEM
     var commentText by remember { mutableStateOf("") }
     var includeImage by remember { mutableStateOf(false) }
     var imageUrl by remember { mutableStateOf<String?>(null) }
@@ -470,42 +453,59 @@ fun CommentDialog(
     val focusRequester = remember { FocusRequester() }
     val coroutineScope = rememberCoroutineScope()
 
+    /**
+     * 去 Java 化后的图片上传逻辑
+     */
     fun uploadImage(uri: Uri, onSuccess: (String) -> Unit) {
         showProgressDialog = true
         progressMessage = "上传图片中..."
 
         coroutineScope.launch(Dispatchers.IO) {
-            try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val file = File.createTempFile("upload_", ".jpg", context.cacheDir).apply {
-                    outputStream().use { output ->
-                        inputStream?.copyTo(output)
-                    }
+            runCatching {
+                // 1. 使用 Okio 将 URI 写入临时 Path
+                val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() 
+                    ?: throw Exception("无法读取图片")
+                
+                @OptIn(kotlin.time.ExperimentalTime::class)
+                val tempPath = context.cacheDir.absolutePath.toPath() / "upload_${Clock.System.now().toEpochMilliseconds()}.jpg"
+                
+                fileSystem.write(tempPath) {
+                    writeAll(source)
                 }
 
-                val response = KtorClient.uploadHttpClient.post("api.php") {
+                // 2. 发起 Ktor 请求，使用 writer 模式流式传输
+                val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
                     setBody(
                         MultiPartFormDataContent(
                             formData {
-                                append("file", file.readBytes(), Headers.build {
-                                    append(HttpHeaders.ContentType, "image/*")
-                                    append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
+                                append("file", ChannelProvider {
+                                    // 在此作用域内调用 writer
+                                    coroutineScope.writer(Dispatchers.IO) {
+                                        fileSystem.source(tempPath).use { s ->
+                                            val buffer = Buffer()
+                                            while (s.read(buffer, 8192L) != -1L) {
+                                                channel.writeFully(buffer.readByteArray())
+                                            }
+                                        }
+                                    }.channel
+                                }, Headers.build {
+                                    append(HttpHeaders.ContentType, "image/jpeg")
+                                    append(HttpHeaders.ContentDisposition, "filename=\"${tempPath.name}\"")
                                 })
                             }
                         )
                     )
                 }
 
-                withContext(Dispatchers.Main) {
-                    showProgressDialog = false
-                    if (response.status.isSuccess()) {
-                        val responseBody: KtorClient.UploadResponse = response.body()
-                        if ((responseBody.code == 1 || responseBody.code == 0) && !responseBody.downurl.isNullOrBlank()) {
+                if (response.status.isSuccess()) {
+                    val responseBody: KtorClient.UploadResponse = response.body()
+                    if ((responseBody.code == 1 || responseBody.code == 0) && !responseBody.downurl.isNullOrBlank()) {
+                        withContext(Dispatchers.Main) {
                             onSuccess(responseBody.downurl)
                         }
                     }
                 }
-            } catch (e: Exception) {
+            }.also {
                 withContext(Dispatchers.Main) {
                     showProgressDialog = false
                 }
@@ -517,12 +517,9 @@ fun CommentDialog(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            val uri = result.data?.data
-            uri?.let {
+            result.data?.data?.let { uri ->
                 selectedImageUri = uri
-                uploadImage(uri) { url ->
-                    imageUrl = url
-                }
+                uploadImage(uri) { url -> imageUrl = url }
             }
         }
     }
@@ -599,10 +596,7 @@ fun CommentDialog(
                                 Button(
                                     onClick = {
                                         ImagePicker.with(context as Activity)
-                                            //.crop()
-//                                            .compress(1024)
-.galleryOnly()	//用户只能从图库选择图片
-//                                            .maxResultSize(1080, 1080)
+                                            .galleryOnly()
                                             .createIntent { intent ->
                                                 imagePickerLauncher.launch(intent)
                                             }
@@ -611,8 +605,6 @@ fun CommentDialog(
                                 ) {
                                     Text("选择图片")
                                 }
-
-                                Spacer(modifier = Modifier.height(8.dp))
 
                                 if (selectedImageUri != null) {
                                     TextButton(
@@ -638,12 +630,8 @@ fun CommentDialog(
                         .padding(top = 16.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("取消")
-                    }
-
+                    TextButton(onClick = onDismiss) { Text("取消") }
                     Spacer(modifier = Modifier.width(8.dp))
-
                     Button(
                         onClick = {
                             isSubmitting = true
@@ -668,17 +656,12 @@ fun CommentDialog(
         )
     }
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    // 监听 ViewModel 的 errorMessage，发送失败后重置发送状态
-    val viewModel: PostDetailViewModel = viewModel()
-    val errorMessage by viewModel.errorMessage.collectAsState()
-    LaunchedEffect(errorMessage) {
-        if (errorMessage.isNotEmpty()) {
-            isSubmitting = false
-        }
+    val detailViewModel: PostDetailViewModel = viewModel()
+    val errorMsg by detailViewModel.errorMessage.collectAsState()
+    LaunchedEffect(errorMsg) {
+        if (errorMsg.isNotEmpty()) isSubmitting = false
     }
 }
 
@@ -691,14 +674,10 @@ fun CommentItem(
     context: Context,
     snackbarHostState: SnackbarHostState
 ) {
-    // Navigation 3 导航器
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     var showDeleteDialog by remember { mutableStateOf(false) }
-
-    // 获取当前用户 ID 的 Flow
-    val currentUserIdFlow = AuthManager.getUserId(context)
-    val currentUserId by currentUserIdFlow.collectAsState(initial = null)
+    val currentUserId by AuthManager.getUserId(context).collectAsState(initial = null)
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -712,9 +691,7 @@ fun CommentItem(
                         onDelete()
                         showDeleteDialog = false
                     }
-                ) {
-                    Text("删除")
-                }
+                ) { Text("删除") }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) { Text("取消") }
@@ -738,9 +715,7 @@ fun CommentItem(
                             )
                         }
                     },
-                    onLongPress = {
-                        showDeleteDialog = true
-                    }
+                    onLongPress = { showDeleteDialog = true }
                 )
             },
         colors = CardDefaults.cardColors(
@@ -756,10 +731,7 @@ fun CommentItem(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .clickable {
-                            // 类型安全导航到用户详情
-                            navigator.navigate(UserDetail(comment.userid))
-                        },
+                        .clickable { navigator.navigate(UserDetail(comment.userid)) },
                     contentScale = ContentScale.Crop
                 )
                 Spacer(Modifier.width(8.dp))
@@ -778,8 +750,7 @@ fun CommentItem(
             Spacer(Modifier.height(8.dp))
             LinkifyText(
                 text = comment.content,
-                style = MaterialTheme.typography.bodyMedium//,
-//                navigator = navigator
+                style = MaterialTheme.typography.bodyMedium
             )
 
             comment.image_path?.firstOrNull()?.takeIf { it.isNotEmpty() }?.let { imageUrl ->
@@ -791,10 +762,7 @@ fun CommentItem(
                         .fillMaxWidth()
                         .height(150.dp)
                         .clip(MaterialTheme.shapes.medium)
-                        .clickable {
-                            // 导航到图片预览
-                            navigator.navigate(ImagePreview(imageUrl))
-                        },
+                        .clickable { navigator.navigate(ImagePreview(imageUrl)) },
                     contentScale = ContentScale.Crop
                 )
             }
@@ -808,8 +776,7 @@ fun CommentItem(
                 )
                 LinkifyText(
                     text = comment.parentcontent ?: "",
-                    style = MaterialTheme.typography.bodySmall//,
-//                    navigator = navigator
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
 
@@ -819,21 +786,15 @@ fun CommentItem(
                     .padding(top = 8.dp),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(onClick = onReply) {
-                    Text("回复")
-                }
-
-                Spacer(Modifier.width(8.dp))
-
+                TextButton(onClick = onReply) { Text("回复") }
                 if (comment.userid == currentUserId) {
+                    Spacer(Modifier.width(8.dp))
                     TextButton(
                         onClick = { showDeleteDialog = true },
                         colors = ButtonDefaults.textButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
                         )
-                    ) {
-                        Text("删除")
-                    }
+                    ) { Text("删除") }
                 }
             }
         }
