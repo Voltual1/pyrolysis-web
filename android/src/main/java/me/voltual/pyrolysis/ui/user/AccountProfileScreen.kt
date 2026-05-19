@@ -26,9 +26,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.rememberAsyncImagePainter
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileKitPickerLauncher
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.core.ui.components.MarkDownText
@@ -364,7 +364,7 @@ fun AvatarSection(
     val launcher = rememberFileKitPickerLauncher(
         type = FileKitType.Image,
         title = "选择头像"
-    ) { platformFile ->
+    ) { platformFile: PlatformFile? ->
         platformFile?.let { onImageSelected(it) }
     }
 

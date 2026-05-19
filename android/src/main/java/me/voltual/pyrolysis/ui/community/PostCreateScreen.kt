@@ -21,9 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileKitPickerLauncher
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.coroutines.flow.first
 import me.voltual.pyrolysis.data.DeviceNameDataStore
 import me.voltual.pyrolysis.ui.*
@@ -133,8 +133,8 @@ fun PostCreateScreen(
     val imagePickerLauncher = rememberFileKitPickerLauncher(
         type = FileKitType.Image,
         title = "选择图片"
-    ) { platformFile ->
-        platformFile?.let { file ->
+    ) { platformFile: PlatformFile? ->
+        platformFile?.let { file: PlatformFile ->
             if (uiState.imageFileToUrlMap.size < MAX_IMAGE_COUNT) {
                 viewModel.uploadImage(file)
             }

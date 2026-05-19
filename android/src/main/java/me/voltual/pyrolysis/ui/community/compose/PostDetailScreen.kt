@@ -46,8 +46,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import io.github.vinceglb.filekit.core.PlatformFile
-import io.github.vinceglb.filekit.core.FileKitType
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileKitPickerLauncher
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*

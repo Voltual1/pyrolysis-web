@@ -1,3 +1,12 @@
+//Copyright (C) 2025 Voltual
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//（或任意更新的版本）的条款重新分发和/或修改它。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+
 package me.voltual.pyrolysis.ui.community
 
 import android.app.Application
@@ -127,12 +136,10 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
 
             uploadImageKtor(file).onSuccess { imageUrl ->
                 _uiState.update { currentState ->
-                    // 修复：显式创建新的 Map 以避免类型推断错误
-                    val newMap = currentState.imageFileToUrlMap.toMutableMap()
-                    newMap[file] = imageUrl
+                    val newUrlMap = currentState.imageFileToUrlMap + (file to imageUrl)
                     currentState.copy(
-                        imageUrls = newMap.values.joinToString(","),
-                        imageFileToUrlMap = newMap,
+                        imageUrls = newUrlMap.values.joinToString(","),
+                        imageFileToUrlMap = newUrlMap,
                         showProgressDialog = false
                     )
                 }
@@ -147,6 +154,7 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
     private suspend fun uploadImageKtor(file: PlatformFile): Result<String> = withContext(Dispatchers.IO) {
         try {
             val fileBytes = file.readBytes()
+            
             val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
                 setBody(
                     MultiPartFormDataContent(
@@ -173,11 +181,10 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
 
     fun removeImage(file: PlatformFile) {
         _uiState.update { currentState ->
-            val newMap = currentState.imageFileToUrlMap.toMutableMap()
-            newMap.remove(file)
+            val newUrlMap = currentState.imageFileToUrlMap - file
             currentState.copy(
-                imageUrls = newMap.values.joinToString(","),
-                imageFileToUrlMap = newMap
+                imageUrls = newUrlMap.values.joinToString(","),
+                imageFileToUrlMap = newUrlMap
             )
         }
     }
@@ -196,48 +203,83 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
     ) {
         viewModelScope.launch {
             _postStatus.value = PostStatus.Loading
+
             val credentials = AuthManager.getCredentials(getApplication()).first()
             if (credentials.userId == 0L || credentials.token.isEmpty()) {
                 _postStatus.value = PostStatus.Error("请先登录")
+                showSnackbar("请先登录")
                 return@launch
             }
 
             val videoPart = if (bvNumber.isNotBlank()) "【视频：$bvNumber】" else ""
             val finalContent = if (mode == "refund") {
-                "${_uiState.value.content}\n\n问题类型:$selectedRefundReason\n退还金额:$refundPayMoney\n機型：$tempDeviceName｜$videoPart"
+                """
+                ${_uiState.value.content}
+
+                问题类型:$selectedRefundReason
+                系统定制商：${android.os.Build.BRAND.uppercase()}
+                设备型号：${android.os.Build.MODEL}
+                退还金额:$refundPayMoney
+                资源id:$refundAppId
+                资源版本:$refundVersionId 機型：$tempDeviceName｜$videoPart
+                """.trimIndent()
             } else {
                 "${_uiState.value.content} 機型：$tempDeviceName｜$videoPart"
             }
+
+            val finalSubsectionId = if (mode == "refund") 21 else subsectionId
 
             KtorClient.ApiServiceImpl.createPost(
                 token = credentials.token,
                 title = title,
                 content = finalContent,
-                sectionId = if (mode == "refund") 21 else subsectionId,
+                sectionId = finalSubsectionId,
                 imageUrls = imageUrls.ifBlank { null }
             ).onSuccess {
                 _postStatus.value = PostStatus.Success
                 if (!_preferencesState.value.noStoreDraft) draftRepository.clearDraft()
+                showSnackbar("发帖成功")
             }.onFailure { e ->
                 _postStatus.value = PostStatus.Error(e.message ?: "发帖失败")
+                showSnackbar("发帖失败: ${e.message}")
             }
         }
     }
 
-    fun resetPostStatus() { _postStatus.value = PostStatus.Idle }
+    fun clearDraft() {
+        viewModelScope.launch { draftRepository.clearDraft() }
+    }
+
+    fun resetPostStatus() {
+        _postStatus.value = PostStatus.Idle
+    }
 
     @OptIn(FlowPreview::class)
     private fun observeAndAutoSave() {
-        _uiState.debounce(1000).onEach { state ->
-            if (_preferencesState.value.noStoreDraft) return@onEach
-            if (state.title.isNotBlank() || state.content.isNotBlank()) {
-                draftRepository.saveDraft(PostDraftRepository.DraftDto(state.title, state.content, emptyList(), state.imageUrls, state.selectedSubsectionId))
+        _uiState
+            .debounce(1000)
+            .onEach { state ->
+                if (_preferencesState.value.noStoreDraft) return@onEach
+
+                if (state.title.isNotBlank() || state.content.isNotBlank() || state.imageUrls.isNotBlank()) {
+                    draftRepository.saveDraft(
+                        PostDraftRepository.DraftDto(
+                            title = state.title,
+                            content = state.content,
+                            imageUris = emptyList(),
+                            imageUrls = state.imageUrls,
+                            subsectionId = state.selectedSubsectionId
+                        )
+                    )
+                }
             }
-        }.launchIn(viewModelScope)
+            .launchIn(viewModelScope)
     }
 
     private fun showSnackbar(message: String) {
-        viewModelScope.launch { _snackbarHostState?.showSnackbar(message) }
+        viewModelScope.launch {
+            _snackbarHostState?.showSnackbar(message)
+        }
     }
 }
 
@@ -251,7 +293,10 @@ data class PostCreateUiState(
     val progressMessage: String = ""
 )
 
-data class DraftPreferencesState(val autoRestoreDraft: Boolean = false, val noStoreDraft: Boolean = false)
+data class DraftPreferencesState(
+    val autoRestoreDraft: Boolean = false,
+    val noStoreDraft: Boolean = false
+)
 
 sealed class PostStatus {
     data object Idle : PostStatus()
