@@ -16,23 +16,20 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
-/**
- * 浏览历史实体类
- * 已移除 java.util.Date 和 SimpleDateFormat，全面适配 kotlinx-datetime
- */
 @Entity(tableName = "browse_history")
 data class BrowseHistory(
     @PrimaryKey val postId: Long,
     val title: String,
     val previewContent: String,
-    val timestamp: Long = Clock.System.now().toEpochMilliseconds()
+    // 显式指定 kotlinx.datetime.Clock.System 避免与 java.lang.System 冲突
+    val timestamp: Long = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
 ) {
     /**
-     * 格式化时间字符串 (yyyy-MM-dd HH:mm)
-     * 使用 Kotlin 原生方式处理日期，避免 Java 平台依赖
+     * 格式化时间字符串
      */
     fun formattedTime(): String {
         val instant = Instant.fromEpochMilliseconds(timestamp)
+        // 使用 TimeZone.currentSystemDefault()
         val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
         
         return with(localDateTime) {

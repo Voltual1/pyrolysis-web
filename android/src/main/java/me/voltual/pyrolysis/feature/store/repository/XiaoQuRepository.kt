@@ -9,6 +9,8 @@
 package me.voltual.pyrolysis.feature.store.repository
 
 import io.ktor.client.call.*
+import io.ktor.utils.io.ByteReadChannel
+import kotlinx.coroutines.GlobalScope // 注意：实际生产建议由构造函数传入 scope
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.utils.io.writer
@@ -378,16 +380,17 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     }
 
     /**
-     * 终极无 Java IO 的上传提供器。
-     * 直接利用 Kotlin 协程的 Channel 架构搭配 Okio 流传输数据！
+     * 修复后的 ChannelProvider。
+     * 使用 GlobalScope.writer (或自定义作用域) 配合 Okio 流式读取。
      */
     private fun createChannelProvider(path: Path): ChannelProvider {
-        return ChannelProvider { size -> // Ktor 的 ChannelProvider 接口预留了 size，但在此忽略使用协程直接流式写入
-            writer(Dispatchers.IO) {
+        return ChannelProvider {
+            // Ktor 2.x+ 的 ChannelProvider lambda 为 () -> ByteReadChannel
+            GlobalScope.writer(Dispatchers.IO) {
                 fileSystem.source(path).use { source ->
                     val okioBuffer = Buffer()
-                    // 每次读取 8KB 然后发射至 Ktor 的 ByteChannel
-                    while (source.read(okioBuffer, 8192) != -1L) {
+                    // 每次读取 8KB 写入 Channel，避免内存溢出
+                    while (source.read(okioBuffer, 8192L) != -1L) {
                         channel.writeFully(okioBuffer.readByteArray())
                     }
                 }
