@@ -146,7 +146,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
         
         viewModelScope.launch(Dispatchers.IO) {
             urisToUpload.forEach { uri ->
-                val now = kotlin.datetime.Clock.System.now().toEpochMilliseconds()
+                val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
                 val path = uriToTempPath(context, uri, "screenshot_${now}.png")
                 path?.let { tempScreenshotPaths.add(it) }
             }
@@ -239,7 +239,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
 
             val uploadJobs = urisToUpload.map { uri ->
                 launch {
-                	val now = kotlin.datetime.Clock.System.now().toEpochMilliseconds()
+                	val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
                     val tempFileName = "intro_${now}.jpg"
                     val path = uriToTempPath(context, uri, tempFileName)
                     path?.let {

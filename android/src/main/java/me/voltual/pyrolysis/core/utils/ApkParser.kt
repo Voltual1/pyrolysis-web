@@ -44,7 +44,7 @@ object ApkParser {
     private val fileSystem = FileSystem.SYSTEM
 
     private fun generateUniqueFileName(prefix: String, extension: String): String {
-        val timestamp = kotlin.datetime.Clock.System.now().toEpochMilliseconds()
+        val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
         val randomSuffix = (100..999).random()
         return "${prefix}_${timestamp}_${randomSuffix}.$extension"
     }
