@@ -111,7 +111,7 @@ dependencies {
     coreLibraryDesugaring(libs.android.desugar)
     implementation(libs.google.material)
     implementation(libs.okhttp)
-    implementation(libs.photoview)
+//    implementation(libs.photoview)
 //    implementation(project(":shared"))
     implementation(libs.fragment)
     implementation(libs.biometric)

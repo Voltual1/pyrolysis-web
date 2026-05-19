@@ -11,40 +11,41 @@ package me.voltual.pyrolysis.ui.community
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.view.ViewGroup
-import android.widget.FrameLayout
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import me.voltual.pyrolysis.core.ui.theme.BBQSnackbarHost // 导入 BBQSnackbarHost
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import coil3.load
-import com.github.chrisbanes.photoview.PhotoView
-import kotlinx.coroutines.Dispatchers
+import coil3.compose.AsyncImage
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import me.voltual.pyrolysis.R
-import me.voltual.pyrolysis.core.utils.cleanUrl 
+import me.voltual.pyrolysis.core.ui.theme.BBQSnackbarHost
+import me.voltual.pyrolysis.core.utils.cleanUrl
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ImagePreviewScreen(
     imageUrl: String,
@@ -56,8 +57,11 @@ fun ImagePreviewScreen(
     val internalSnackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     
-    // 清理图片 URL
     val cleanedImageUrl = imageUrl.cleanUrl()
+
+    // 缩放、平移状态管理
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
 
     Scaffold(
         containerColor = Color.Black,
@@ -68,51 +72,65 @@ fun ImagePreviewScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(Color.Black)
-                .clickable { onClose() }
+                // 点击背景关闭预览
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onClose() },
+            contentAlignment = Alignment.Center
         ) {
-            AndroidView(
-                factory = { context ->
-                    FrameLayout(context).apply {
-                        layoutParams = FrameLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-
-                        val photoView = PhotoView(context).apply {
-                            layoutParams = FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-
-                            maximumScale = 8f
-                            mediumScale = 3f
-                            setScaleLevels(1f, 3f, 8f)
-
-                            setOnLongClickListener {
-                                clipboardManager.setPrimaryClip(
-                                    ClipData.newPlainText("image_url", cleanedImageUrl) // 使用清理后的 URL
-                                )
-                                scope.launch {
-                                    internalSnackbarHostState.showSnackbar(
-                                        message = context.getString(R.string.image_link_copied)
-                                    )
-                                }
-                                true
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    // 1. 手势捕捉：缩放和平移
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            scale = (scale * zoom).coerceIn(1f, 8f) // 限制缩放范围 1x 到 8x
+                            
+                            // 只有在放大状态下才允许平移
+                            if (scale > 1f) {
+                                offset += pan
+                            } else {
+                                offset = Offset.Zero // 重置位移
                             }
                         }
-                        addView(photoView)
                     }
-                },
-                update = { frameLayout ->
-                    val photoView = frameLayout.getChildAt(0) as PhotoView
-                    photoView.load(cleanedImageUrl) { // 使用清理后的 URL
-                        size(coil3.size.Size.ORIGINAL)
-                        diskCachePolicy(coil3.request.CachePolicy.ENABLED)
-                        memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+                    // 2. 应用图形变换（通过 graphicsLayer 避免触发不必要的重组，性能更好）
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offset.x,
+                        translationY = offset.y
+                    )
+                    // 3. 长按复制事件
+                    .combinedClickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onClose() }, // 点击图片也可以关闭
+                        onLongClick = {
+                            clipboardManager.setPrimaryClip(
+                                ClipData.newPlainText("image_url", cleanedImageUrl)
+                            )
+                            scope.launch {
+                                internalSnackbarHostState.showSnackbar(
+                                    message = context.getString(R.string.image_link_copied)
+                                )
+                            }
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(cleanedImageUrl)
+                        .size(coil3.size.Size.ORIGINAL)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }
