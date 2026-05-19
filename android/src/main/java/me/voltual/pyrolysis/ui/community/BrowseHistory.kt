@@ -11,8 +11,8 @@ package me.voltual.pyrolysis.ui.community
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import kotlinx.datetime.Clock.System|
-import kotlinx.datetime.Instant
+import kotlin.datetime.Clock.System
+import kotlin.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
@@ -30,7 +30,7 @@ data class BrowseHistory(
     fun formattedTime(): String {
         val instant = Instant.fromEpochMilliseconds(timestamp)
         // 使用 TimeZone.currentSystemDefault()
-        @kotlin.time.ExperimentalTime val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+        @OptIn(kotlin.time.ExperimentalTime::class) val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
         
         return with(localDateTime) {
             val yearStr = year.toString()
