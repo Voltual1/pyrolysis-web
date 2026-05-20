@@ -111,7 +111,6 @@ class AppDetailComposeViewModel(
     private val _downloadEvent = MutableSharedFlow<DownloadEvent>()
     val downloadEvent: SharedFlow<DownloadEvent> = _downloadEvent.asSharedFlow()
 
-
     // 支付信息数据类
     data class PaymentInfo(
         val appId: Long,

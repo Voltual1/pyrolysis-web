@@ -126,7 +126,6 @@ data class SheetNavigationData(
     val editMode: Boolean = false,
 ) : Parcelable
 
-
 data class ReposPageState(
     val enabledRepos: List<Repository> = emptyList(),
     val disabledRepo: List<Repository> = emptyList(),

@@ -260,7 +260,6 @@ fun ReleaseBadge(
         label = "contentColor"
     )
 
-
     Badge(
         modifier = modifier,
         containerColor = containerColor,

@@ -201,7 +201,6 @@ fun Context.getLocaleOfCode(localeCode: String): Locale {
     }
 }
 
-
     /**
      * Checks if app is currently considered to be in the foreground by Android.
      */
@@ -345,7 +344,6 @@ fun List<PermissionInfo>.getLabelsAndDescriptions(context: Context): List<String
         else "${label ?: permission.name}: $description"
     }
 }
-
 
 fun Context.openPermissionPage(packageName: String) {
     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).setData(

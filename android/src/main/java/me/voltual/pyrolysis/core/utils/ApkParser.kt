@@ -19,9 +19,9 @@ import android.os.Build
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.readBytes
 import kotlin.time.Clock
-import okio.FileSystem
-import okio.Path
-import okio.Path.Companion.toPath
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.files.Path
+import kotlinx.io.files.Path.Companion.toPath
 import kotlin.math.roundToInt
 
 data class ApkInfo(
@@ -39,7 +39,7 @@ data class ApkInfo(
 
 object ApkParser {
 
-    private val fileSystem = FileSystem.SYSTEM
+    private val fileSystem = SystemFileSystem
 
     private fun generateUniqueFileName(prefix: String, extension: String): String {
         @OptIn(kotlin.time.ExperimentalTime::class) val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()

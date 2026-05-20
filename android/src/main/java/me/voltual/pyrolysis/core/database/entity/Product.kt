@@ -134,7 +134,6 @@ open class Product(
     }
 }
 
-
 @Entity(tableName = TABLE_PRODUCT_TEMP,inheritSuperIndices = true)
 class ProductTemp(
     repositoryId: Long,

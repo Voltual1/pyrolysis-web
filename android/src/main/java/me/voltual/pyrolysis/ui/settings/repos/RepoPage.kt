@@ -618,7 +618,6 @@ AnimatedVisibility(visible = state.isSyncing) { // 建议统一使用 state.isSy
         }
     }
 
-
     if (openDeleteDialog.value) {
         BaseDialog(openDialogCustom = openDeleteDialog) {
             ActionsDialogUI(

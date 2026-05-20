@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
 
-
 /*object CoilDownloader {
 
     private val clients = ConcurrentHashMap<String, OkHttpClient>()

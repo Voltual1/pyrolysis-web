@@ -32,9 +32,9 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.android.annotation.KoinViewModel
-import okio.FileSystem
-import okio.Path
-import okio.Path.Companion.toPath
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.files.Path
+import kotlinx.io.files.Path.Companion.toPath
 import kotlin.time.Clock
 
 // 小趣空间分类模型
@@ -53,7 +53,7 @@ enum class ApkUploadService(val displayName: String) {
 class AppReleaseViewModel(application: Application) : AndroidViewModel(application) {
 
     private val context: Context = application.applicationContext
-    private val fileSystem = FileSystem.SYSTEM
+    private val fileSystem = SystemFileSystem
     
     private val _selectedStore = MutableStateFlow(AppStore.XIAOQU_SPACE)
     val selectedStore = _selectedStore.asStateFlow()

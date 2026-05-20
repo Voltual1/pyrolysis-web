@@ -82,7 +82,6 @@ enum class AndroidVersion(override val valueString: String) : Preferences.EnumEn
     Baklava("16"),
 }
 
-
 enum class TopDownloadType(val key: String, @param:StringRes val displayString: Int) {
     TOTAL_RECENT("_total", R.string.total_recent_downloads),
     TOTAL_ALLTIME("_total_alltime", R.string.total_alltime_downloads),

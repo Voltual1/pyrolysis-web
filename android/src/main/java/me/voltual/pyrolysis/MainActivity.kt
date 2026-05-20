@@ -122,7 +122,6 @@ class MainActivity : AppCompatActivity() {
                     userAccepted && xiaoquAccepted 
                 )
 
-
                 BBQTheme(appDarkTheme = ThemeManager.isAppDarkTheme) {
                     MainScreenContent(
                         navigationState = navigationState,

@@ -15,7 +15,6 @@ import me.voltual.pyrolysis.core.utils.extension.android.Android
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-
 // TODO unify with Product
 @Serializable
 open class IndexProduct(

@@ -9,7 +9,7 @@
 package me.voltual.pyrolysis.data.unified
 
 import me.voltual.pyrolysis.AppStore
-import okio.Path
+import kotlinx.io.files.Path
 
 /**
  * 统一的用户信息模型

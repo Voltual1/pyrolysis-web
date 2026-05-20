@@ -112,7 +112,6 @@ fun LanguagePrefDialogUI(
     }
 }
 
-
 @Composable
 fun EnumSelectionPrefDialogUI(
     prefKey: Preferences.Key<Preferences.Enumeration<*>>,

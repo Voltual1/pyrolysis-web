@@ -345,7 +345,6 @@ class BatchSyncWorker(
                 cancelIntent
             )
 
-
         when {
             nActiveSyncs > 0 -> {
                 builder.setContentTitle(

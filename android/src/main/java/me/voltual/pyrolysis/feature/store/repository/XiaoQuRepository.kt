@@ -22,8 +22,8 @@ import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.BBQApplication
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.data.unified.*
-import okio.FileSystem
-import okio.Path
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.files.Path
 import okio.Buffer
 import org.koin.core.annotation.Single
 
@@ -34,7 +34,7 @@ import org.koin.core.annotation.Single
 @Single
 class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStoreRepository {
 
-    private val fileSystem = FileSystem.SYSTEM
+    private val fileSystem = SystemFileSystem
 
     // 辅助方法：获取 Token
     private suspend fun getToken(): String {

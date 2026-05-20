@@ -43,7 +43,6 @@ class ShizukuInstaller(context: Context) : BaseInstaller(context) {
                     PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT or
                             PendingIntent.FLAG_ALLOW_UNSAFE_IMPLICIT_INTENT
 
-
                 Android.sdk(Build.VERSION_CODES.S)                ->
                     // For Android 12+, but below 14, can use FLAG_MUTABLE
                     PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT

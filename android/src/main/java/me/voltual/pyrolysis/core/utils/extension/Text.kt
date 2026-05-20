@@ -22,7 +22,6 @@ import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
-
 val RE_jumpChars = Regex("""[\t]""")
 val RE_finishChars = Regex("""[\n]""")
 

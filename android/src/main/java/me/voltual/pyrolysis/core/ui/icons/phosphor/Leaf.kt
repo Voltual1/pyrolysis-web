@@ -1,6 +1,5 @@
 package me.voltual.pyrolysis.core.ui.icons.phosphor
 
-
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -61,7 +60,6 @@ val Phosphor.Leaf: ImageVector
     }
 
 private var _leaf: ImageVector? = null
-
 
 //@Preview
 @Composable

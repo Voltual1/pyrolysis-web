@@ -142,7 +142,6 @@ fun ResourcePlazaContent(
         viewModel.initialize(isMyResourceMode, userId, mode, storeName)
     }
 
-
     Column(
         modifier = modifier
             .fillMaxSize()

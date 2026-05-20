@@ -9,7 +9,7 @@
 package me.voltual.pyrolysis.feature.store.repository
 
 import me.voltual.pyrolysis.data.unified.*
-import okio.Path
+import kotlinx.io.files.Path
 
 /**
  * 统一的应用商店仓库接口定义。
