@@ -18,10 +18,13 @@ import android.graphics.drawable.Drawable
 import android.os.Build
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.readBytes
-import kotlin.time.Clock
-import kotlinx.io.files.SystemFileSystem
+import kotlinx.datetime.Clock
+import kotlinx.io.buffered
 import kotlinx.io.files.Path
-import kotlinx.io.files.Path.Companion.toPath
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.write
+import java.io.File
+import java.io.OutputStream
 import kotlin.math.roundToInt
 
 data class ApkInfo(
@@ -42,17 +45,16 @@ object ApkParser {
     private val fileSystem = SystemFileSystem
 
     private fun generateUniqueFileName(prefix: String, extension: String): String {
-        @OptIn(kotlin.time.ExperimentalTime::class) val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
+        val timestamp = Clock.System.now().toEpochMilliseconds()
         val randomSuffix = (100..999).random()
         return "${prefix}_${timestamp}_${randomSuffix}.$extension"
     }
 
     /**
-     * 解析 APK 文件 - 已修正为挂起函数
+     * 解析 APK 文件
      */
     suspend fun parse(context: Context, file: PlatformFile): ApkInfo? {
         val tempApkFileName = generateUniqueFileName("release", "apk")
-        // 调用挂起函数 fileToTempPath
         val tempApkPath = fileToTempPath(context, file, tempApkFileName) ?: return null
         val archivePath = tempApkPath.toString()
 
@@ -92,10 +94,11 @@ object ApkParser {
             val tempIconFileName = generateUniqueFileName("icon", "png")
             val tempIconPath = drawableToTempPath(context, iconDrawable, tempIconFileName)
             
-            // 将路径包装回 PlatformFile
-            val tempIconFile = tempIconPath?.let { PlatformFile(it.toFile()) }
+            // 将 Path 转换为 PlatformFile
+            val tempIconFile = tempIconPath?.let { PlatformFile(File(it.toString())) }
 
-            val sizeInBytes = fileSystem.metadata(tempApkPath).size ?: 0L
+            val metadata = fileSystem.metadataOrNull(tempApkPath)
+            val sizeInBytes = metadata?.size ?: 0L
             val sizeInMb = (sizeInBytes / 1024.0 / 1024.0 * 100).roundToInt() / 100.0
 
             return ApkInfo(
@@ -118,16 +121,16 @@ object ApkParser {
     }
     
     /**
-     * 写入临时路径 - 已修正为挂起函数
+     * 写入临时路径
      */
     private suspend fun fileToTempPath(context: Context, file: PlatformFile, fileName: String): Path? {
         return try {
-            // readBytes() 是挂起函数，现在可以在这里安全调用
             val bytes = file.readBytes()
-            val tempPath = context.cacheDir.absolutePath.toPath() / fileName
+            val tempPath = Path(context.cacheDir.absolutePath, fileName)
             
-            fileSystem.write(tempPath) {
-                write(bytes)
+            // kotlinx-io 写入逻辑
+            fileSystem.sink(tempPath).buffered().use { sink ->
+                sink.write(bytes)
             }
             tempPath
         } catch (e: Exception) {
@@ -153,10 +156,22 @@ object ApkParser {
                 bmp
             }
 
-            val tempPath = context.cacheDir.absolutePath.toPath() / fileName
+            val tempPath = Path(context.cacheDir.absolutePath, fileName)
             
-            fileSystem.write(tempPath) {
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream())
+            // kotlinx-io 写入逻辑并桥接 OutputStream
+            fileSystem.sink(tempPath).buffered().use { sink ->
+                val bridgeStream = object : OutputStream() {
+                    override fun write(b: Int) {
+                        sink.writeByte(b.toByte())
+                    }
+                    override fun write(b: ByteArray, off: Int, len: Int) {
+                        sink.write(b, off, len)
+                    }
+                    override fun flush() {
+                        sink.flush()
+                    }
+                }
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, bridgeStream)
             }
             tempPath
         } catch (e: Exception) {

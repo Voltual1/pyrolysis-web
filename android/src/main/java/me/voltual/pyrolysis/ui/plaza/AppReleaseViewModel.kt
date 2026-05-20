@@ -34,7 +34,8 @@ import kotlinx.coroutines.withContext
 import org.koin.android.annotation.KoinViewModel
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.files.Path
-import kotlinx.io.files.Path.Companion.toPath
+import kotlinx.io.buffered // 必须导入以支持 .buffered()
+import kotlinx.io.write    // 必须导入以支持 .write(byteArray)
 import kotlin.time.Clock
 
 // 小趣空间分类模型
@@ -164,7 +165,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
     fun parseAndUploadApk(file: PlatformFile) {
         viewModelScope.launch(Dispatchers.IO) {
             _processFeedback.value = Result.success("正在解析APK...")
-            // 注意：ApkParser 内部需要适配 PlatformFile 或者通过 file.readBytes() 处理
             val parsedInfo: ApkInfo? = ApkParser.parse(context, file)
 
             if (parsedInfo == null) {
@@ -181,7 +181,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                 
                 tempApkPath.value = parsedInfo.tempApkPath
                 tempIconPath.value = parsedInfo.tempIconPath
-                localIconFile.value = parsedInfo.tempIconFile // 假设 ApkInfo 存储了 PlatformFile
+                localIconFile.value = parsedInfo.tempIconFile
                 
                 appExplain.value = "适配性能描述 •\n包名：${parsedInfo.packageName}\n版本：${parsedInfo.versionName}"
             }
@@ -261,11 +261,19 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
 
     fun clearProcessFeedback() { _processFeedback.value = null }
 
+    /**
+     * 修正后的 kotlinx-io 写入逻辑
+     */
     private suspend fun fileToTempPath(file: PlatformFile, fileName: String): Path? {
         return try {
             val bytes = file.readBytes()
-            val tempPath = context.cacheDir.absolutePath.toPath() / fileName
-            fileSystem.write(tempPath) { write(bytes) }
+            // 使用 Path 构造函数替代 toPath()
+            val tempPath = Path(context.cacheDir.absolutePath, fileName)
+            
+            // 使用 sink().buffered().use 替代 okio 的 write {}
+            fileSystem.sink(tempPath).buffered().use { sink ->
+                sink.write(bytes)
+            }
             tempPath
         } catch (e: Exception) { null }
     }

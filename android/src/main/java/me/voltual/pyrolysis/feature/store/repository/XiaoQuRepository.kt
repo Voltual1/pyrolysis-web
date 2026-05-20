@@ -9,34 +9,35 @@
 package me.voltual.pyrolysis.feature.store.repository
 
 import io.ktor.client.call.*
-import io.ktor.utils.io.ByteReadChannel
-import kotlinx.coroutines.GlobalScope // 注意：实际生产建议由构造函数传入 scope
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
-import io.ktor.utils.io.writer
 import io.ktor.utils.io.writeFully
+import io.ktor.utils.io.writer
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.first
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.BBQApplication
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.data.unified.*
-import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.Buffer
 import kotlinx.io.files.Path
-import okio.Buffer
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.readByteArray
+import kotlinx.io.use
 import org.koin.core.annotation.Single
 
 /**
  * 小趣空间数据仓库实现。
- * 完全由 Okio 和 Ktor Coroutine Channels 驱动。
+ * 现已完全适配 kotlinx-io。
  */
 @Single
 class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStoreRepository {
 
     private val fileSystem = SystemFileSystem
 
-    // 辅助方法：获取 Token
     private suspend fun getToken(): String {
         return AuthManager.getCredentials(BBQApplication.instance).first()?.token ?: ""
     }
@@ -380,18 +381,20 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     }
 
     /**
-     * 修复后的 ChannelProvider。
-     * 使用 GlobalScope.writer (或自定义作用域) 配合 Okio 流式读取。
+     * 修正后的 kotlinx-io 版 ChannelProvider。
      */
+    @OptIn(DelicateCoroutinesApi::class)
     private fun createChannelProvider(path: Path): ChannelProvider {
         return ChannelProvider {
-            // Ktor 2.x+ 的 ChannelProvider lambda 为 () -> ByteReadChannel
             GlobalScope.writer(Dispatchers.IO) {
                 fileSystem.source(path).use { source ->
-                    val okioBuffer = Buffer()
-                    // 每次读取 8KB 写入 Channel，避免内存溢出
-                    while (source.read(okioBuffer, 8192L) != -1L) {
-                        channel.writeFully(okioBuffer.readByteArray())
+                    val buffer = Buffer()
+                    // 循环读取，直到文件结束
+                    while (true) {
+                        val read = source.read(buffer, 8192L)
+                        if (read == -1L) break
+                        // 将 Buffer 内容转为 ByteArray 并写入 Channel
+                        channel.writeFully(buffer.readByteArray())
                     }
                 }
             }.channel
