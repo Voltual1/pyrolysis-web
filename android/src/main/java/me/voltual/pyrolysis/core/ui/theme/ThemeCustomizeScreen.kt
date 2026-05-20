@@ -1,11 +1,12 @@
 package me.voltual.pyrolysis.core.ui.theme
 
-import android.net.Uri
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import coil3.compose.rememberAsyncImagePainter
 import android.content.res.Configuration
+import android.net.Uri
+import android.util.DisplayMetrics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -28,6 +29,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.uri // 必须显式导入 Android 扩展属性 uri
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +39,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import me.voltual.pyrolysis.restartMainActivity 
-import android.util.DisplayMetrics
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,7 +73,7 @@ fun ThemeCustomizeScreen(
         type = FileKitType.Image,
         onResult = { file ->
             file?.let {
-                // 获取 Android 原生 Uri 以保留持久化权限
+                // 现在可以正确识别 it.uri 了
                 val uri = it.uri
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 scope.launch { ThemeColorStore.saveGlobalBackgroundUri(context, uri.toString()) }
