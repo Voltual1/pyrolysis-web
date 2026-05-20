@@ -5,13 +5,10 @@
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
 @file:Suppress("DEPRECATION")
 package me.voltual.pyrolysis.core.ui.components
 
-import android.content.Intent
-import android.net.Uri
-import android.util.Log
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.MaterialTheme
@@ -19,11 +16,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
+import io.ktor.http.Url
 import me.voltual.pyrolysis.ui.*
 
 /**
@@ -59,6 +57,7 @@ private enum class LinkType {
  * 自动识别文本中的帖子链接、B站视频标记和普通URL，并使其可点击。
  * - 已移除 java.util.regex 依赖，全面适配 Kotlin Regex。
  * - 使用 Navigation 3 的 LocalNavigator 进行内部导航。
+ * - 使用 Ktor Http Url 与 LocalUriHandler 替换 Android 原生 Uri/Intent，全面适配 KMP。
  */
 @Composable
 fun LinkifyText(
@@ -66,8 +65,8 @@ fun LinkifyText(
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyLarge
 ) {
-    val context = LocalContext.current
     val navigator = LocalNavigator.current
+    val uriHandler = LocalUriHandler.current // 跨平台的本地 URI 处理器
     val linkColor = MaterialTheme.colorScheme.primary
 
     val textStyle = if (style.color == Color.Unspecified) {
@@ -161,14 +160,16 @@ fun LinkifyText(
                 // 处理普通URL
                 annotatedString.getStringAnnotations(tag = LinkType.URL.name, start = offset, end = offset)
                     .firstOrNull()?.let { annotation ->
-                        val urlToOpen = annotation.item.let {
+                        val urlString = annotation.item.let {
                             if (!it.startsWith("http://") && !it.startsWith("https://")) "http://$it" else it
                         }
+                        
                         runCatching {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(urlToOpen))
-                            context.startActivity(intent)
-                        }.onFailure { e ->
-                            Log.e("LinkifyText", "无法打开URL: $urlToOpen", e)
+                            // 使用 Ktor Http 的 Url 对象进行安全解析/校验
+                            val ktorUrl = Url(urlString)
+                            // 使用 Compose 跨平台的 uriHandler 打开浏览器
+                            uriHandler.openUri(ktorUrl.toString())
+                        }.onFailure {
                         }
                     }
             }

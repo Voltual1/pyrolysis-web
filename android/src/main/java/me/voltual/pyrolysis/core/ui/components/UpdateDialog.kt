@@ -8,24 +8,24 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.core.ui.components
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import me.voltual.pyrolysis.data.UpdateInfo
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.window.Dialog
-import androidx.compose.foundation.layout.ColumnScope
+import io.ktor.http.Url
+import me.voltual.pyrolysis.data.UpdateInfo
 
 @Composable
 fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
+    val uriHandler = LocalUriHandler.current // 跨平台的本地 URI 处理器
+
     Dialog(
         onDismissRequest = onDismiss,
     ) {
@@ -63,15 +63,16 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                val context = LocalContext.current
+                
                 updateInfo.assets.filter { it.name.endsWith(".apk") }.forEach { asset ->
                     Button(
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                data = Uri.parse(asset.browser_download_url)
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            runCatching {
+                                // 使用 Ktor 的 Url 解析并验证下载链接
+                                val downloadUrl = Url(asset.browser_download_url)
+                                // 唤起系统浏览器/下载器
+                                uriHandler.openUri(downloadUrl.toString())
                             }
-                            context.startActivity(intent)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {

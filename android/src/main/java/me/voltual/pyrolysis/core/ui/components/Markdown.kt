@@ -12,29 +12,18 @@
 @file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 package me.voltual.pyrolysis.core.ui.components
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
-import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -51,16 +40,12 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -72,12 +57,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastForEach
-import androidx.core.net.toUri
+import io.ktor.http.Url
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -92,7 +76,6 @@ import org.intellij.markdown.flavours.gfm.GFMElementTypes
 import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes
 import org.intellij.markdown.parser.MarkdownParser
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 private val flavour by lazy {
     GFMFlavourDescriptor(
@@ -226,6 +209,8 @@ private fun MarkdownNode(
     onClickCitation: (String) -> Unit = {},
     listLevel: Int = 0
 ) {
+    val uriHandler = LocalUriHandler.current // 用于跨平台点击打开链接
+
     when (node.type) {
         // 文件根节点
         MarkdownElementTypes.MARKDOWN_FILE -> {
@@ -256,10 +241,10 @@ private fun MarkdownNode(
             }
             ProvideTextStyle(value = style) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    node.children.fastForEach { node ->
-                        if (node.type == MarkdownTokenTypes.ATX_CONTENT) {
+                    node.children.fastForEach { childrenNode ->
+                        if (childrenNode.type == MarkdownTokenTypes.ATX_CONTENT) {
                             Paragraph(
-                                node = node,
+                                node = childrenNode,
                                 content = content,
                                 onClickCitation = onClickCitation,
                                 modifier = modifier.padding(vertical = 16.dp),
@@ -329,21 +314,23 @@ private fun MarkdownNode(
             }
         }
 
-        // 链接
+        // 行内链接（如果独立作为一个Node的话，通过跨平台 uriHandler 进行保护打开）
         MarkdownElementTypes.INLINE_LINK -> {
             val linkText = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_TEXT)
                 ?.findChildOfTypeRecursive(GFMTokenTypes.GFM_AUTOLINK, MarkdownTokenTypes.TEXT)?.getTextInNode(content)
                 ?: ""
             val linkDest =
                 node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_DESTINATION)?.getTextInNode(content) ?: ""
-            val context = LocalContext.current
+            
             Text(
                 text = linkText,
                 color = MaterialTheme.colorScheme.primary,
                 textDecoration = TextDecoration.Underline,
                 modifier = modifier.clickable {
-                    val intent = Intent(Intent.ACTION_VIEW, linkDest.toUri())
-                    context.startActivity(intent)
+                    runCatching {
+                        val ktorUrl = Url(linkDest)
+                        uriHandler.openUri(ktorUrl.toString())
+                    }
                 })
         }
 
@@ -388,21 +375,6 @@ private fun MarkdownNode(
             )
         }
 
-/*        // 图片 - 简化版本，只显示链接文本
-        MarkdownElementTypes.IMAGE -> {
-            val altText = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_TEXT)?.getTextInNode(content) ?: ""
-            val imageUrl =
-                node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_DESTINATION)?.getTextInNode(content) ?: ""
-            Text(
-                text = "[图片: $altText]($imageUrl)",
-                color = MaterialTheme.colorScheme.primary,
-                modifier = modifier.clickable {
-                    val intent = Intent(Intent.ACTION_VIEW, imageUrl.toUri())
-                    LocalContext.current.startActivity(intent)
-                }
-            )
-        }
-*/
         // 行内代码
         MarkdownElementTypes.CODE_SPAN -> {
             val code = node.getTextInNode(content).trim('`')
@@ -453,7 +425,6 @@ private fun MarkdownNode(
 
         // 其他类型的节点，递归处理子节点
         else -> {
-            // 递归处理其他节点的子节点
             node.children.fastForEach { child ->
                 MarkdownNode(
                     node = child, content = content, modifier = modifier, onClickCitation = onClickCitation
@@ -526,9 +497,7 @@ private fun ListItemNode(
     node: ASTNode, content: String, bulletText: String, onClickCitation: (String) -> Unit = {}, level: Int
 ) {
     Column {
-        // 分离列表项的直接内容和嵌套列表
         val (directContent, nestedLists) = separateContentAndLists(node)
-        // directContent 渲染处理
         if (directContent.isNotEmpty()) {
             Row {
                 Text(
@@ -549,16 +518,14 @@ private fun ListItemNode(
                 }
             }
         }
-        // nestedLists 渲染处理
         nestedLists.fastForEach { nestedList ->
             MarkdownNode(
-                node = nestedList, content = content, onClickCitation = onClickCitation, listLevel = level + 1 // 增加层级
+                node = nestedList, content = content, onClickCitation = onClickCitation, listLevel = level + 1
             )
         }
     }
 }
 
-// 分离列表项的直接内容和嵌套列表
 private fun separateContentAndLists(listItemNode: ASTNode): Pair<List<ASTNode>, List<ASTNode>> {
     val directContent = mutableListOf<ASTNode>()
     val nestedLists = mutableListOf<ASTNode>()
@@ -636,7 +603,6 @@ private fun Paragraph(
 
 @Composable
 private fun SimpleTableNode(node: ASTNode, content: String, modifier: Modifier = Modifier) {
-    // 简化表格显示，只显示文本内容
     val rows = node.children.filter { it.type == GFMElementTypes.ROW }
     
     Column(
@@ -679,7 +645,6 @@ private fun SimpleCodeBlock(
         modifier = modifier
     ) {
         Column {
-            // 语言标签
             if (language.isNotBlank() && language != "plaintext") {
                 Text(
                     text = language,
@@ -692,7 +657,6 @@ private fun SimpleCodeBlock(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                 )
             }
-            // 代码内容
             Text(
                 text = code,
                 fontFamily = FontFamily.Monospace,
@@ -718,7 +682,9 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
 
         node.type == GFMTokenTypes.GFM_AUTOLINK -> {
             val link = node.getTextInNode(content)
-            withLink(LinkAnnotation.Url(link)) {
+            // 使用 Ktor 保护构造 URL 字符串
+            val safeUrl = runCatching { Url(link).toString() }.getOrDefault(link)
+            withLink(LinkAnnotation.Url(safeUrl)) {
                 withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
                     append(link)
                 }
@@ -784,7 +750,8 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
             val linkText = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_TEXT)?.getTextInNode(content)
                 ?.trim { it == '[' || it == ']' } ?: linkDest
             
-            withLink(LinkAnnotation.Url(linkDest)) {
+            val safeUrl = runCatching { Url(linkDest).toString() }.getOrDefault(linkDest)
+            withLink(LinkAnnotation.Url(safeUrl)) {
                 withStyle(
                     SpanStyle(
                         color = colorScheme.primary, textDecoration = TextDecoration.Underline
@@ -798,9 +765,11 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
         node.type == MarkdownElementTypes.AUTOLINK -> {
             val links = node.children.trim(MarkdownTokenTypes.LT, 1).trim(MarkdownTokenTypes.GT, 1)
             links.fastForEach { link ->
-                withLink(LinkAnnotation.Url(link.getTextInNode(content))) {
+                val linkStr = link.getTextInNode(content)
+                val safeUrl = runCatching { Url(linkStr).toString() }.getOrDefault(linkStr)
+                withLink(LinkAnnotation.Url(safeUrl)) {
                     withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                        append(link.getTextInNode(content))
+                        append(linkStr)
                     }
                 }
             }
@@ -819,7 +788,6 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
             }
         }
 
-        // 其他类型继续递归处理
         else -> {
             node.children.fastForEach {
                 appendMarkdownNodeContent(
@@ -865,13 +833,11 @@ private fun List<ASTNode>.trim(type: IElementType, size: Int): List<ASTNode> {
     if (this.isEmpty() || size <= 0) return this
     var start = 0
     var end = this.size
-    // 从头裁剪
     var trimmed = 0
     while (start < end && trimmed < size && this[start].type == type) {
         start++
         trimmed++
     }
-    // 从尾裁剪
     trimmed = 0
     while (end > start && trimmed < size && this[end - 1].type == type) {
         end--
