@@ -5,10 +5,6 @@ import android.content.Context
 import android.content.Intent
 import coil3.compose.rememberAsyncImagePainter
 import android.content.res.Configuration
-import android.net.Uri
-import android.util.DisplayMetrics
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -31,12 +27,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import me.voltual.pyrolysis.restartMainActivity 
+import android.util.DisplayMetrics
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,26 +65,40 @@ fun ThemeCustomizeScreen(
 
     var translate by remember { mutableStateOf(false) }
 
-    val globalBackgroundPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        uri?.let {
-            context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            scope.launch { ThemeColorStore.saveGlobalBackgroundUri(context, it.toString()) }
+    // 使用 FileKit 替换 OpenDocument
+    val globalBackgroundPickerLauncher = rememberFilePickerLauncher(
+        type = FileKitType.Image,
+        onResult = { file ->
+            file?.let {
+                // 获取 Android 原生 Uri 以保留持久化权限
+                val uri = it.uri
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                scope.launch { ThemeColorStore.saveGlobalBackgroundUri(context, uri.toString()) }
+            }
         }
-    }
+    )
 
-    val lightDrawerBgPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        uri?.let {
-            context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            scope.launch { ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, it.toString()) }
+    val lightDrawerBgPickerLauncher = rememberFilePickerLauncher(
+        type = FileKitType.Image,
+        onResult = { file ->
+            file?.let {
+                val uri = it.uri
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                scope.launch { ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, uri.toString()) }
+            }
         }
-    }
+    )
 
-    val darkDrawerBgPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        uri?.let {
-            context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            scope.launch { ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, it.toString()) }
+    val darkDrawerBgPickerLauncher = rememberFilePickerLauncher(
+        type = FileKitType.Image,
+        onResult = { file ->
+            file?.let {
+                val uri = it.uri
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                scope.launch { ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, uri.toString()) }
+            }
         }
-    }
+    )
 
     val globalBackgroundUri by ThemeColorStore.getGlobalBackgroundUriFlow(context).collectAsState(initial = null)
     val lightDrawerBgUri by ThemeColorStore.getDrawerHeaderLightBackgroundUriFlow(context).collectAsState(initial = null)
@@ -147,7 +160,7 @@ fun ThemeCustomizeScreen(
                     GlobalBackgroundEditor(
                         title = "主页背景图片",
                         backgroundUri = globalBackgroundUri,
-                        onSelectImage = { globalBackgroundPickerLauncher.launch(arrayOf("image/*")) },
+                        onSelectImage = { globalBackgroundPickerLauncher.launch() },
                         onReset = { scope.launch { ThemeColorStore.saveGlobalBackgroundUri(context, null) } }
                     )
                 }
@@ -181,7 +194,7 @@ fun ThemeCustomizeScreen(
                                 title = "侧边栏背景 (日间)",
                                 description = "仅修改侧边栏头部背景图片",
                                 backgroundUri = lightDrawerBgUri,
-                                onSelectImage = { lightDrawerBgPickerLauncher.launch(arrayOf("image/*")) },
+                                onSelectImage = { lightDrawerBgPickerLauncher.launch() },
                                 onReset = { scope.launch { ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, null) } }
                             )
                         }
@@ -199,7 +212,7 @@ fun ThemeCustomizeScreen(
                                 title = "侧边栏背景 (夜间)",
                                 description = "仅修改侧边栏头部背景图片",
                                 backgroundUri = darkDrawerBgUri,
-                                onSelectImage = { darkDrawerBgPickerLauncher.launch(arrayOf("image/*")) },
+                                onSelectImage = { darkDrawerBgPickerLauncher.launch() },
                                 onReset = { scope.launch { ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, null) } }
                             )
                         }
@@ -238,8 +251,6 @@ fun ThemeCustomizeScreen(
     }
 }
 
-// 局部函数：保存主题并重启
-
 @Suppress("DEPRECATION")
 private fun saveThemeAndRestart(
     context: Context,
@@ -262,13 +273,12 @@ private fun saveThemeAndRestart(
         ThemeColorStore.saveColors(context, colors)
         ThemeColorStore.saveDpi(context, dpi)
         ThemeColorStore.saveFontSize(context, fontScale)
-        ThemeColorStore.saveCustomDpiEnabled(context, customDpiEnabled) // 保存是否启用自定义 DPI 的状态
+        ThemeColorStore.saveCustomDpiEnabled(context, customDpiEnabled)
         ThemeColorStore.saveRoundScreenPaddings(context, roundScreenEnabled, roundLeft, roundTop, roundRight, roundBottom)
 
         withContext(Dispatchers.Main) {
-            ThemeManager.applyCustomColors(context) // 应用颜色
+            ThemeManager.applyCustomColors(context)
 
-            // 仅当 DPI 或字体大小或自定义 DPI 启用状态改变时才重启 Activity
             if (oldDpi != dpi || oldFontScale != fontScale || oldCustomDpiEnabled != customDpiEnabled) {
                 (context as? Activity)?.let {
                     if(customDpiEnabled){
@@ -283,7 +293,7 @@ private fun saveThemeAndRestart(
                     }
                 }
                 delay(300)
-                 restartMainActivity(context) // 重启
+                 restartMainActivity(context)
             }
         }
     }
@@ -342,7 +352,7 @@ fun ColorEditItem(
     colorName: String,
     currentColor: Color,
     onColorChange: (Color) -> Unit,
-    translate: Boolean // 接收 translate 参数
+    translate: Boolean
 ) {
     var hexValue by remember(currentColor) { mutableStateOf(currentColor.toHex()) }
     var showColorPicker by remember { mutableStateOf(false) }
@@ -373,7 +383,7 @@ fun ColorEditItem(
                 .border(1.dp, MaterialTheme.colorScheme.outline)
         )
         Text(
-            text = if (translate) colorNameTranslations[colorName] ?: colorName else colorName, // 使用翻译
+            text = if (translate) colorNameTranslations[colorName] ?: colorName else colorName,
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 16.dp),
@@ -488,7 +498,7 @@ fun HsvColorPickerDialog(
                 Text("取消")
             }
         },
-        shape = AppShapes.medium // 应用 AppShapes.medium
+        shape = AppShapes.medium
     )
 }
 
@@ -563,7 +573,6 @@ private fun DrawerHeaderPreview(modifier: Modifier = Modifier, backgroundUri: St
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            // 显示默认背景或占位符
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -582,7 +591,6 @@ fun String.isValidHex(): Boolean =
 
 fun Float.to255(): Int = (this * 255).roundToInt()
 
-// 新增：颜色名称翻译
 val colorNameTranslations = mapOf(
     "primary" to "主要颜色",
     "onPrimary" to "主要文字颜色",
