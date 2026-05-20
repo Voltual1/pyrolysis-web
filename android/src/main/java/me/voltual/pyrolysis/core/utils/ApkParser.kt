@@ -18,7 +18,7 @@ import android.graphics.drawable.Drawable
 import android.os.Build
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.readBytes
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem

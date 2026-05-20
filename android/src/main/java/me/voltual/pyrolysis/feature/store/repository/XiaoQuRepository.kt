@@ -387,13 +387,15 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     private fun createChannelProvider(path: Path): ChannelProvider {
         return ChannelProvider {
             GlobalScope.writer(Dispatchers.IO) {
+                // fileSystem.source 返回的是 RawSource 或是 Source，它们都实现了 AutoCloseable/Closeable
+                // 这里显式调用 standard library 的 use 来确保关闭
                 fileSystem.source(path).use { source ->
                     val buffer = Buffer()
-                    // 循环读取，直到文件结束
-                    while (true) {
-                        val read = source.read(buffer, 8192L)
-                        if (read == -1L) break
-                        // 将 Buffer 内容转为 ByteArray 并写入 Channel
+                    // 只要没有到达文件末尾（exhausted），就持续读取
+                    while (!source.exhausted()) {
+                        // kotlinx-io 推荐的读取方式：直接读入到 buffer
+                        source.readAtMostTo(buffer, 8192L)
+                        // 将 Buffer 缓冲的内容写出到 Ktor 的 Channel 中
                         channel.writeFully(buffer.readByteArray())
                     }
                 }
