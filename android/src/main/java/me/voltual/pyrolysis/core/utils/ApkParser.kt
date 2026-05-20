@@ -19,7 +19,6 @@ import android.os.Build
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.readBytes
 import kotlin.time.Clock
-import kotlin.time.Clock.System
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
@@ -35,7 +34,7 @@ data class ApkInfo(
     val sizeInMb: Double,
     val tempApkPath: Path,
     val tempIconPath: Path?,
-    val tempIconFile: PlatformFile? // 替换 Uri 为 PlatformFile
+    val tempIconFile: PlatformFile?
 )
 
 object ApkParser {
@@ -43,18 +42,17 @@ object ApkParser {
     private val fileSystem = FileSystem.SYSTEM
 
     private fun generateUniqueFileName(prefix: String, extension: String): String {
-        val timestamp = Clock.System.now().toEpochMilliseconds()
+        @OptIn(kotlin.time.ExperimentalTime::class) val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
         val randomSuffix = (100..999).random()
         return "${prefix}_${timestamp}_${randomSuffix}.$extension"
     }
 
     /**
-     * 解析 APK 文件
-     * @param file FileKit 的 PlatformFile 对象
+     * 解析 APK 文件 - 已修正为挂起函数
      */
-    fun parse(context: Context, file: PlatformFile): ApkInfo? {
+    suspend fun parse(context: Context, file: PlatformFile): ApkInfo? {
         val tempApkFileName = generateUniqueFileName("release", "apk")
-        // 将 PlatformFile 写入临时路径，因为 getPackageArchiveInfo 需要物理路径
+        // 调用挂起函数 fileToTempPath
         val tempApkPath = fileToTempPath(context, file, tempApkFileName) ?: return null
         val archivePath = tempApkPath.toString()
 
@@ -94,10 +92,9 @@ object ApkParser {
             val tempIconFileName = generateUniqueFileName("icon", "png")
             val tempIconPath = drawableToTempPath(context, iconDrawable, tempIconFileName)
             
-            // 将临时图标路径包装为 PlatformFile
+            // 将路径包装回 PlatformFile
             val tempIconFile = tempIconPath?.let { PlatformFile(it.toFile()) }
 
-            // 使用 Okio 的 FileSystem 获取文件大小
             val sizeInBytes = fileSystem.metadata(tempApkPath).size ?: 0L
             val sizeInMb = (sizeInBytes / 1024.0 / 1024.0 * 100).roundToInt() / 100.0
 
@@ -121,10 +118,11 @@ object ApkParser {
     }
     
     /**
-     * 将 PlatformFile 写入缓存目录
+     * 写入临时路径 - 已修正为挂起函数
      */
-    private fun fileToTempPath(context: Context, file: PlatformFile, fileName: String): Path? {
+    private suspend fun fileToTempPath(context: Context, file: PlatformFile, fileName: String): Path? {
         return try {
+            // readBytes() 是挂起函数，现在可以在这里安全调用
             val bytes = file.readBytes()
             val tempPath = context.cacheDir.absolutePath.toPath() / fileName
             
