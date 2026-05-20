@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import coil3.compose.rememberAsyncImagePainter
 import android.content.res.Configuration
-import android.net.Uri
 import android.util.DisplayMetrics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,7 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.uri // 必须显式导入 Android 扩展属性 uri
+import io.github.vinceglb.filekit.path // 导入 path 扩展属性
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import kotlinx.coroutines.Dispatchers
@@ -68,15 +67,12 @@ fun ThemeCustomizeScreen(
 
     var translate by remember { mutableStateOf(false) }
 
-    // 使用 FileKit 替换 OpenDocument
+    // 使用 FileKit 选择图片，直接保存缓存路径，无需申请持久化 Uri 权限
     val globalBackgroundPickerLauncher = rememberFilePickerLauncher(
         type = FileKitType.Image,
         onResult = { file ->
             file?.let {
-                // 现在可以正确识别 it.uri 了
-                val uri = it.uri
-                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                scope.launch { ThemeColorStore.saveGlobalBackgroundUri(context, uri.toString()) }
+                scope.launch { ThemeColorStore.saveGlobalBackgroundUri(context, it.path) }
             }
         }
     )
@@ -85,9 +81,7 @@ fun ThemeCustomizeScreen(
         type = FileKitType.Image,
         onResult = { file ->
             file?.let {
-                val uri = it.uri
-                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                scope.launch { ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, uri.toString()) }
+                scope.launch { ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, it.path) }
             }
         }
     )
@@ -96,9 +90,7 @@ fun ThemeCustomizeScreen(
         type = FileKitType.Image,
         onResult = { file ->
             file?.let {
-                val uri = it.uri
-                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                scope.launch { ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, uri.toString()) }
+                scope.launch { ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, it.path) }
             }
         }
     )

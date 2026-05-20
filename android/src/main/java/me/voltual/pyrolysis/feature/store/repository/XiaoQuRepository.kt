@@ -26,7 +26,7 @@ import kotlinx.io.Buffer
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readByteArray
-import kotlinx.io.use
+import kotlinx.io.buffered
 import org.koin.core.annotation.Single
 
 /**
@@ -387,14 +387,16 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
     private fun createChannelProvider(path: Path): ChannelProvider {
         return ChannelProvider {
             GlobalScope.writer(Dispatchers.IO) {
-                // fileSystem.source 返回的是 RawSource 或是 Source，它们都实现了 AutoCloseable/Closeable
-                // 这里显式调用 standard library 的 use 来确保关闭
-                fileSystem.source(path).use { source ->
+                // 1. 使用 .buffered() 将 RawSource 转换为 Source
+                // 2. 利用 Kotlin 标库自带的 use 块确保自动关闭
+                fileSystem.source(path).buffered().use { source ->
                     val buffer = Buffer()
-                    // 只要没有到达文件末尾（exhausted），就持续读取
+                    
+                    // 此时 source 是 Source 类型，可以正常使用 exhausted()
                     while (!source.exhausted()) {
-                        // kotlinx-io 推荐的读取方式：直接读入到 buffer
+                        // 每次最多读取 8192 字节到 buffer 中
                         source.readAtMostTo(buffer, 8192L)
+                        
                         // 将 Buffer 缓冲的内容写出到 Ktor 的 Channel 中
                         channel.writeFully(buffer.readByteArray())
                     }
