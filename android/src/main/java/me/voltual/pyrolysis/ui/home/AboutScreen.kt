@@ -9,9 +9,7 @@
 package me.voltual.pyrolysis.ui.home
 
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -30,11 +28,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler  // 引入 Compose 的 UriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.ktor.http.Url          // 引入 Ktor 的 Url 核心类
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.BuildConfig
 import me.voltual.pyrolysis.R
@@ -91,12 +92,22 @@ fun getAppSignatureSha256(context: Context): String {
     }
 }
 
+/**
+ * 辅助方法：使用 Ktor 校验和规范化 URL，然后通过 Compose 的 UriHandler 打开
+ */
+private fun openKtorUrlWithHandler(uriHandler: UriHandler, urlString: String) {
+    val ktorUrl = Url(urlString)
+    // ktorUrl.toString() 会返回一个编码规范的 URL 字符串
+    uriHandler.openUri(ktorUrl.toString())
+}
+
 @Composable
 fun AboutScreen(
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState 
 ) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current // 获取当前平台的 UriHandler 实例
     val versionName = BuildConfig.VERSION_NAME
     val versionCode = BuildConfig.VERSION_CODE
     val scope = rememberCoroutineScope() 
@@ -148,8 +159,7 @@ fun AboutScreen(
         LicenseCard(
             onLicenseClick = {
                 runCatching {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://gitee.com/Voltula/bbq/blob/master/LICENSE"))
-                    context.startActivity(intent)
+                    openKtorUrlWithHandler(uriHandler, "https://gitee.com/Voltula/bbq/blob/master/LICENSE")
                 }.onFailure {
                     scope.launch {
                         snackbarHostState.showSnackbar(message = "无法打开浏览器")
@@ -163,16 +173,14 @@ fun AboutScreen(
         OpenSourceCard(
             onGiteeClick = {
                 runCatching {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://gitee.com/Voltula/bbq"))
-                    context.startActivity(intent)
+                    openKtorUrlWithHandler(uriHandler, "https://gitee.com/Voltula/bbq")
                 }.onFailure {
                     scope.launch { snackbarHostState.showSnackbar(message = "无法打开浏览器") }
                 }
             },
             onReleasesClick = {
                 runCatching {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://gitee.com/Voltula/bbq/releases/"))
-                    context.startActivity(intent)
+                    openKtorUrlWithHandler(uriHandler, "https://gitee.com/Voltula/bbq/releases/")
                 }.onFailure {
                     scope.launch { snackbarHostState.showSnackbar(message = "无法打开浏览器") }
                 }
@@ -189,7 +197,7 @@ fun AboutScreen(
         
         Spacer(modifier = Modifier.height(24.dp))
         
-        AcknowledgmentsCard()
+        AcknowledgmentsCard(uriHandler = uriHandler)
         
         Spacer(modifier = Modifier.height(32.dp))
         
@@ -352,7 +360,7 @@ fun SignatureVerificationCard(context: Context) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = if (isOfficial) Icons.Default.CheckCircle 
-                                 else Icons.Default.Warning,
+                                  else Icons.Default.Warning,
                     contentDescription = null,
                     tint = if (isOfficial) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
@@ -403,7 +411,7 @@ fun SignatureVerificationCard(context: Context) {
 }
 
 @Composable
-fun AcknowledgmentsCard() {
+fun AcknowledgmentsCard(uriHandler: UriHandler) {
     val acknowledgmentsMd = """
         本项目的上游与参考项目（或者说是它们的衍生作品）:
         
@@ -413,8 +421,6 @@ fun AcknowledgmentsCard() {
         * **Droid-ify (GPLv3)**: [GitHub](https://github.com/Droid-ify/client)
         * **Neo Store (GPLv3)**: [GitHub](https://github.com/NeoApplications/Neo-Store)
     """.trimIndent()
-
-    val context = LocalContext.current
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -438,8 +444,7 @@ fun AcknowledgmentsCard() {
                 ),
                 onClickCitation = { url ->
                     runCatching {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        context.startActivity(intent)
+                        openKtorUrlWithHandler(uriHandler, url)
                     }
                 }
             )

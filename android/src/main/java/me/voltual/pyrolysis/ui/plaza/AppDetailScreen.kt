@@ -13,8 +13,6 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,11 +37,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler // 引入 Compose 跨平台 UriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import io.ktor.http.Url // 引入 Ktor Http URL 用于替代 android.net.Uri
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
@@ -66,8 +66,10 @@ fun AppDetailScreen(
     viewModel: AppDetailComposeViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
-    // Navigation 3 导航器
     val navigator = LocalNavigator.current
+    
+    // 1. 获取 Compose 跨平台的 UriHandler
+    val uriHandler = LocalUriHandler.current
 
     val appDetail by viewModel.appDetail.collectAsState()
     val comments by viewModel.comments.collectAsState()
@@ -81,9 +83,7 @@ fun AppDetailScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    // 应用删除确认对话框
     var showDeleteAppDialog by remember { mutableStateOf(false) }
-    // 评论删除确认对话框
     var showDeleteCommentDialog by remember { mutableStateOf(false) }
     var commentToDeleteId by remember { mutableStateOf<String?>(null) }
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -109,7 +109,6 @@ fun AppDetailScreen(
 
                     when (result) {
                         SnackbarResult.ActionPerformed -> {
-                            // 类型安全导航到下载管理
                             navigator.navigate(Download)
                         }
                         SnackbarResult.Dismissed -> { /* 忽略 */ }
@@ -123,13 +122,17 @@ fun AppDetailScreen(
         viewModel.initializeData(appId, versionId, storeName)
     }
 
+    // 2. 替换为 Ktor Url 解析与 Compose UriHandler 打开浏览器
     LaunchedEffect(Unit) {
-        viewModel.openUrlEvent.collectLatest { url ->
+        viewModel.openUrlEvent.collectLatest { urlString ->
             try {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                context.startActivity(intent)
+                // 使用 Ktor 的 Url 类进行安全校验/解析（如果传入的 URL 格式非法会抛出异常）
+                val ktorUrl = Url(urlString) 
+                
+                // 使用 Compose 跨平台自带的 uriHandler 打开链接
+                uriHandler.openUri(ktorUrl.toString())
             } catch (e: Exception) {
-                snackbarHostState.showSnackbar("无法打开链接: $url")
+                snackbarHostState.showSnackbar("无法打开链接: $urlString")
             }
         }
     }
@@ -144,7 +147,6 @@ fun AppDetailScreen(
     // 监听更新事件
     LaunchedEffect(viewModel.updateEvent) {
         viewModel.updateEvent.collectLatest { jsonString ->
-            // 类型安全导航到更新应用页面
             navigator.navigate(UpdateAppRelease(jsonString))
         }
     }
@@ -188,7 +190,6 @@ fun AppDetailScreen(
         }
     }
 
-    // 下拉刷新状态
     var isRefreshing by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullToRefreshState()
 
@@ -200,7 +201,6 @@ fun AppDetailScreen(
         }
     }
 
-    // 处理分享功能
     fun handleShare() {
         appDetail?.let { detail ->
             when (detail.store) {
@@ -229,7 +229,6 @@ fun AppDetailScreen(
         }
     }
 
-    // 监听 ViewModel 状态变化以结束刷新状态
     LaunchedEffect(isRefreshing, isLoading, appDetail, errorMessage) {
         if (!isLoading && (appDetail != null || errorMessage.isNotEmpty()) && isRefreshing) {
             isRefreshing = false
@@ -258,7 +257,6 @@ fun AppDetailScreen(
             val detail = appDetail!!
             val pageCount = when (detail.store) {
                 AppStore.LOCAL -> 2
-                //暂时硬编码为LOCAL占位
                 else -> 1
             }
             val pagerState = rememberPagerState(pageCount = { pageCount })
@@ -308,7 +306,6 @@ fun AppDetailScreen(
                 }
             }
 
-            // FAB
             FloatingActionButton(
                 onClick = { viewModel.openCommentDialog() },
                 modifier = Modifier
@@ -324,7 +321,6 @@ fun AppDetailScreen(
         }
     }
 
-    // 删除应用确认对话框
     if (showDeleteAppDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteAppDialog = false },
@@ -351,7 +347,6 @@ fun AppDetailScreen(
         )
     }
 
-    // 删除评论确认对话框
     if (showDeleteCommentDialog && commentToDeleteId != null) {
         AlertDialog(
             onDismissRequest = { showDeleteCommentDialog = false },
