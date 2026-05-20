@@ -10,10 +10,10 @@
 package me.voltual.pyrolysis.data
 
 import android.content.Context
-import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import io.ktor.http.Url
 import kotlinx.coroutines.flow.Flow
 import org.koin.core.annotation.Single
 import kotlinx.coroutines.flow.map
@@ -36,7 +36,7 @@ class PostDraftDataStore(private val context: Context) {
     suspend fun saveDraft(
         title: String,
         content: String,
-        imageUris: List<Uri>,
+        imageUris: List<Url>,
         imageUrls: String,
         subsectionId: Int
     ) {
@@ -78,7 +78,7 @@ class PostDraftDataStore(private val context: Context) {
             val uriStrings = preferences[DRAFT_IMAGE_URIS] ?: ""
             val imageUris = uriStrings.split(",")
                 .filter { it.isNotEmpty() }
-                .map { Uri.parse(it) }
+                .map { Url(it) }
             
             Draft(
                 title = preferences[DRAFT_TITLE] ?: "",
@@ -101,7 +101,7 @@ class PostDraftDataStore(private val context: Context) {
     data class Draft(
         val title: String,
         val content: String,
-        val imageUris: List<Uri>,
+        val imageUris: List<Url>,
         val imageUrls: String,
         val subsectionId: Int,
         val hasDraft: Boolean
