@@ -5,7 +5,7 @@
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.core.utils
 
 import android.content.Context
@@ -15,15 +15,14 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
-import android.net.Uri
 import android.os.Build
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.readBytes
 import kotlin.time.Clock
 import kotlin.time.Clock.System
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
-import okio.buffer
-import okio.source
 import kotlin.math.roundToInt
 
 data class ApkInfo(
@@ -36,7 +35,7 @@ data class ApkInfo(
     val sizeInMb: Double,
     val tempApkPath: Path,
     val tempIconPath: Path?,
-    val tempIconFileUri: Uri?
+    val tempIconFile: PlatformFile? // 替换 Uri 为 PlatformFile
 )
 
 object ApkParser {
@@ -44,14 +43,19 @@ object ApkParser {
     private val fileSystem = FileSystem.SYSTEM
 
     private fun generateUniqueFileName(prefix: String, extension: String): String {
-        @OptIn(kotlin.time.ExperimentalTime::class) val timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
+        val timestamp = Clock.System.now().toEpochMilliseconds()
         val randomSuffix = (100..999).random()
         return "${prefix}_${timestamp}_${randomSuffix}.$extension"
     }
 
-    fun parse(context: Context, apkUri: Uri): ApkInfo? {
+    /**
+     * 解析 APK 文件
+     * @param file FileKit 的 PlatformFile 对象
+     */
+    fun parse(context: Context, file: PlatformFile): ApkInfo? {
         val tempApkFileName = generateUniqueFileName("release", "apk")
-        val tempApkPath = uriToTempPath(context, apkUri, tempApkFileName) ?: return null
+        // 将 PlatformFile 写入临时路径，因为 getPackageArchiveInfo 需要物理路径
+        val tempApkPath = fileToTempPath(context, file, tempApkFileName) ?: return null
         val archivePath = tempApkPath.toString()
 
         try {
@@ -90,8 +94,8 @@ object ApkParser {
             val tempIconFileName = generateUniqueFileName("icon", "png")
             val tempIconPath = drawableToTempPath(context, iconDrawable, tempIconFileName)
             
-            // 巧妙避开 java.io.File，直接通过字符串构建 file:// 协议的 Uri
-            val tempIconFileUri = tempIconPath?.let { Uri.parse("file://$it") }
+            // 将临时图标路径包装为 PlatformFile
+            val tempIconFile = tempIconPath?.let { PlatformFile(it.toFile()) }
 
             // 使用 Okio 的 FileSystem 获取文件大小
             val sizeInBytes = fileSystem.metadata(tempApkPath).size ?: 0L
@@ -107,7 +111,7 @@ object ApkParser {
                 sizeInMb = sizeInMb,
                 tempApkPath = tempApkPath,
                 tempIconPath = tempIconPath,
-                tempIconFileUri = tempIconFileUri
+                tempIconFile = tempIconFile
             )
         } catch (e: Exception) {
             e.printStackTrace()
@@ -116,14 +120,16 @@ object ApkParser {
         }
     }
     
-    private fun uriToTempPath(context: Context, uri: Uri, fileName: String): Path? {
+    /**
+     * 将 PlatformFile 写入缓存目录
+     */
+    private fun fileToTempPath(context: Context, file: PlatformFile, fileName: String): Path? {
         return try {
-            // 利用 Kotlin 类型推断隐藏 InputStream 声明，直接调用 Okio 的 source()
-            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+            val bytes = file.readBytes()
             val tempPath = context.cacheDir.absolutePath.toPath() / fileName
             
             fileSystem.write(tempPath) {
-                writeAll(inputStream.source().buffer())
+                write(bytes)
             }
             tempPath
         } catch (e: Exception) {
@@ -152,7 +158,6 @@ object ApkParser {
             val tempPath = context.cacheDir.absolutePath.toPath() / fileName
             
             fileSystem.write(tempPath) {
-                // 直接从 Okio 的 BufferedSink 中获取 outputStream 给 Bitmap 压缩使用
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream())
             }
             tempPath

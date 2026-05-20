@@ -8,10 +8,6 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.plaza
 
-import android.content.Intent
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,14 +19,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.SubcomposeAsyncImage
+import io.github.vinceglb.filekit.dialogs.FileKitMode
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
-import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.theme.*
 
@@ -38,19 +35,16 @@ import me.voltual.pyrolysis.core.ui.theme.*
 @Composable
 fun AppReleaseScreen(
     viewModel: AppReleaseViewModel,
-    snackbarHostState: SnackbarHostState,  // 保留未使用参数，若不需要可移除
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    // Navigation 3 导航器
     val navigator = LocalNavigator.current
-
     val internalSnackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     val selectedStore by viewModel.selectedStore.collectAsStateWithLifecycle()
-
     val processFeedback by viewModel.processFeedback.collectAsStateWithLifecycle()
+
     LaunchedEffect(processFeedback) {
         processFeedback?.let { result ->
             val message = result.fold(
@@ -65,23 +59,28 @@ fun AppReleaseScreen(
         }
     }
 
-    val apkLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { viewModel.parseAndUploadApk(it) }
-    }
+    // APK 选择器
+    val apkLauncher = rememberFilePickerLauncher(
+        type = FileKitType.File(extensions = listOf("apk")),
+        onResult = { file ->
+            file?.let { viewModel.parseAndUploadApk(it) }
+        }
+    )
 
-    val imageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetMultipleContents()
-    ) { uris: List<Uri> ->
-        if (uris.isNotEmpty()) {
-            if (selectedStore == AppStore.XIAOQU_SPACE) {
-                viewModel.uploadIntroductionImages(uris)
-            } else {
-                viewModel.addScreenshots(uris)
+    // 图片选择器
+    val imageLauncher = rememberFilePickerLauncher(
+        type = FileKitType.Image,
+        mode = FileKitMode.Multiple(),
+        onResult = { files ->
+            if (!files.isNullOrEmpty()) {
+                if (selectedStore == AppStore.XIAOQU_SPACE) {
+                    viewModel.uploadIntroductionImages(files)
+                } else {
+                    viewModel.addScreenshots(files)
+                }
             }
         }
-    }
+    )
 
     val isUpdateMode by viewModel.isUpdateMode
 
@@ -99,7 +98,6 @@ fun AppReleaseScreen(
         ) {
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            // 商店选择
             item {
                 AppStoreDropdownMenu(
                     selectedStore = selectedStore,
@@ -108,22 +106,20 @@ fun AppReleaseScreen(
                 )
             }
 
-            // --- 公共部分：APK上传与图标 ---
             item {
-                val buttonText = "1. 选择 APK (解析并准备上传)"
                 BBQButton(
-                    onClick = { apkLauncher.launch("application/vnd.android.package-archive") },
+                    onClick = { apkLauncher.launch() },
                     modifier = Modifier.fillMaxWidth(),
-                    text = { Text(buttonText) }
+                    text = { Text("1. 选择 APK (解析并准备上传)") }
                 )
             }
 
             item {
                 val iconUrl by viewModel.iconUrl
-                val localIconUri by viewModel.localIconUri
+                val localIconFile by viewModel.localIconFile
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    val model: Any? = iconUrl ?: localIconUri
+                    val model: Any? = iconUrl ?: localIconFile
                     if (model != null) {
                         SubcomposeAsyncImage(
                             model = model,
@@ -141,7 +137,6 @@ fun AppReleaseScreen(
                 }
             }
 
-            // --- 小趣空间表单 ---
             if (selectedStore == AppStore.XIAOQU_SPACE) {
                 item { ApkUploadServiceDropdown(viewModel) }
                 item { FormTextField(label = "应用名称", state = viewModel.appName) }
@@ -157,7 +152,7 @@ fun AppReleaseScreen(
                         Text("2. 上传应用介绍图", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(8.dp))
                         BBQOutlinedButton(
-                            onClick = { imageLauncher.launch("image/*") },
+                            onClick = { imageLauncher.launch() },
                             modifier = Modifier.fillMaxWidth(),
                             text = { Text("选择图片") }
                         )
@@ -170,7 +165,6 @@ fun AppReleaseScreen(
                                     ImagePreviewItem(
                                         imageUrl = url,
                                         onRemoveClick = { viewModel.removeIntroductionImage(url) },
-                                        // Navigation 3 类型安全导航
                                         onImageClick = { navigator.navigate(ImagePreview(url)) }
                                     )
                                 }
@@ -183,7 +177,6 @@ fun AppReleaseScreen(
                 item { PaymentSettings(viewModel) }
             }
 
-            // --- 提交按钮 ---
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 BBQButton(

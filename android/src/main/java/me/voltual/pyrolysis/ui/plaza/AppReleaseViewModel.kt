@@ -11,11 +11,13 @@ package me.voltual.pyrolysis.ui.plaza
 
 import android.app.Application
 import android.content.Context
-import android.net.Uri
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.readBytes
+import io.github.vinceglb.filekit.name
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
@@ -33,11 +35,7 @@ import org.koin.android.annotation.KoinViewModel
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
-import okio.buffer
-import okio.source
 import kotlin.time.Clock
-import kotlin.time.Clock.System
-//注意kotlinx.datetime.Clock.System，kotlinx.datetime.Clock，kotlinx.datetime.Instant等在kotlin2.1都被收编进标准库了
 
 // 小趣空间分类模型
 data class AppCategory(
@@ -78,7 +76,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
     val versionName = mutableStateOf("")
     val versionCode = mutableStateOf(0L)
     val appSize = mutableStateOf("") 
-    val localIconUri = mutableStateOf<Uri?>(null)
+    val localIconFile = mutableStateOf<PlatformFile?>(null)
     val tempIconPath = mutableStateOf<Path?>(null)
     val tempApkPath = mutableStateOf<Path?>(null)
     
@@ -126,7 +124,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
     val keyword = mutableStateOf("关键字")
     val isWearOs = mutableStateOf(0)
     val abi = mutableStateOf(0) 
-    val screenshotsUris = mutableStateListOf<Uri>() 
+    val screenshotsFiles = mutableStateListOf<PlatformFile>() 
     val tempScreenshotPaths = mutableStateListOf<Path>()
 
     val isApkUploading = mutableStateOf(false)
@@ -138,35 +136,36 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
     
     private val MAX_INTRO_IMAGES_XIAOQU = 3
 
-    fun addScreenshots(uris: List<Uri>) {       
-        val currentCount = screenshotsUris.size
+    fun addScreenshots(files: List<PlatformFile>) {       
+        val currentCount = screenshotsFiles.size
         val remainingSlots = MAX_INTRO_IMAGES_XIAOQU - currentCount
-        val urisToUpload = uris.take(remainingSlots)
+        val filesToUpload = files.take(remainingSlots)
         
-        screenshotsUris.addAll(urisToUpload)
+        screenshotsFiles.addAll(filesToUpload)
         
         viewModelScope.launch(Dispatchers.IO) {
-            urisToUpload.forEach { uri ->
-                val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
-                val path = uriToTempPath(context, uri, "screenshot_${now}.png")
+            filesToUpload.forEach { file ->
+                val now = Clock.System.now().toEpochMilliseconds()
+                val path = fileToTempPath(file, "screenshot_${now}.png")
                 path?.let { tempScreenshotPaths.add(it) }
             }
         }
     }
     
-    fun removeScreenshot(uri: Uri) {
-        val index = screenshotsUris.indexOf(uri)
+    fun removeScreenshot(file: PlatformFile) {
+        val index = screenshotsFiles.indexOf(file)
         if (index != -1) {
-            screenshotsUris.removeAt(index)
+            screenshotsFiles.removeAt(index)
             if (index < tempScreenshotPaths.size) tempScreenshotPaths.removeAt(index)
         }
     }
 
     // --- APK 解析与上传 ---
-    fun parseAndUploadApk(uri: Uri) {
+    fun parseAndUploadApk(file: PlatformFile) {
         viewModelScope.launch(Dispatchers.IO) {
             _processFeedback.value = Result.success("正在解析APK...")
-            val parsedInfo: ApkInfo? = ApkParser.parse(context, uri)
+            // 注意：ApkParser 内部需要适配 PlatformFile 或者通过 file.readBytes() 处理
+            val parsedInfo: ApkInfo? = ApkParser.parse(context, file)
 
             if (parsedInfo == null) {
                 _processFeedback.value = Result.failure(Exception("APK 文件解析失败"))
@@ -182,7 +181,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
                 
                 tempApkPath.value = parsedInfo.tempApkPath
                 tempIconPath.value = parsedInfo.tempIconPath
-                localIconUri.value = parsedInfo.tempIconFileUri
+                localIconFile.value = parsedInfo.tempIconFile // 假设 ApkInfo 存储了 PlatformFile
                 
                 appExplain.value = "适配性能描述 •\n包名：${parsedInfo.packageName}\n版本：${parsedInfo.versionName}"
             }
@@ -224,7 +223,7 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun uploadIntroductionImages(uris: List<Uri>) {
+    fun uploadIntroductionImages(files: List<PlatformFile>) {
         if (_selectedStore.value != AppStore.XIAOQU_SPACE) return
         
         viewModelScope.launch(Dispatchers.IO) {
@@ -236,13 +235,13 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
 
             isIntroImagesUploading.value = true
             val remainingSlots = MAX_INTRO_IMAGES_XIAOQU - currentCount
-            val urisToUpload = uris.take(remainingSlots)
+            val filesToUpload = files.take(remainingSlots)
 
-            val uploadJobs = urisToUpload.map { uri ->
+            val uploadJobs = filesToUpload.map { file ->
                 launch {
-                	val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
+                	val now = Clock.System.now().toEpochMilliseconds()
                     val tempFileName = "intro_${now}.jpg"
-                    val path = uriToTempPath(context, uri, tempFileName)
+                    val path = fileToTempPath(file, tempFileName)
                     path?.let {
                         val imageResult = xiaoQuRepo.uploadImage(it, "intro")
                         imageResult.onSuccess { url ->
@@ -262,16 +261,15 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
 
     fun clearProcessFeedback() { _processFeedback.value = null }
 
-    private fun uriToTempPath(context: Context, uri: Uri, fileName: String): Path? {
+    private suspend fun fileToTempPath(file: PlatformFile, fileName: String): Path? {
         return try {
-            val source = context.contentResolver.openInputStream(uri)?.source()?.buffer() ?: return null
+            val bytes = file.readBytes()
             val tempPath = context.cacheDir.absolutePath.toPath() / fileName
-            fileSystem.write(tempPath) { writeAll(source) }
+            fileSystem.write(tempPath) { write(bytes) }
             tempPath
         } catch (e: Exception) { null }
     }
 
-    // 恢复被遗漏的方法
     fun removeIntroductionImage(url: String) {
         introductionImageUrls.remove(url)
     }
