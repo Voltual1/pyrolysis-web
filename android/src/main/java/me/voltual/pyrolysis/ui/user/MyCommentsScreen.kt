@@ -8,11 +8,9 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.user
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,11 +25,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler // 引入 Compose 跨平台 UriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import io.ktor.http.Url // 引入 Ktor 的 Url 解析
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.data.unified.UnifiedComment
@@ -46,7 +46,8 @@ fun MyCommentsScreen(
     modifier: Modifier = Modifier,
     viewModel: MyCommentsViewModel = koinViewModel()
 ) {
-    val context = LocalContext.current
+    // 获取跨平台的 UriHandler
+    val uriHandler = LocalUriHandler.current
     // Navigation 3 导航器
     val navigator = LocalNavigator.current
 
@@ -102,7 +103,6 @@ fun MyCommentsScreen(
                         MyCommentItem(
                             comment = comment,
                             onUserClick = { userId ->
-                                // 类型安全导航：传递 UserDetail 路由对象
                                 navigator.navigate(
                                     UserDetail(
                                         userId = userId.toLong(),
@@ -111,7 +111,6 @@ fun MyCommentsScreen(
                                 )
                             },
                             onOpenApp = { appId, versionId ->
-                                // 类型安全导航：传递 AppDetail 路由对象
                                 navigator.navigate(
                                     AppDetail(
                                         appId = appId,
@@ -120,12 +119,14 @@ fun MyCommentsScreen(
                                     )
                                 )
                             },
-                            onOpenUrl = { url ->
+                            onOpenUrl = { urlString ->
                                 try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                    context.startActivity(intent)
+                                    // 使用 Ktor 的 Url 进行安全的链接解析与验证
+                                    val parsedUrl = Url(urlString)
+                                    // 使用 Compose 跨平台的 uriHandler 打开浏览器
+                                    uriHandler.openUri(parsedUrl.toString())
                                 } catch (e: Exception) {
-                                    // 错误处理
+                                    // 错误处理（例如：URL 格式不正确或平台不支持）
                                 }
                             },
                             onDeleteComment = { commentId ->
@@ -192,7 +193,7 @@ fun MyCommentItem(
     onUserClick: (String) -> Unit,
     onOpenApp: (String, Long) -> Unit,
     onOpenUrl: (String) -> Unit,
-    onDeleteComment: (String) -> Unit // 新增：删除评论回调
+    onDeleteComment: (String) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
