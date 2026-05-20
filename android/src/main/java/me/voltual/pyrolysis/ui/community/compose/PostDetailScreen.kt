@@ -49,6 +49,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.readBytes // 新增扩展导入
+import io.github.vinceglb.filekit.name      // 新增扩展导入
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.ktor.client.call.*
@@ -478,7 +480,6 @@ fun CommentDialog(
         }
     }
 
-    // 使用 FileKit 替代原有的 ImagePicker
     val imagePickerLauncher = rememberFilePickerLauncher(
         type = FileKitType.Image,
         onResult = { file ->

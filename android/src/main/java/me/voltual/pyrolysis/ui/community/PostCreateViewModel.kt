@@ -14,6 +14,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.readBytes // 新增扩展导入
+import io.github.vinceglb.filekit.name      // 新增扩展导入
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
@@ -153,6 +155,7 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
 
     private suspend fun uploadImageKtor(file: PlatformFile): Result<String> = withContext(Dispatchers.IO) {
         try {
+            // 显式调用 PlatformFile 的扩展函数
             val fileBytes = file.readBytes()
             val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
                 setBody(

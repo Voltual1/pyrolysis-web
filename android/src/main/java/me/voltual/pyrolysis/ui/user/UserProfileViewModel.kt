@@ -19,6 +19,8 @@ import me.voltual.pyrolysis.data.unified.UnifiedUserDetail
 import me.voltual.pyrolysis.data.unified.UpdateUserProfileParams
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
 import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.readBytes // 新增扩展导入
+import io.github.vinceglb.filekit.name      // 新增扩展导入
 import org.koin.android.annotation.KoinViewModel
 
 @KoinViewModel
@@ -95,7 +97,6 @@ class UserProfileViewModel(
 
     /**
      * 上传头像逻辑
-     * 使用 FileKit 的 PlatformFile 替代 okio.Path
      */
     fun uploadAvatar(store: AppStore, file: PlatformFile, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
@@ -103,7 +104,7 @@ class UserProfileViewModel(
             try {
                 val repository = repositories[store] ?: return@launch onResult(false, "不支持的平台")
                 
-                // 直接从 PlatformFile 读取字节
+                // 现在可以正确识别扩展函数
                 val bytes = file.readBytes()
                 
                 val result = repository.uploadAvatar(bytes, file.name)
