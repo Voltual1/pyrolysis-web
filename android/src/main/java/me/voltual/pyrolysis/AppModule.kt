@@ -105,7 +105,9 @@ val appModule = module {
     // Singletons    
     single { UserFilterDataStore(get()) }    
     single { InstallsRepository(get()) }  
-    single { PostDraftDataStore(get()) }
+    single { 
+        PostDraftDataStore(get(named("draft_store"))) 
+    }
     single { ExtrasRepository(get()) }    
     single { DownloadedRepository(get()) }    
     single { ProductsRepository(get(), get(), get(), get()) }
@@ -114,7 +116,6 @@ val appModule = module {
     single { RepositoriesRepository(get(), get(), get()) }
     single { UserAgreementDataStore(androidContext()) }    
     single { BBQApplication.instance.database }
-    single { PostDraftDataStore(get()) }
     single { PostDraftRepository() }
     single { get<AppDatabase>().logDao() }  
     single { get<AppDatabase>().browseHistoryDao() } 
@@ -132,13 +133,15 @@ val appModule = module {
             .keysetHandle
         keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
     }
-    single {
+    single<DataStore<UserCredentials>>(named("auth_store")) {
         DataStoreFactory.create(
             serializer = UserCredentialsSerializer(get()),
             produceFile = { androidContext().dataStoreFile("user_credentials_v2.pb") }
         )
     }
-    single { AuthRepository(get()) }
+    single { 
+        AuthRepository(get(named("auth_store"))) 
+    }
     viewModel { UserProfileViewModel(get(), get()) }
     
     single { DeviceNameDataStore(androidContext()) }
