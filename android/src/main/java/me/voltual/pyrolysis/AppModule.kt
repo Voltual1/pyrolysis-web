@@ -62,7 +62,7 @@ import me.voltual.pyrolysis.core.proto.UserCredentialsSerializer
 val appModule = module {
     // ViewModel definitions
 	viewModel { LoginViewModel(get()) } 
-    viewModel { BillingViewModel(androidApplication()) }
+    viewModel { BillingViewModel(get()) }
     viewModel { CommunityViewModel() }
     viewModel { FollowingPostsViewModel(androidApplication()) }
     viewModel { HotPostsViewModel() }
