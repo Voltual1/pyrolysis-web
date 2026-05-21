@@ -13,6 +13,7 @@ import me.voltual.pyrolysis.core.database.dao.*
 import me.voltual.pyrolysis.ui.auth.LoginViewModel
 import me.voltual.pyrolysis.ui.billing.BillingViewModel
 import org.koin.android.ext.koin.androidContext
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import me.voltual.pyrolysis.ui.community.CommunityViewModel
 import me.voltual.pyrolysis.ui.community.FollowingPostsViewModel
 import me.voltual.pyrolysis.ui.community.HotPostsViewModel
@@ -144,8 +145,8 @@ val appModule = module {
         )
     }
     single<DataStore<Preferences>>(named("draft_store")) {
-    DataStoreFactory.create(
-        produceFile = { androidContext().preferencesDataStoreFile("post_drafts") }
+    PreferenceDataStoreFactory.create(
+        produceFile = { androidContext().dataStoreFile("post_drafts.preferences_pb") }
     )
 }
     single { 
