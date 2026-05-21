@@ -5,23 +5,19 @@
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
-
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.data
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore
 import io.ktor.http.Url
 import kotlinx.coroutines.flow.Flow
-import org.koin.core.annotation.Single
 import kotlinx.coroutines.flow.map
 
-val Context.draftDataStore: DataStore<Preferences> by preferencesDataStore(name = "post_draft")
+// 注意：Context.draftDataStore 的定义依然可以留在文件顶部，供 Koin 调用
+// 但类本身不再持有 Context
 
-@Single
-class PostDraftDataStore(private val context: Context) {
+class PostDraftDataStore(private val dataStore: DataStore<Preferences>) {
     companion object {
         private val DRAFT_TITLE = stringPreferencesKey("draft_title")
         private val DRAFT_CONTENT = stringPreferencesKey("draft_content")
@@ -40,7 +36,7 @@ class PostDraftDataStore(private val context: Context) {
         imageUrls: String,
         subsectionId: Int
     ) {
-        context.draftDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[DRAFT_TITLE] = title
             preferences[DRAFT_CONTENT] = content
             preferences[DRAFT_IMAGE_URIS] = imageUris.joinToString(",") { it.toString() }
@@ -51,7 +47,7 @@ class PostDraftDataStore(private val context: Context) {
     }
 
     suspend fun clearDraft() {
-        context.draftDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences.remove(DRAFT_TITLE)
             preferences.remove(DRAFT_CONTENT)
             preferences.remove(DRAFT_IMAGE_URIS)
@@ -62,18 +58,18 @@ class PostDraftDataStore(private val context: Context) {
     }
 
     suspend fun setAutoRestoreDraft(enabled: Boolean) {
-        context.draftDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[AUTO_RESTORE_DRAFT] = enabled
         }
     }
 
     suspend fun setNoStoreDraft(enabled: Boolean) {
-        context.draftDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[NO_STORE_DRAFT] = enabled
         }
     }
 
-    val draftFlow: Flow<Draft> = context.draftDataStore.data
+    val draftFlow: Flow<Draft> = dataStore.data
         .map { preferences ->
             val uriStrings = preferences[DRAFT_IMAGE_URIS] ?: ""
             val imageUris = uriStrings.split(",")
@@ -90,7 +86,7 @@ class PostDraftDataStore(private val context: Context) {
             )
         }
 
-    val preferencesFlow: Flow<DraftPreferences> = context.draftDataStore.data
+    val preferencesFlow: Flow<DraftPreferences> = dataStore.data
         .map { preferences ->
             DraftPreferences(
                 autoRestoreDraft = preferences[AUTO_RESTORE_DRAFT] ?: false,
@@ -107,7 +103,6 @@ class PostDraftDataStore(private val context: Context) {
         val hasDraft: Boolean
     )
 
-    // 新增：偏好设置数据类
     data class DraftPreferences(
         val autoRestoreDraft: Boolean,
         val noStoreDraft: Boolean

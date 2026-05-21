@@ -8,7 +8,6 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.community
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,12 +15,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.AuthManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import me.voltual.pyrolysis.AuthRepository
 import me.voltual.pyrolysis.KtorClient
-import org.koin.android.annotation.KoinViewModel
 
-@KoinViewModel
-class MyLikesViewModel(private val context: Context) : ViewModel() {
+class MyLikesViewModel(
+    private val authRepository: AuthRepository // 注入 Repository，不再需要 Context
+) : ViewModel() {
     
     private val _posts = MutableStateFlow(emptyList<KtorClient.Post>())
     val posts: StateFlow<List<KtorClient.Post>> = _posts.asStateFlow()
@@ -62,7 +63,6 @@ class MyLikesViewModel(private val context: Context) : ViewModel() {
 
     /**
      * 加载点赞记录
-     * 使用 Kotlin Result 风格处理异步请求，彻底移除 java.io 依赖
      */
     private fun loadLikesRecords() {
         if (_isLoading.value) return
@@ -71,15 +71,18 @@ class MyLikesViewModel(private val context: Context) : ViewModel() {
             _isLoading.value = true
             _errorMessage.value = ""
 
-            // 获取 Token
-            val token = AuthManager.getCredentials(context).first()?.token ?: ""
+            // 直接从 Repository 获取 token，不再需要 Context
+            val userCredentials = authRepository.credentials.first()
+            val token = userCredentials.token
 
             // 发起请求并处理结果
-            KtorClient.ApiServiceImpl.getLikesRecords(
-                token = token,
-                limit = PAGE_SIZE,
-                page = currentPage
-            ).onSuccess { response ->
+            withContext(Dispatchers.IO) {
+                KtorClient.ApiServiceImpl.getLikesRecords(
+                    token = token,
+                    limit = PAGE_SIZE,
+                    page = currentPage
+                )
+            }.onSuccess { response ->
                 if (response.code == 1) {
                     val data = response.data
                     _totalPages.value = data.pagecount

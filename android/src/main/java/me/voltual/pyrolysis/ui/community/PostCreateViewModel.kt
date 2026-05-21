@@ -6,16 +6,14 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-
 package me.voltual.pyrolysis.ui.community
 
-import android.app.Application
 import androidx.compose.material3.SnackbarHostState
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.readBytes // 新增扩展导入
-import io.github.vinceglb.filekit.name      // 新增扩展导入
+import io.github.vinceglb.filekit.readBytes
+import io.github.vinceglb.filekit.name
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
@@ -26,17 +24,16 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.voltual.pyrolysis.AuthManager
+import me.voltual.pyrolysis.AuthRepository
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.core.database.PostDraftRepository
 import me.voltual.pyrolysis.data.PostDraftDataStore
-import org.koin.android.annotation.KoinViewModel
 
-@KoinViewModel
-class PostCreateViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val draftRepository = PostDraftRepository()
-    private val draftDataStore = PostDraftDataStore(application)
+class PostCreateViewModel(
+    private val authRepository: AuthRepository,        // 注入 AuthRepository
+    private val draftRepository: PostDraftRepository,   // 注入 Repository
+    private val draftDataStore: PostDraftDataStore      // 注入 DataStore
+) : ViewModel() { // 变为普通 ViewModel
 
     private val _uiState = MutableStateFlow(PostCreateUiState())
     val uiState: StateFlow<PostCreateUiState> = _uiState.asStateFlow()
@@ -155,7 +152,6 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
 
     private suspend fun uploadImageKtor(file: PlatformFile): Result<String> = withContext(Dispatchers.IO) {
         try {
-            // 显式调用 PlatformFile 的扩展函数
             val fileBytes = file.readBytes()
             val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
                 setBody(
@@ -206,7 +202,8 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             _postStatus.value = PostStatus.Loading
 
-            val credentials = AuthManager.getCredentials(getApplication()).first()
+            // 直接从 Repository 获取凭证，不再需要 getApplication()
+            val credentials = authRepository.credentials.first()
             if (credentials.userId == 0L || credentials.token.isEmpty()) {
                 _postStatus.value = PostStatus.Error("请先登录")
                 showSnackbar("请先登录")
@@ -231,13 +228,15 @@ class PostCreateViewModel(application: Application) : AndroidViewModel(applicati
 
             val finalSubsectionId = if (mode == "refund") 21 else subsectionId
 
-            KtorClient.ApiServiceImpl.createPost(
-                token = credentials.token,
-                title = title,
-                content = finalContent,
-                sectionId = finalSubsectionId,
-                imageUrls = imageUrls.ifBlank { null }
-            ).onSuccess {
+            withContext(Dispatchers.IO) {
+                KtorClient.ApiServiceImpl.createPost(
+                    token = credentials.token,
+                    title = title,
+                    content = finalContent,
+                    sectionId = finalSubsectionId,
+                    imageUrls = imageUrls.ifBlank { null }
+                )
+            }.onSuccess {
                 _postStatus.value = PostStatus.Success
                 if (!_preferencesState.value.noStoreDraft) draftRepository.clearDraft()
                 showSnackbar("发帖成功")

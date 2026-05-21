@@ -64,9 +64,9 @@ val appModule = module {
 	viewModel { LoginViewModel(get()) } 
     viewModel { BillingViewModel(get()) }
     viewModel { CommunityViewModel() }
-    viewModel { FollowingPostsViewModel(androidApplication()) }
+	viewModel { FollowingPostsViewModel(get()) } // 移除 androidApplication()，改为 get() 获取 AuthRepository
     viewModel { HotPostsViewModel() }
-    viewModel { MyLikesViewModel(androidApplication()) }
+	viewModel { MyLikesViewModel(get()) } // 移除 androidApplication()，改为 get() 获取 AuthRepository
     viewModel { LogViewModel(androidApplication()) }
     viewModel { MessageViewModel(androidApplication()) }   
     viewModel { AppDetailComposeViewModel(androidApplication(), get()) }
@@ -80,7 +80,7 @@ val appModule = module {
     viewModel { SearchViewModel(get(), get()) }
     
     viewModel { UserListViewModel(androidApplication()) }
-    viewModel { PostCreateViewModel(androidApplication()) }
+    viewModel { PostCreateViewModel(get(), get(), get()) }
     viewModel { MyPostsViewModel(get()) }
     viewModel { PaymentViewModel(androidApplication()) }
     viewModel { VersionListViewModel(androidApplication(), get()) }
@@ -104,6 +104,7 @@ val appModule = module {
     // Singletons    
     single { UserFilterDataStore(get()) }    
     single { InstallsRepository(get()) }  
+    single { PostDraftDataStore(get()) }
     single { ExtrasRepository(get()) }    
     single { DownloadedRepository(get()) }    
     single { ProductsRepository(get(), get(), get(), get()) }
@@ -112,6 +113,7 @@ val appModule = module {
     single { RepositoriesRepository(get(), get(), get()) }
     single { UserAgreementDataStore(androidContext()) }    
     single { BBQApplication.instance.database }
+    single { PostDraftDataStore(get()) }
     single { get<AppDatabase>().logDao() }  
     single { get<AppDatabase>().browseHistoryDao() } 
     single { get<AppDatabase>().networkCacheDao() }  
