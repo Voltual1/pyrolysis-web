@@ -42,7 +42,6 @@ import coil3.request.ImageRequest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
-import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.data.unified.FollowStatus

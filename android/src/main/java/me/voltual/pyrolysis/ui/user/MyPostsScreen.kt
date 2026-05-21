@@ -14,7 +14,6 @@ import androidx.compose.runtime.*
 //import androidx.navigation.NavControllerNav2拜拜了
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.flow.first
-import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.ui.community.compose.BaseComposeListScreen
 

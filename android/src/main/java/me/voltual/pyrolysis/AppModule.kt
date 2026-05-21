@@ -74,7 +74,6 @@ val appModule = module {
     viewModel { HotPostsViewModel() }
 	viewModel { MyLikesViewModel(get()) } // 移除 androidApplication()，改为 get() 获取 AuthRepository
     viewModel { LogViewModel(androidApplication()) }
-    viewModel { MessageViewModel(androidApplication()) }   
     viewModel { AppDetailComposeViewModel(androidApplication(), get()) }
     
     viewModel { AppReleaseViewModel(androidApplication()) }    
