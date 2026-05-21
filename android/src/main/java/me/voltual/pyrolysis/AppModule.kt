@@ -198,6 +198,6 @@ val appModule = module {
     viewModel { PlayerViewModel(androidApplication()) }
     viewModel { LogViewModel(androidApplication()) }
     viewModel { StoreManagerViewModel(androidApplication()) }
-    viewModel { UpdateSettingsViewModel() }
+    viewModel { UpdateSettingsViewModel(get()) }
     viewModel { PrefsVM(get(), get(), get()) }
 }

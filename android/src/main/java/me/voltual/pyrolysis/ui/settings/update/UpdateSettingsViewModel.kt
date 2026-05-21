@@ -32,12 +32,14 @@ import me.voltual.pyrolysis.core.utils.UpdateChecker
 import org.koin.android.annotation.KoinViewModel
 
 @KoinViewModel
-class UpdateSettingsViewModel : ViewModel() {
+class UpdateSettingsViewModel(
+    private val updateSettingsDataStore: UpdateSettingsDataStore // 注入
+) : ViewModel() {
 
-    val autoCheckUpdates: Flow<Boolean> = UpdateSettingsDataStore.autoCheckUpdates
+    val autoCheckUpdates: Flow<Boolean> = updateSettingsDataStore.autoCheckUpdates
 
     suspend fun setAutoCheckUpdates(value: Boolean) {
-        UpdateSettingsDataStore.setAutoCheckUpdates(value)
+        updateSettingsDataStore.setAutoCheckUpdates(value)
     }
 
     fun checkForUpdates(context: Context, onUpdateResult: (me.voltual.pyrolysis.core.utils.UpdateCheckResult) -> Unit) {

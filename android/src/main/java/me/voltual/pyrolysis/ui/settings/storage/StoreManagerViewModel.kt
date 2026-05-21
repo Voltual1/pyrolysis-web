@@ -23,11 +23,12 @@ import org.koin.android.annotation.KoinViewModel
 import java.io.File
 
 @KoinViewModel
-class StoreManagerViewModel(application: Application) : AndroidViewModel(application) {
+class StoreManagerViewModel(
+    application: Application,
+    private val storageSettingsDataStore: StorageSettingsDataStore // 注入
+) : AndroidViewModel(application) {
 
-    private val storageSettingsDataStore = StorageSettingsDataStore(application)
-
-    // 缓存大小状态（格式化后的字符串，如 "12.5 MB"）
+    // 缓存大小状态
     private val _cacheSize = MutableStateFlow("0 B")
     val cacheSize: StateFlow<String> = _cacheSize.asStateFlow()
 
@@ -43,9 +44,6 @@ class StoreManagerViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    /**
-     * 计算 Cache 类涉及的所有目录总大小
-     */
     fun updateCacheSize() {
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<Application>()
@@ -65,17 +63,12 @@ class StoreManagerViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    /**
-     * 清理所有应用定义的缓存
-     */
     fun clearAppCache(onComplete: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<Application>()
-            // 清理内部和外部缓存目录下的所有内容
             context.cacheDir.deleteRecursively()
             context.externalCacheDir?.deleteRecursively()
             
-            // 重新计算大小并回调 UI
             updateCacheSize()
             withContext(Dispatchers.Main) {
                 onComplete()
@@ -95,5 +88,4 @@ class StoreManagerViewModel(application: Application) : AndroidViewModel(applica
         val digitGroups = (Math.log10(size.toDouble()) / Math.log10(1024.0)).toInt()
         return String.format("%.2f %s", size / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
     }
-
 }

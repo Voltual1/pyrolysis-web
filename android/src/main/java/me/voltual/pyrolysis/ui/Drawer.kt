@@ -105,11 +105,12 @@ fun NavigationDrawerItems(
     var draggedItem by remember { mutableStateOf<DrawerItem?>(null) }
     var dragOffsetY by remember { mutableStateOf(0f) }
     var itemHeight by remember { mutableStateOf(0) }
+   val drawerMenuDataStore: DrawerMenuDataStore = koinInject()
 
     var selectedItemId by remember { mutableStateOf("home") }
 
     LaunchedEffect(Unit) {
-        val savedOrder = DrawerMenuDataStore.loadMenuOrder(context).first()
+        val savedOrder = drawerMenuDataStore.loadMenuOrder().first()
         orderedItems = if (savedOrder.isEmpty()) {
             allDrawerItems
         } else {
@@ -204,7 +205,7 @@ fun NavigationDrawerItems(
                                                 }
                                                 orderedItems = newList
                                                 scope.launch {
-                                                    DrawerMenuDataStore.saveMenuOrder(context, newList.map { it.id })
+                                                    drawerMenuDataStore.saveMenuOrder(newList.map { it.id })
                                                 }
                                             }
                                         }

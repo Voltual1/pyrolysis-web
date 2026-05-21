@@ -5,12 +5,10 @@
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
-
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.player
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.api.BiliApiManager
 import me.voltual.pyrolysis.data.PlayerDataStore
@@ -21,17 +19,10 @@ import java.io.IOException
 import java.util.zip.Inflater
 import org.koin.android.annotation.KoinViewModel
 
-enum class VideoScaleMode { FIT, FILL, ZOOM }
-
-data class PlayerSettings(
-    val scaleMode: VideoScaleMode = VideoScaleMode.FIT,
-    val danmakuSize: Float = 1.2f
-)
-
 @KoinViewModel
-class PlayerViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val playerDataStore = PlayerDataStore(application)
+class PlayerViewModel(
+    private val playerDataStore: PlayerDataStore // 注入
+) : ViewModel() {
 
     private val _playerUiState = MutableStateFlow<PlayerUiState>(PlayerUiState.Loading)
     val playerUiState = _playerUiState.asStateFlow()
@@ -55,14 +46,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // 更新弹幕字号的方法
     fun updateDanmakuSize(newSize: Float) {
         viewModelScope.launch {
             val newSettings = _settings.value.copy(danmakuSize = newSize)
             _settings.value = newSettings
             playerDataStore.saveSettings(newSettings)
         }
-    }
+    }    
 
     fun loadVideoData(bvid: String) {
         viewModelScope.launch {

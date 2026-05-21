@@ -21,45 +21,31 @@ import kotlinx.coroutines.withContext
 import me.voltual.pyrolysis.data.SignInSettingsDataStore
 import kotlinx.coroutines.Dispatchers
 
-// 签到结果密封类
-sealed class SignInResult {
-    object Success : SignInResult()
-    data class Error(val message: String) : SignInResult()
-    object NotLoggedIn : SignInResult()
-    object AlreadySignedIn : SignInResult()
-}
-
 class SignInSettingsViewModel(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val signInSettingsDataStore: SignInSettingsDataStore // 注入
 ) : ViewModel() {
 
-    val autoSignIn: Flow<Boolean> = SignInSettingsDataStore.autoSignIn
+    val autoSignIn: Flow<Boolean> = signInSettingsDataStore.autoSignIn
     
-    // 签到状态
     private val _signInState = MutableStateFlow<SignInState>(SignInState.Idle)
     val signInState: StateFlow<SignInState> = _signInState
 
     suspend fun setAutoSignIn(value: Boolean) {
-        SignInSettingsDataStore.setAutoSignIn(value)
+        signInSettingsDataStore.setAutoSignIn(value)
     }
     
-    // 执行签到 - 不再需要 Context
     fun signIn() {
         viewModelScope.launch {
             _signInState.value = SignInState.Loading
-            
             try {
-                // 直接从注入的 Repository 获取用户凭证
                 val userCredentials = authRepository.credentials.first()
-                
                 if (userCredentials.userId == 0L || userCredentials.token.isEmpty()) {
                     _signInState.value = SignInState.Error("请先登录")
                     return@launch
                 }
                 
                 val token = userCredentials.token
-                
-                // 调用签到API
                 val result = withContext(Dispatchers.IO) {
                     KtorClient.ApiServiceImpl.userSignIn(token = token)
                 }
@@ -81,7 +67,6 @@ class SignInSettingsViewModel(
                 _signInState.value = SignInState.Error("签到失败: ${e.message ?: "未知错误"}")
             }
             
-            // 3秒后重置状态
             launch {
                 kotlinx.coroutines.delay(3000)
                 if (_signInState.value !is SignInState.Loading) {
@@ -91,13 +76,11 @@ class SignInSettingsViewModel(
         }
     }
     
-    // 重置签到状态
     fun resetSignInState() {
         _signInState.value = SignInState.Idle
     }
 }
 
-// 签到状态密封类
 sealed class SignInState {
     object Idle : SignInState()
     object Loading : SignInState()

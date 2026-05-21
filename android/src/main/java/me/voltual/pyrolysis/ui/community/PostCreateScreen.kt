@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import org.koin.compose.koinInject
 import kotlinx.coroutines.flow.first
 import me.voltual.pyrolysis.data.DeviceNameDataStore
 import me.voltual.pyrolysis.ui.*               // 提供 LocalNavigator, ImagePreview 等
@@ -83,7 +84,7 @@ fun PostCreateScreen(
     var selectedRefundReason by rememberSaveable { mutableStateOf(REFUND_REASONS.first().name) }
 
     val context = LocalContext.current
-    val deviceNameDataStore = remember { DeviceNameDataStore(context) }
+    val deviceNameDataStore: DeviceNameDataStore = koinInject()
 
     LaunchedEffect(Unit) {
         viewModel.setSnackbarHostState(snackbarHostState)

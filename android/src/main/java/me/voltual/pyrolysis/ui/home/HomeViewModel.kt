@@ -61,7 +61,8 @@ data class HomeUiState(
 )
 
 class HomeViewModel(
-    private val authRepository: AuthRepository  // 注入 AuthRepository
+    private val authRepository: AuthRepository,
+    private val signInSettingsDataStore: SignInSettingsDataStore // 注入
 ) : ViewModel() {
     
     var uiState = mutableStateOf(HomeUiState())
@@ -151,7 +152,8 @@ class HomeViewModel(
         viewModelScope.launch {
             if (uiState.value.signToday) return@launch
             
-            val autoSignInEnabled = SignInSettingsDataStore.autoSignIn.first()
+            // 修复点：使用实例调用
+            val autoSignInEnabled = signInSettingsDataStore.autoSignIn.first()
             if (autoSignInEnabled) {
                 signIn(isAutoSignIn = true)
             }
