@@ -2,28 +2,27 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.auth
 
-import android.app.Application
 import androidx.lifecycle.*
 import me.voltual.pyrolysis.AppStore
-import me.voltual.pyrolysis.AuthManager
+import me.voltual.pyrolysis.AuthRepository // 使用新的 Repository
 import me.voltual.pyrolysis.KtorClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.Flow
-import org.koin.android.annotation.KoinViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-@KoinViewModel
 class LoginViewModel(
-    application: Application
-) : AndroidViewModel(application) {
+    private val authRepository: AuthRepository // 注入 Repository
+) : ViewModel() { // 变为普通 ViewModel
 
     // --- 商店选择状态 ---
     private val _selectedStore = MutableStateFlow(AppStore.XIAOQU_SPACE)
@@ -69,50 +68,47 @@ class LoginViewModel(
     // --- 业务逻辑 ---
 
     fun login() {
-    if (_username.value.isBlank() || _password.value.isBlank()) {
-        _errorMessage.value = "用户名和密码不能为空"
-        return
-    }
-    viewModelScope.launch {
-        _isLoading.value = true
-        _errorMessage.value = null
-        try {
-            when (_selectedStore.value) {
-                AppStore.XIAOQU_SPACE -> loginXiaoqu()           
-                else -> {
-                    _errorMessage.value = "不支持登录"
+        if (_username.value.isBlank() || _password.value.isBlank()) {
+            _errorMessage.value = "用户名和密码不能为空"
+            return
+        }
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                when (_selectedStore.value) {
+                    AppStore.XIAOQU_SPACE -> loginXiaoqu()           
+                    else -> {
+                        _errorMessage.value = "不支持登录"
+                    }
                 }
+            } catch (e: Exception) {
+                _errorMessage.value = "登录异常: ${e.message}"
+            } finally {
+                _isLoading.value = false
             }
-        } catch (e: Exception) {
-            _errorMessage.value = "登录异常: ${e.message}"
-        } finally {
-            _isLoading.value = false
         }
     }
-}
 
     // --- 平台特定登录逻辑 ---
 
-    /**
-     * 小趣空间登录逻辑
-     */
     private suspend fun loginXiaoqu() {
         try {
-            val context: Application = getApplication()
-            val deviceIdFlow: Flow<String> = AuthManager.getDeviceId(context)
-            val deviceId = deviceIdFlow.first()
+            // 直接从 Repository 获取设备 ID，不再需要 Context
+            val deviceId = authRepository.deviceId.first()
             
-            val loginResult = KtorClient.ApiServiceImpl.login(
-                username = _username.value,
-                password = _password.value,
-                device = deviceId
-            )
+            val loginResult = withContext(Dispatchers.IO) {
+                KtorClient.ApiServiceImpl.login(
+                    username = _username.value,
+                    password = _password.value,
+                    device = deviceId
+                )
+            }
             
             if (loginResult.isSuccess) {
                 val loginResponse = loginResult.getOrNull()
                 if (loginResponse?.code == 1) {
                     loginResponse.data?.let { 
-                        // 小趣空间是主账号，使用 saveCredentials 保存完整信息
                         saveCredentialsAndNotifySuccess(
                             usertoken = it.usertoken,
                             userId = it.id
@@ -131,7 +127,7 @@ class LoginViewModel(
         }
     }    
 
-    // --- 注册逻辑 (仅限小趣空间) ---
+    // --- 注册逻辑 ---
 
     fun register() {
         if (_selectedStore.value != AppStore.XIAOQU_SPACE) {
@@ -147,21 +143,20 @@ class LoginViewModel(
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                val context: Application = getApplication()
-                val deviceIdFlow: Flow<String> = AuthManager.getDeviceId(context)
-                val deviceId = deviceIdFlow.first()
+                val deviceId = authRepository.deviceId.first()
 
-                val registerResult = KtorClient.ApiServiceImpl.register(
-                    username = _username.value,
-                    password = _password.value,
-                    email = _email.value,
-                    device = deviceId,
-                    captcha = _captcha.value
-                )
+                val registerResult = withContext(Dispatchers.IO) {
+                    KtorClient.ApiServiceImpl.register(
+                        username = _username.value,
+                        password = _password.value,
+                        email = _email.value,
+                        device = deviceId,
+                        captcha = _captcha.value
+                    )
+                }
                 if (registerResult.isSuccess) {
                     val registerResponse = registerResult.getOrNull()
                     if (registerResponse?.code == 1) {
-                        // 注册成功，自动登录
                         loginAfterRegister()
                     } else {
                         _errorMessage.value = registerResponse?.msg ?: "注册失败"
@@ -182,14 +177,14 @@ class LoginViewModel(
 
     private suspend fun loginAfterRegister() {
         try {
-            val context: Application = getApplication()
-             val deviceIdFlow: Flow<String> = AuthManager.getDeviceId(context)
-                val deviceId = deviceIdFlow.first()
-            val loginResult = KtorClient.ApiServiceImpl.login(
-                username = _username.value,
-                password = _password.value,
-                device = deviceId
-            )
+            val deviceId = authRepository.deviceId.first()
+            val loginResult = withContext(Dispatchers.IO) {
+                KtorClient.ApiServiceImpl.login(
+                    username = _username.value,
+                    password = _password.value,
+                    device = deviceId
+                )
+            }
             if (loginResult.isSuccess) {
                  val loginResponse = loginResult.getOrNull()
                 if (loginResponse?.code == 1) {
@@ -217,9 +212,12 @@ class LoginViewModel(
     }
 
     private suspend fun saveCredentialsAndNotifySuccess(usertoken: String, userId: Long) {
-        val context: Application = getApplication()
-        AuthManager.saveCredentials(
-            context, _username.value, _password.value, usertoken, userId
+        // 使用 Repository 保存，不再需要 Context
+        authRepository.saveCredentials(
+            username = _username.value,
+            password = _password.value,
+            token = usertoken,
+            userId = userId
         )
         _loginSuccess.value = true
     }
