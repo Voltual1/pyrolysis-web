@@ -141,7 +141,7 @@ val appModule = module {
             produceFile = { androidContext().dataStoreFile("user_credentials_v2.pb") }
         )
     }
-    private val PAYMENT_STORE_QUALIFIER = named("payment_store")
+     val PAYMENT_STORE_QUALIFIER = named("payment_store")
 
 // 提供 Payment DataStore
 single<DataStore<Preferences>>(PAYMENT_STORE_QUALIFIER) {
@@ -162,7 +162,7 @@ viewModel { PaymentViewModel(get(), get(PAYMENT_STORE_QUALIFIER)) }
     }
     
     // 定义 Plaza DataStore 的限定符
-private val PLAZA_STORE_QUALIFIER = named("plaza_store")
+ val PLAZA_STORE_QUALIFIER = named("plaza_store")
 
 // 提供 Plaza DataStore
 single<DataStore<Preferences>>(PLAZA_STORE_QUALIFIER) {
@@ -182,6 +182,8 @@ viewModel {
     ) 
 }
     viewModel { UserProfileViewModel(get(), get()) }
+    
+viewModel { MessageViewModel(get()) } 
     
     single { DeviceNameDataStore(androidContext()) }
     single { XiaoQuRepository(KtorClient.ApiServiceImpl) }
