@@ -9,7 +9,6 @@
 
 package me.voltual.pyrolysis.ui.community.compose
 
-import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -28,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.core.ui.theme.BBQDropdownMenu
-import me.voltual.pyrolysis.AuthManager
+import me.voltual.pyrolysis.AuthRepository // 导入新 Repository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -36,12 +35,13 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import me.voltual.pyrolysis.core.ui.theme.BBQPullRefreshIndicator
 import me.voltual.pyrolysis.ui.LocalTopAppBarController
 import me.voltual.pyrolysis.ui.TopAppBarAction
+import org.koin.compose.koinInject // Koin 注入支持
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BaseComposeListScreen(
     title: String = "",
-    currentRoute: String = "", // 新增参数：传入当前页面的路由标识
+    currentRoute: String = "",
     posts: List<KtorClient.Post>,
     isLoading: Boolean,
     errorMessage: String,
@@ -65,11 +65,12 @@ fun BaseComposeListScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
+    // 注入 AuthRepository
+    val authRepository: AuthRepository = koinInject()
+    
     val topAppBarController = LocalTopAppBarController.current
 
-    // 动态同步顶栏状态
-    LaunchedEffect(title, menuExpanded, totalPages, currentRoute) { // 将 currentRoute 加入感知依赖
-        // 1. 设置自定义标题组件
+    LaunchedEffect(title, menuExpanded, totalPages, currentRoute) {
         topAppBarController.titleContent = {
             val titleScrollState = rememberScrollState()
             Box(modifier = Modifier.wrapContentSize()) {
@@ -99,7 +100,6 @@ fun BaseComposeListScreen(
                     }
                 }
 
-                // 下拉菜单：根据 currentRoute 动态过滤当前路由
                 BBQDropdownMenu(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
@@ -118,14 +118,14 @@ fun BaseComposeListScreen(
                         DropdownMenuItem(text = { Text("我喜欢的") }, onClick = { menuExpanded = false; onNavigate("my_likes") })
                     }
                     
-                    // 特殊处理：我的帖子带有动态参数（如 "my_posts/123"），使用 startsWith 来匹配前缀
                     if (!currentRoute.startsWith("my_posts")) {
                         DropdownMenuItem(
                             text = { Text("我的帖子") },
                             onClick = {
                                 menuExpanded = false
                                 scope.launch {
-                                    val currentUserId = AuthManager.getUserId(context).first()
+                                    // 使用 authRepository 替代 AuthManager
+                                    val currentUserId = authRepository.userId.first()
                                     if (currentUserId > 0) onNavigate("my_posts/$currentUserId")
                                     else snackbarHostState.showSnackbar(context.getString(R.string.login_first))
                                 }
@@ -136,7 +136,6 @@ fun BaseComposeListScreen(
             }
         }
 
-        // 2. 设置右侧动作按钮
         topAppBarController.updateActions(
             listOf(
                 TopAppBarAction(
@@ -163,7 +162,6 @@ fun BaseComposeListScreen(
         }
     }
 
-    // 弹窗逻辑
     if (showJumpDialog) {
         AlertDialog(
             onDismissRequest = { showJumpDialog = false },
@@ -192,7 +190,6 @@ fun BaseComposeListScreen(
         )
     }
 
-    // 主内容
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = {

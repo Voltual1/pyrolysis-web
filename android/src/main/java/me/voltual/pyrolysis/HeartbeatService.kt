@@ -5,7 +5,7 @@
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 
 package me.voltual.pyrolysis
 
@@ -20,7 +20,8 @@ import org.koin.android.ext.android.inject
 class HeartbeatService : Service() {
     private var heartbeatJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val apiService: KtorClient.ApiService by inject() // Inject ApiService
+    private val apiService: KtorClient.ApiService by inject()
+    private val authRepository: AuthRepository by inject() // 注入 AuthRepository
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startHeartbeat()
@@ -35,12 +36,10 @@ class HeartbeatService : Service() {
                 Log.d("HEARTBEAT", "Starting new heartbeat cycle.")
 
                 supervisorScope {
-                    val context = this@HeartbeatService
-                    val userCredentialsFlow = AuthManager.getCredentials(context)
+                    // 直接从注入的 Repository 获取 token，不再需要 Context
+                    val userToken = authRepository.credentials.first().token
 
-                    val userToken = userCredentialsFlow.first()?.token
-
-                    if (!userToken.isNullOrBlank()) {
+                    if (userToken.isNotBlank()) {
                         launch {
                             try {
                                 val result = apiService.heartbeat(token = userToken)
@@ -55,7 +54,6 @@ class HeartbeatService : Service() {
                         }
                     }
                 }
-                // =======================================================
 
                 delay(60 * 1000)
             }

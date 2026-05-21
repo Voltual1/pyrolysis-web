@@ -23,7 +23,6 @@ import androidx.navigation3.runtime.*
 import androidx.navigation3.scene.DialogSceneStrategy
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
-import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.ui.auth.LoginScreen
 import me.voltual.pyrolysis.ui.auth.LoginViewModel

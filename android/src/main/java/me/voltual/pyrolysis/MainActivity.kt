@@ -3,6 +3,7 @@
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
 // 有关更多细节，请参阅 GNU 通用公共许可证。
+//
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis
@@ -12,16 +13,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
-import androidx.navigation3.runtime.entryProvider
 import android.util.DisplayMetrics
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -33,15 +28,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.scene.DialogSceneStrategy
-import androidx.navigation3.ui.NavDisplay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -53,24 +44,24 @@ import me.voltual.pyrolysis.data.UpdateSettingsDataStore
 import me.voltual.pyrolysis.core.database.LogEntry
 import me.voltual.pyrolysis.data.UserAgreementDataStore
 import me.voltual.pyrolysis.ui.*
-import me.voltual.pyrolysis.core.ui.components.UpdateDialog
 import me.voltual.pyrolysis.core.ui.components.UserAgreementDialog
 import me.voltual.pyrolysis.core.ui.theme.*
 import me.voltual.pyrolysis.core.utils.UpdateCheckResult
 import me.voltual.pyrolysis.core.utils.UpdateChecker
 import org.koin.android.ext.android.inject
+import org.koin.compose.koinInject
 import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
     private val agreementDataStore: UserAgreementDataStore by inject()
+    private val authRepository: AuthRepository by inject() // 注入 AuthRepository
     
-        companion object {
+    companion object {
         private const val TAG = "NeoActivity"
         const val ACTION_UPDATES = "${BuildConfig.APPLICATION_ID}.intent.action.UPDATES"
         const val ACTION_INSTALL = "${BuildConfig.APPLICATION_ID}.intent.action.INSTALL"
         const val EXTRA_UPDATES = "${BuildConfig.APPLICATION_ID}.intent.extra.UPDATES"
-        const val EXTRA_CACHE_FILE_NAME =
-            "${BuildConfig.APPLICATION_ID}.intent.extra.CACHE_FILE_NAME"
+        const val EXTRA_CACHE_FILE_NAME = "${BuildConfig.APPLICATION_ID}.intent.extra.CACHE_FILE_NAME"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,29 +77,19 @@ class MainActivity : AppCompatActivity() {
                 startRoute = Home,
                 topLevelRoutes = topLevelRoutes
             )
-            // 在这里获取 TextToolbar
-    val textToolbar = LocalTextToolbar.current
-
-    val view = LocalView.current // 获取承载 Compose 的原生 View
-
-    val topAppBarController = remember { TopAppBarController() }
-
-      val navigator =
-        remember(navigationState, view) {
-          // 传入控制器
-          Navigator(navigationState, view, topAppBarController)
-        }
+            val view = LocalView.current 
+            val topAppBarController = remember { TopAppBarController() }
+            val navigator = remember(navigationState, view) {
+                Navigator(navigationState, view, topAppBarController)
+            }
 
             CompositionLocalProvider(
-        LocalNavigator provides navigator,
-        LocalNavigationState provides navigationState,
-        LocalTopAppBarController provides topAppBarController,
-      )  {
+                LocalNavigator provides navigator,
+                LocalNavigationState provides navigationState,
+                LocalTopAppBarController provides topAppBarController,
+            ) {
                 val snackbarHostState = remember { SnackbarHostState() }
-                val context = LocalContext.current
-                val scope = rememberCoroutineScope()
 
-                // 协议状态监听
                 val userAccepted by agreementDataStore.isUserAgreementAccepted.collectAsState(initial = true)
                 val xiaoquAccepted by agreementDataStore.isXiaoquAccepted.collectAsState(initial = true)
 
@@ -118,15 +99,12 @@ class MainActivity : AppCompatActivity() {
                     isAgreementDataLoaded = true
                 }
 
-                val showAgreementDialog = isAgreementDataLoaded && !(
-                    userAccepted && xiaoquAccepted 
-                )
+                val showAgreementDialog = isAgreementDataLoaded && !(userAccepted && xiaoquAccepted)
 
                 BBQTheme(appDarkTheme = ThemeManager.isAppDarkTheme) {
                     MainScreenContent(
                         navigationState = navigationState,
                         navigator = navigator,
-//                        entryProvider = entryProvider,
                         snackbarHostState = snackbarHostState,
                         showAgreementDialog = showAgreementDialog,
                         onAgreementDismiss = { finish() }
@@ -135,14 +113,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // 心跳服务初始化
         lifecycleScope.launch {
             delay(10000)
-            val context = this@MainActivity
-            val userCredentials = AuthManager.getCredentials(context).first()
-            // 检查 Token 是否存在（如果没登录过，token 默认是空字符串 ""）
-if (userCredentials.token.isNotEmpty()) {
-    startHeartbeatService(this@MainActivity, userCredentials.token)
-}
+            // 使用注入的 authRepository 获取 token
+            val userCredentials = authRepository.credentials.first()
+            if (userCredentials.token.isNotEmpty()) {
+                startHeartbeatService(this@MainActivity, userCredentials.token)
+            }
         }
     }
 
@@ -197,35 +175,15 @@ if (userCredentials.token.isNotEmpty()) {
         metrics.densityDpi = newDensityDpi
         resources.updateConfiguration(configuration, metrics)
     }
-    
-fun launchLockPrompt(action: () -> Unit) {
-    // TODO: 待重新实现生物识别逻辑
 }
 
-/*    private fun createBiometricPrompt(action: () -> Unit): BiometricPrompt {
-        return BiometricPrompt(
-            this,
-            ContextCompat.getMainExecutor(this),
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    super.onAuthenticationSucceeded(result)
-                    action()
-                }
-            })
-    }*/
-}
-
-/** 定义顶层路由（对应抽屉中独立返回堆栈的页面）*/
-val topLevelRoutes: Set<NavKey> = setOf(
-    Home
-)
+val topLevelRoutes: Set<NavKey> = setOf(Home)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenContent(
     navigationState: NavigationState,
     navigator: Navigator,
-//    entryProvider: (NavKey) -> NavEntry<NavKey>,
     snackbarHostState: SnackbarHostState,
     showAgreementDialog: Boolean,
     onAgreementDismiss: () -> Unit
@@ -233,6 +191,7 @@ fun MainScreenContent(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val authRepository: AuthRepository = koinInject() // 在 Composable 中注入
 
     val currentRoute = navigationState.currentRoute
     val currentTopLevelRoute = navigationState.topLevelRoute
@@ -240,20 +199,10 @@ fun MainScreenContent(
     val showBackButton = remember(currentRoute) {
         currentRoute != Home && currentRoute != Login
     }
-
-/*    val isCommunityScreen = remember(currentRoute) {
-        currentRoute == Community ||
-        currentRoute == MyLikes ||
-        currentRoute == HotPosts ||
-        currentRoute == FollowingPosts ||
-        currentRoute is MyPosts
-    }*/
     
     val topAppBarController = LocalTopAppBarController.current
 
-    val isPlayerScreen = remember(currentRoute) {
-        currentRoute is Player
-    }
+    val isPlayerScreen = remember(currentRoute) { currentRoute is Player }
 
     val useDarkTheme = ThemeManager.isAppDarkTheme
     val lightBgUri by ThemeColorStore.getDrawerHeaderLightBackgroundUriFlow(context).collectAsState(initial = null)
@@ -262,11 +211,16 @@ fun MainScreenContent(
 
     val isLoggedIn = remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        val credentials = AuthManager.getCredentials(context).first()
-        // 逻辑：如果 userId 不等于 0，则认为已登录
+        val credentials = authRepository.credentials.first()
         isLoggedIn.value = credentials.userId != 0L
         if (isLoggedIn.value) {
-            tryAutoLogin(credentials.username, credentials.password, context, navigator, snackbarHostState)
+            tryAutoLogin(
+                username = credentials.username, 
+                password = credentials.password, 
+                authRepository = authRepository, 
+                navigator = navigator, 
+                snackbarHostState = snackbarHostState
+            )
         }
     }
 
@@ -303,7 +257,6 @@ fun MainScreenContent(
                 if (!isPlayerScreen) {
                     TopAppBar(
                         title = {
-                            // 逻辑：如果有自定义标题组件则渲染，否则渲染文字标题
                             val customContent = topAppBarController.titleContent
                             if (customContent != null) {
                                 customContent()
@@ -336,7 +289,6 @@ fun MainScreenContent(
                         },
                         actions = {
                             if (currentRoute != Login) {
-                                // 基础按钮
                                 IconButton(onClick = {
                                     navigator.navigate(Search(userId = null, nickname = null))
                                 }) {
@@ -349,7 +301,6 @@ fun MainScreenContent(
                                     Icon(Icons.Default.History, "浏览历史", tint = MaterialTheme.colorScheme.onSurface)
                                 }
 
-                                // 动态按钮
                                 topAppBarController.actions.forEach { action ->
                                     val iconTint = action.tint?.invoke() ?: MaterialTheme.colorScheme.onSurface
                                     IconButton(onClick = action.onClick) {
@@ -367,7 +318,6 @@ fun MainScreenContent(
             },
             snackbarHost = { BBQSnackbarHost(hostState = snackbarHostState) },
             content = { innerPadding ->
-                // 1. 只有播放器这种真正的全屏页面才使用 0.dp，社区页面现在需要 innerPadding
                 val contentPadding = when {
                     isPlayerScreen -> PaddingValues(0.dp)
                     else -> innerPadding
@@ -376,17 +326,15 @@ fun MainScreenContent(
                 val currentBackStack = navigationState.backStacks[currentTopLevelRoute] 
                     ?: navigationState.backStacks[navigationState.startRoute]!! 
 
-                // 2. 将 padding 应用在最外层容器上
                 Box(modifier = Modifier
                     .fillMaxSize()
-                    .padding(contentPadding) // 这里应用了顶栏高度
+                    .padding(contentPadding) 
                     .roundScreenPadding()
                 ) {
                     BBQNavDisplay(
                         backStack = currentBackStack,
                         onBack = { navigator.goBack() },
                         snackbarHostState = snackbarHostState,
-                        // 3. 内部不再重复应用 padding，直接 fillMaxSize
                         modifier = Modifier.fillMaxSize()
                     )
 
@@ -468,13 +416,14 @@ fun startHeartbeatService(context: Context, token: String) {
 private fun tryAutoLogin(
     username: String,
     password: String,
-    context: Context,
+    authRepository: AuthRepository, // 传入注入的 Repository
     navigator: Navigator,
     snackbarHostState: SnackbarHostState
 ) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            val deviceId = AuthManager.getDeviceId(context).first()
+            // 使用 authRepository 获取设备 ID
+            val deviceId = authRepository.deviceId.first()
             val result = KtorClient.ApiServiceImpl.login(
                 username = username,
                 password = password,
@@ -488,28 +437,27 @@ private fun tryAutoLogin(
                         if (loginResponse != null && loginResponse.code == 1) {
                             val loginData = loginResponse.data
                             if (loginData != null) {
-                                AuthManager.saveCredentials(
-                                    context,
+                                // 使用 authRepository 保存凭证
+                                authRepository.saveCredentials(
                                     username,
                                     password,
                                     loginData.usertoken,
                                     loginData.id
                                 )
-                                // 登录成功，无需导航
                             } else {
-                                AuthManager.clearCredentials(context)
+                                authRepository.clearCredentials()
                                 snackbarHostState.showSnackbar("登录数据为空")
                                 navigator.navigate(Login)
                             }
                         } else {
-                            AuthManager.clearCredentials(context)
+                            authRepository.clearCredentials()
                             val errorMsg = loginResponse?.msg ?: "登录失败"
                             snackbarHostState.showSnackbar(errorMsg)
                             navigator.navigate(Login)
                         }
                     }
                     else -> {
-                        AuthManager.clearCredentials(context)
+                        authRepository.clearCredentials()
                         val exception = result.exceptionOrNull()
                         val errorMsg = when (exception) {
                             is IOException -> {
@@ -528,7 +476,7 @@ private fun tryAutoLogin(
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                AuthManager.clearCredentials(context)
+                authRepository.clearCredentials()
                 snackbarHostState.showSnackbar("登录异常: ${e.message}")
                 navigator.navigate(Login)
             }

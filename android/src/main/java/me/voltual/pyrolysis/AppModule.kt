@@ -82,11 +82,10 @@ val appModule = module {
     
     viewModel { SearchViewModel(get(), get()) }
     
-    viewModel { UserListViewModel(androidApplication()) }
     viewModel { PostCreateViewModel(get(), get(), get()) }
     viewModel { MyPostsViewModel(get()) }
     viewModel { VersionListViewModel(androidApplication(), get()) }
-    viewModel { UserDetailViewModel(androidApplication()) }
+
     viewModel { StoreManagerViewModel(androidApplication()) }
     
     viewModel { BrowseHistoryViewModel(androidApplication()) }
@@ -183,9 +182,11 @@ viewModel {
     viewModel { UserProfileViewModel(get(), get()) }
     
 viewModel { MessageViewModel(get()) } 
+viewModel { UserListViewModel(get()) }
+viewModel { UserDetailViewModel(get()) }
     
     single { DeviceNameDataStore(androidContext()) }
-    single { XiaoQuRepository(KtorClient.ApiServiceImpl) }
+single { XiaoQuRepository(KtorClient.ApiServiceImpl, get()) }
     single<Map<AppStore, IAppStoreRepository>> {
     val map = mutableMapOf<AppStore, IAppStoreRepository>()
     map[AppStore.XIAOQU_SPACE] = get<XiaoQuRepository>()

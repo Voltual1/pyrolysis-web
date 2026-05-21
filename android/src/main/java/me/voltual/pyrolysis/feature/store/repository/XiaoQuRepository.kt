@@ -18,8 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.first
 import me.voltual.pyrolysis.AppStore
-import me.voltual.pyrolysis.AuthManager
-import me.voltual.pyrolysis.BBQApplication
+import me.voltual.pyrolysis.AuthRepository // 导入新 Repository
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.data.unified.*
 import kotlinx.io.Buffer
@@ -27,19 +26,21 @@ import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readByteArray
 import kotlinx.io.buffered
-import org.koin.core.annotation.Single
 
 /**
  * 小趣空间数据仓库实现。
- * 现已完全适配 kotlinx-io。
+ * 现已完全去 Context 化，使用 AuthRepository 注入。
  */
-@Single
-class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStoreRepository {
+class XiaoQuRepository(
+    private val apiClient: KtorClient.ApiService,
+    private val authRepository: AuthRepository // 注入 AuthRepository
+) : IAppStoreRepository {
 
     private val fileSystem = SystemFileSystem
 
     private suspend fun getToken(): String {
-        return AuthManager.getCredentials(BBQApplication.instance).first()?.token ?: ""
+        // 直接从注入的 Repository 获取 token，不再需要 BBQApplication.instance
+        return authRepository.credentials.first().token
     }
     
     override suspend fun getCurrentUserDetail(): Result<UnifiedUserDetail> {
@@ -380,24 +381,14 @@ class XiaoQuRepository(private val apiClient: KtorClient.ApiService) : IAppStore
         }
     }
 
-    /**
-     * 修正后的 kotlinx-io 版 ChannelProvider。
-     */
     @OptIn(DelicateCoroutinesApi::class)
     private fun createChannelProvider(path: Path): ChannelProvider {
         return ChannelProvider {
             GlobalScope.writer(Dispatchers.IO) {
-                // 1. 使用 .buffered() 将 RawSource 转换为 Source
-                // 2. 利用 Kotlin 标库自带的 use 块确保自动关闭
                 fileSystem.source(path).buffered().use { source ->
                     val buffer = Buffer()
-                    
-                    // 此时 source 是 Source 类型，可以正常使用 exhausted()
                     while (!source.exhausted()) {
-                        // 每次最多读取 8192 字节到 buffer 中
                         source.readAtMostTo(buffer, 8192L)
-                        
-                        // 将 Buffer 缓冲的内容写出到 Ktor 的 Channel 中
                         channel.writeFully(buffer.readByteArray())
                     }
                 }

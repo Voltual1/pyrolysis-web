@@ -8,23 +8,21 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.user
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.data.unified.toUnifiedUserDetail  
 import me.voltual.pyrolysis.AppStore
-import me.voltual.pyrolysis.AuthManager
+import me.voltual.pyrolysis.AuthRepository
 import me.voltual.pyrolysis.KtorClient
-import me.voltual.pyrolysis.BBQApplication
 import me.voltual.pyrolysis.data.unified.UnifiedUserDetail 
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.*
-import org.koin.android.annotation.KoinViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-@KoinViewModel
-class UserDetailViewModel(application: Application) : AndroidViewModel(application) {
+class UserDetailViewModel(
+    private val authRepository: AuthRepository // 注入 AuthRepository
+) : ViewModel() { // 变为普通 ViewModel
 
     private val _userData = MutableStateFlow<UnifiedUserDetail?>(null)
     val userData: StateFlow<UnifiedUserDetail?> = _userData.asStateFlow()
@@ -35,14 +33,12 @@ class UserDetailViewModel(application: Application) : AndroidViewModel(applicati
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    // 添加状态跟踪
     private var _isInitialized = false
     private var _currentUserId: Long = -1L
     private var _currentStore: AppStore = AppStore.XIAOQU_SPACE
     private val apiService = KtorClient.ApiServiceImpl
 
     fun loadUserDetails(userId: Long, store: AppStore = AppStore.XIAOQU_SPACE) {
-        // 只有当用户ID或商店真正改变时才重新加载
         if (this._currentUserId != userId || this._currentStore != store) {
             this._currentUserId = userId
             this._currentStore = store
@@ -50,7 +46,6 @@ class UserDetailViewModel(application: Application) : AndroidViewModel(applicati
             resetState()
             loadDataIfNeeded()
         } else {
-            // 相同的用户ID和商店，确保数据已加载
             loadDataIfNeeded()
         }
     }
@@ -61,7 +56,6 @@ class UserDetailViewModel(application: Application) : AndroidViewModel(applicati
         _isLoading.value = false
     }
 
-    // 内部方法：只在需要时加载数据
     private fun loadDataIfNeeded() {
         if (!_isInitialized && _currentUserId != -1L && !_isLoading.value) {
             _isInitialized = true
@@ -69,15 +63,13 @@ class UserDetailViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    // 提供手动刷新方法
     fun refresh() {
-    if (_currentUserId != -1L) {
-        _isLoading.value = false
-        loadData()
+        if (_currentUserId != -1L) {
+            _isLoading.value = false
+            loadData()
+        }
     }
-}
         
-    // 关注用户
     fun followUser(targetUserId: Long) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -88,17 +80,17 @@ class UserDetailViewModel(application: Application) : AndroidViewModel(applicati
                     return@launch
                 }
                 
-                val result = apiService.followUser(
-                    token = token,
-                    followedId = targetUserId
-                )
+                val result = withContext(Dispatchers.IO) {
+                    apiService.followUser(
+                        token = token,
+                        followedId = targetUserId
+                    )
+                }
                 
                 when (val response = result.getOrNull()) {
                     is KtorClient.BaseResponse -> {
                         if (response.code == 1) {
-                            // 关注成功，刷新用户数据
                             refresh()
-                            // 这里可以使用 Snackbar 提示，需要在 UI 层处理
                         } else {
                             _errorMessage.value = "关注失败: ${response.msg}"
                         }
@@ -115,52 +107,40 @@ class UserDetailViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
     
-    // 新增：取消关注用户（使用相同的 API）
     fun unfollowUser(targetUserId: Long) {
-        // 注意：根据接口文档，关注和取消关注使用同一个 API
         followUser(targetUserId)
     }
     
-    // 获取 Token 的辅助函数
     private suspend fun getToken(): String {
-        val context = getApplication<Application>()
-        val userCredentialsFlow = AuthManager.getCredentials(context)
-        val userCredentials = userCredentialsFlow.first()
-        return userCredentials?.token ?: ""
+        return authRepository.credentials.first().token
     }
 
     private fun loadData() {
         viewModelScope.launch {
-            val context = getApplication<Application>()
-/*            val userCredentialsFlow = AuthManager.getCredentials(context)
-            val userCredentials = userCredentialsFlow.first()*/
             val token = getToken()
 
-            // 检查是否已经在加载
             if (_isLoading.value) return@launch
 
             _isLoading.value = true
 
             try {
-                val result = when (_currentStore) {
-                    AppStore.XIAOQU_SPACE -> {
-                        // 小趣空间 API
-                        apiService.getUserInformation(
-                            userId = _currentUserId,
-                            token = token
-                        )
-                    }
-                    else -> {
-                        // 其他应用商店：不支持用户详情，直接返回失败
-                        Result.failure(IllegalArgumentException("当前应用商店不支持用户详情"))
+                val result = withContext(Dispatchers.IO) {
+                    when (_currentStore) {
+                        AppStore.XIAOQU_SPACE -> {
+                            apiService.getUserInformation(
+                                userId = _currentUserId,
+                                token = token
+                            )
+                        }
+                        else -> {
+                            Result.failure(IllegalArgumentException("当前应用商店不支持用户详情"))
+                        }
                     }
                 }
 
-                // 只有在分支时才处理响应
                 if (_currentStore == AppStore.XIAOQU_SPACE ) {
                     when (val response = result.getOrNull()) {
                         is KtorClient.UserInformationResponse -> {
-                            // 小趣空间响应
                             if (response.code == 1) {
                                 _userData.value = response.data.toUnifiedUserDetail()
                                 _errorMessage.value = null
@@ -173,7 +153,6 @@ class UserDetailViewModel(application: Application) : AndroidViewModel(applicati
                         }
                     }
                 } else {
-                    // 其他商店的情况
                     _errorMessage.value = "当前应用商店不支持用户详情"
                 }
             } catch (e: Exception) {

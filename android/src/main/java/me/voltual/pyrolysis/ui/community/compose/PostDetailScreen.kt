@@ -1,11 +1,12 @@
-// Copyright (C) 2025 Voltual
+//Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
-// 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+
 @file:Suppress("DEPRECATION")
 package me.voltual.pyrolysis.ui.community.compose
 
@@ -45,12 +46,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.readBytes // 新增扩展导入
-import io.github.vinceglb.filekit.name      // 新增扩展导入
+import io.github.vinceglb.filekit.readBytes
+import io.github.vinceglb.filekit.name
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.ktor.client.call.*
@@ -61,7 +61,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.voltual.pyrolysis.AuthManager
+import me.voltual.pyrolysis.AuthRepository // 导入新 Repository
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.ui.*
@@ -72,6 +72,8 @@ import me.voltual.pyrolysis.ui.community.PostDetailViewModel
 import me.voltual.pyrolysis.core.ui.components.LinkifyText
 import me.voltual.pyrolysis.core.ui.theme.*
 import me.voltual.pyrolysis.core.utils.cleanUrl
+import org.koin.androidx.compose.koinViewModel // Koin 支持
+import org.koin.compose.koinInject            // Koin 支持
 
 @Composable
 fun PostDetailScreen(
@@ -83,6 +85,9 @@ fun PostDetailScreen(
 ) {
     val navigator = LocalNavigator.current
     val context = LocalContext.current
+    
+    // 注入 AuthRepository 用于后续判断
+    val authRepository: AuthRepository = koinInject()
 
     val postDetail by viewModel.postDetail.collectAsState()
     val comments by viewModel.comments.collectAsState()
@@ -330,7 +335,8 @@ fun PostDetailScreen(
                     onDelete = { viewModel.deleteComment(comment.id) },
                     clipboardManager = clipboardManager,
                     context = context,
-                    snackbarHostState = internalSnackbarHostState
+                    snackbarHostState = internalSnackbarHostState,
+                    authRepository = authRepository // 传递注入的 Repository
                 )
             }
 
@@ -402,7 +408,6 @@ fun PostDetailScreen(
         CommentDialog(
             hint = "输入评论内容...",
             onDismiss = { viewModel.closeCommentDialog() },
-            context = context,
             onSubmit = { content, imageUrl ->
                 viewModel.submitComment(content, imageUrl)
             }
@@ -412,7 +417,6 @@ fun PostDetailScreen(
         CommentDialog(
             hint = "回复 @${currentReplyComment?.nickname}",
             onDismiss = { viewModel.closeReplyDialog() },
-            context = context,
             onSubmit = { content, imageUrl ->
                 viewModel.submitComment(content, imageUrl)
             }
@@ -432,7 +436,7 @@ fun CommentDialog(
     hint: String,
     onDismiss: () -> Unit,
     onSubmit: (String, String?) -> Unit,
-    context: Context
+    viewModel: PostDetailViewModel = koinViewModel() // 使用 Koin 注入
 ) {
     var commentText by remember { mutableStateOf("") }
     var includeImage by remember { mutableStateOf(false) }
@@ -618,8 +622,7 @@ fun CommentDialog(
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    val detailViewModel: PostDetailViewModel = viewModel()
-    val errorMsg by detailViewModel.errorMessage.collectAsState()
+    val errorMsg by viewModel.errorMessage.collectAsState()
     LaunchedEffect(errorMsg) {
         if (errorMsg.isNotEmpty()) isSubmitting = false
     }
@@ -632,12 +635,15 @@ fun CommentItem(
     onDelete: () -> Unit,
     clipboardManager: ClipboardManager,
     context: Context,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    authRepository: AuthRepository // 接收注入的 Repository
 ) {
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     var showDeleteDialog by remember { mutableStateOf(false) }
-    val currentUserId by AuthManager.getUserId(context).collectAsState(initial = null)
+    
+    // 使用 authRepository 获取当前用户 ID
+    val currentUserId by authRepository.userId.collectAsState(initial = null)
 
     if (showDeleteDialog) {
         AlertDialog(

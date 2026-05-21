@@ -33,9 +33,10 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.AuthManager
+import me.voltual.pyrolysis.AuthRepository // 导入新 Repository
 import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.data.DrawerMenuDataStore
+import org.koin.compose.koinInject // Koin 注入支持
 
 sealed class IconSource {
     data class Resource(val resId: Int) : IconSource()
@@ -74,6 +75,8 @@ fun NavigationDrawerItems(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
+    // 注入 AuthRepository
+    val authRepository: AuthRepository = koinInject()
 
     val allDrawerItems = remember {
         mutableListOf(
@@ -103,7 +106,6 @@ fun NavigationDrawerItems(
     var dragOffsetY by remember { mutableStateOf(0f) }
     var itemHeight by remember { mutableStateOf(0) }
 
-    // 新增：维护当前用户点击选中的 Item ID
     var selectedItemId by remember { mutableStateOf("home") }
 
     LaunchedEffect(Unit) {
@@ -117,10 +119,8 @@ fun NavigationDrawerItems(
         }
     }
 
-    // 联动物理路由：当系统外部切换路由时（例如返回键），同步修正选中的高亮项（可选增强）
     LaunchedEffect(currentTopLevelRoute) {
         currentTopLevelRoute?.let { currentRoute ->
-            // 只有当当前选中的项与物理路由不匹配时，才自动校准（优先匹配非注销的正常页面）
             val matchedItem = orderedItems.find { it.route == currentRoute && it.id != "logout" }
             if (matchedItem != null && matchedItem.id != selectedItemId) {
                 selectedItemId = matchedItem.id
@@ -152,11 +152,29 @@ fun NavigationDrawerItems(
 
                 if (showPlaceholder) {
                     if (placeholderIndex!! > orderedItems.indexOf(draggedItem)) {
-                        ItemContent(item, selectedItemId, { selectedItemId = it }, false, scope, drawerState, navigator)
+                        ItemContent(
+                            item = item,
+                            selectedItemId = selectedItemId,
+                            onItemClick = { selectedItemId = it },
+                            isDragged = false,
+                            scope = scope,
+                            drawerState = drawerState,
+                            navigator = navigator,
+                            authRepository = authRepository
+                        )
                         PlaceholderItem(modifier = Modifier.onSizeChanged { itemHeight = it.height })
                     } else {
                         PlaceholderItem(modifier = Modifier.onSizeChanged { itemHeight = it.height })
-                        ItemContent(item, selectedItemId, { selectedItemId = it }, false, scope, drawerState, navigator)
+                        ItemContent(
+                            item = item,
+                            selectedItemId = selectedItemId,
+                            onItemClick = { selectedItemId = it },
+                            isDragged = false,
+                            scope = scope,
+                            drawerState = drawerState,
+                            navigator = navigator,
+                            authRepository = authRepository
+                        )
                     }
                 } else {
                     ItemContent(
@@ -167,6 +185,7 @@ fun NavigationDrawerItems(
                         scope = scope,
                         drawerState = drawerState,
                         navigator = navigator,
+                        authRepository = authRepository,
                         modifier = Modifier
                             .onSizeChanged { itemHeight = it.height }
                             .pointerInput(Unit) {
@@ -212,7 +231,16 @@ fun NavigationDrawerItems(
                     }
                     .padding(horizontal = 12.dp)
             ) {
-                ItemContent(item, selectedItemId, { selectedItemId = it }, false, scope, drawerState, navigator)
+                ItemContent(
+                    item = item,
+                    selectedItemId = selectedItemId,
+                    onItemClick = { selectedItemId = it },
+                    isDragged = false,
+                    scope = scope,
+                    drawerState = drawerState,
+                    navigator = navigator,
+                    authRepository = authRepository
+                )
             }
         }
     }
@@ -227,11 +255,9 @@ private fun ItemContent(
     scope: CoroutineScope,
     drawerState: DrawerState,
     navigator: Navigator,
+    authRepository: AuthRepository, // 接收注入的 Repository
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-
-    // 改为基于唯一的 ID 进行高亮匹配
     val isSelected = selectedItemId == item.id
 
     NavigationDrawerItem(
@@ -250,14 +276,14 @@ private fun ItemContent(
         },
         selected = isSelected,
         onClick = {
-            // 点击时立刻更新高亮项 ID
             onItemClick(item.id)
             
             scope.launch { drawerState.close() }
             when (item.id) {
                 "logout" -> {
                     scope.launch {
-                        AuthManager.clearCredentials(context)
+                        // 使用 authRepository 替代 AuthManager
+                        authRepository.clearCredentials()
                         navigator.logoutAndReset()   
                     }
                 }
