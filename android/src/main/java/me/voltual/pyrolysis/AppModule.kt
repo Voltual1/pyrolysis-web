@@ -49,6 +49,15 @@ import me.voltual.pyrolysis.data.UserFilterDataStore
 import me.voltual.pyrolysis.data.UserAgreementDataStore
 import me.voltual.pyrolysis.ui.user.MyCommentsViewModel
 import me.voltual.pyrolysis.feature.store.repository.*
+import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.dataStoreFile
+import com.google.crypto.tink.Aead
+import com.google.crypto.tink.KeyTemplates
+import com.google.crypto.tink.RegistryConfiguration
+import com.google.crypto.tink.aead.AeadConfig
+import com.google.crypto.tink.integration.android.AndroidKeysetManager
+import me.voltual.pyrolysis.core.proto.UserCredentials
+import me.voltual.pyrolysis.core.proto.UserCredentialsSerializer
 
 val appModule = module {
     // ViewModel definitions
@@ -109,6 +118,23 @@ val appModule = module {
     single { get<AppDatabase>().postDraftDao() }         
     single { SearchHistoryDataStore(androidApplication()) }
     single { StorageSettingsDataStore(androidApplication()) }
+    single<Aead> {
+        AeadConfig.register()
+        val keysetHandle = AndroidKeysetManager.Builder()
+            .withSharedPref(androidContext(), "master_keyset", "tink_auth_prefs")
+            .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
+            .withMasterKeyUri("android-keystore://auth_master_key")
+            .build()
+            .keysetHandle
+        keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
+    }
+    single {
+        DataStoreFactory.create(
+            serializer = UserCredentialsSerializer(get()),
+            produceFile = { androidContext().dataStoreFile("user_credentials_v2.pb") }
+        )
+    }
+    single { AuthRepository(get()) }
     viewModel { UserProfileViewModel(get(), get()) }
     
     single { DeviceNameDataStore(androidContext()) }
