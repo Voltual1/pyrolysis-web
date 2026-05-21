@@ -76,7 +76,7 @@ val appModule = module {
     viewModel { LogViewModel(androidApplication()) }
     viewModel { AppDetailComposeViewModel(androidApplication(), get()) }
     
-    viewModel { AppReleaseViewModel(androidApplication()) }    
+    viewModel { AppReleaseViewModel(androidApplication(), get()) }
     
     viewModel { PlayerViewModel(androidApplication()) }
     

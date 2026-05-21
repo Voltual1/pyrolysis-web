@@ -47,6 +47,7 @@ import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.components.UserAgreementDialog
 import me.voltual.pyrolysis.core.ui.theme.*
 import me.voltual.pyrolysis.core.utils.UpdateCheckResult
+import me.voltual.pyrolysis.core.ui.components.UpdateDialog
 import me.voltual.pyrolysis.core.utils.UpdateChecker
 import org.koin.android.ext.android.inject
 import org.koin.compose.koinInject
@@ -63,6 +64,10 @@ class MainActivity : AppCompatActivity() {
         const val EXTRA_UPDATES = "${BuildConfig.APPLICATION_ID}.intent.extra.UPDATES"
         const val EXTRA_CACHE_FILE_NAME = "${BuildConfig.APPLICATION_ID}.intent.extra.CACHE_FILE_NAME"
     }
+    
+    fun launchLockPrompt(action: () -> Unit) {
+    // TODO: 待重新实现生物识别逻辑
+}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_BBQ_Main)

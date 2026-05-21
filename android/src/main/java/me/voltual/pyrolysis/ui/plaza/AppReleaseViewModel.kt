@@ -51,7 +51,10 @@ enum class ApkUploadService(val displayName: String) {
 }
 
 @KoinViewModel
-class AppReleaseViewModel(application: Application) : AndroidViewModel(application) {
+class AppReleaseViewModel(
+	application: Application,
+    private val xiaoQuRepo: XiaoQuRepository  // 注入 XiaoQuRepository，不再手动创建
+) : AndroidViewModel(application) {
 
     private val context: Context = application.applicationContext
     private val fileSystem = SystemFileSystem
@@ -63,8 +66,6 @@ class AppReleaseViewModel(application: Application) : AndroidViewModel(applicati
         _selectedStore.value = store
         clearProcessFeedback()
     }
-
-    private val xiaoQuRepo: IAppStoreRepository = XiaoQuRepository(KtorClient.ApiServiceImpl)
 
     private fun getCurrentRepo(): IAppStoreRepository = when (_selectedStore.value) {
         AppStore.XIAOQU_SPACE -> xiaoQuRepo
