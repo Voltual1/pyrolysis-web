@@ -2,26 +2,28 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.community
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import me.voltual.pyrolysis.AuthManager
-import me.voltual.pyrolysis.KtorClient
-import me.voltual.pyrolysis.core.database.BrowseHistoryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.koin.android.annotation.KoinViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import me.voltual.pyrolysis.AuthRepository
+import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.core.database.BrowseHistoryRepository
 import kotlinx.coroutines.flow.first
 
-@KoinViewModel
-class PostDetailViewModel(application: Application) : AndroidViewModel(application) {
+class PostDetailViewModel(
+    private val authRepository: AuthRepository  // 注入 AuthRepository
+) : ViewModel() {  // 变为普通 ViewModel
 
     private val _postDetail = MutableStateFlow<KtorClient.PostDetail?>(null)
     val postDetail: StateFlow<KtorClient.PostDetail?> = _postDetail.asStateFlow()
@@ -76,14 +78,16 @@ class PostDetailViewModel(application: Application) : AndroidViewModel(applicati
     fun loadPostDetail(postId: Long) {
         viewModelScope.launch {
             try {
-                val context = getApplication<Application>().applicationContext
-                val userCredentialsFlow = AuthManager.getCredentials(context)
-                val userCredentials = userCredentialsFlow.first()!!
+                // 直接从 Repository 获取凭证
+                val userCredentials = authRepository.credentials.first()
+                val token = userCredentials.token
 
-                val result = KtorClient.ApiServiceImpl.getPostDetail(
-                    token = userCredentials.token,
-                    postId = postId
-                )
+                val result = withContext(Dispatchers.IO) {
+                    KtorClient.ApiServiceImpl.getPostDetail(
+                        token = token,
+                        postId = postId
+                    )
+                }
 
                 if (result.isSuccess) {
                     val response = result.getOrThrow()
@@ -124,11 +128,13 @@ class PostDetailViewModel(application: Application) : AndroidViewModel(applicati
 
         viewModelScope.launch {
             try {
-                val result = KtorClient.ApiServiceImpl.getPostComments(
-                    postId = postId,
-                    limit = 20,
-                    page = page
-                )
+                val result = withContext(Dispatchers.IO) {
+                    KtorClient.ApiServiceImpl.getPostComments(
+                        postId = postId,
+                        limit = 20,
+                        page = page
+                    )
+                }
 
                 if (result.isSuccess) {
                     val response = result.getOrThrow()
@@ -187,14 +193,15 @@ class PostDetailViewModel(application: Application) : AndroidViewModel(applicati
             val isCurrentlyLiked = _isLiked.value
 
             try {
-                 val context = getApplication<Application>().applicationContext
-                val userCredentialsFlow = AuthManager.getCredentials(context)
-                val userCredentials = userCredentialsFlow.first()!!
+                val userCredentials = authRepository.credentials.first()
+                val token = userCredentials.token
 
-                val result = KtorClient.ApiServiceImpl.likePost(
-                    token = userCredentials.token,
-                    postId = postId
-                )
+                val result = withContext(Dispatchers.IO) {
+                    KtorClient.ApiServiceImpl.likePost(
+                        token = token,
+                        postId = postId
+                    )
+                }
 
                 if (result.isSuccess) {
                     val response = result.getOrThrow()
@@ -240,19 +247,20 @@ class PostDetailViewModel(application: Application) : AndroidViewModel(applicati
     fun submitComment(content: String, imageUrl: String? = null) {
         viewModelScope.launch {
             try {
-                 val context = getApplication<Application>().applicationContext
-                val userCredentialsFlow = AuthManager.getCredentials(context)
-                val userCredentials = userCredentialsFlow.first()!!
+                val userCredentials = authRepository.credentials.first()
+                val token = userCredentials.token
                 val postId = postDetail.value?.id ?: return@launch
                 val parentId = _currentReplyComment.value?.id ?: 0L
 
-                val result = KtorClient.ApiServiceImpl.postComment(
-                    token = userCredentials.token,
-                    content = content,
-                    postId = postId,
-                    parentId = parentId,
-                    imageUrl = imageUrl
-                )
+                val result = withContext(Dispatchers.IO) {
+                    KtorClient.ApiServiceImpl.postComment(
+                        token = token,
+                        content = content,
+                        postId = postId,
+                        parentId = parentId,
+                        imageUrl = imageUrl
+                    )
+                }
 
                 if (result.isSuccess) {
                     val response = result.getOrThrow()
@@ -277,15 +285,16 @@ class PostDetailViewModel(application: Application) : AndroidViewModel(applicati
     fun deletePost() {
         viewModelScope.launch {
             val postId = postDetail.value?.id ?: return@launch
-            val context = getApplication<Application>().applicationContext
-               val userCredentialsFlow = AuthManager.getCredentials(context)
-                val userCredentials = userCredentialsFlow.first()!!
-
             try {
-                val result = KtorClient.ApiServiceImpl.deletePost(
-                    token = userCredentials.token,
-                    postId = postId
-                )
+                val userCredentials = authRepository.credentials.first()
+                val token = userCredentials.token
+
+                val result = withContext(Dispatchers.IO) {
+                    KtorClient.ApiServiceImpl.deletePost(
+                        token = token,
+                        postId = postId
+                    )
+                }
 
                 if (result.isSuccess) {
                     val response = result.getOrThrow()
@@ -306,15 +315,16 @@ class PostDetailViewModel(application: Application) : AndroidViewModel(applicati
 
     fun deleteComment(commentId: Long) {
         viewModelScope.launch {
-            val context = getApplication<Application>().applicationContext
-             val userCredentialsFlow = AuthManager.getCredentials(context)
-                val userCredentials = userCredentialsFlow.first()!!
-
             try {
-                val result = KtorClient.ApiServiceImpl.deleteComment(
-                    token = userCredentials.token,
-                    commentId = commentId
-                )
+                val userCredentials = authRepository.credentials.first()
+                val token = userCredentials.token
+
+                val result = withContext(Dispatchers.IO) {
+                    KtorClient.ApiServiceImpl.deleteComment(
+                        token = token,
+                        commentId = commentId
+                    )
+                }
 
                 if (result.isSuccess) {
                     val response = result.getOrThrow()

@@ -94,7 +94,7 @@ val appModule = module {
     viewModel { StoreManagerViewModel(androidApplication()) }
     
     viewModel { BrowseHistoryViewModel(androidApplication()) }
-    viewModel { PostDetailViewModel(androidApplication()) }
+	viewModel { PostDetailViewModel(get()) } 
     viewModel { RankingListViewModel() }
     viewModel { UpdateSettingsViewModel() }
 	viewModel { SignInSettingsViewModel(get()) }
