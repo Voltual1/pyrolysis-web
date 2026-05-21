@@ -53,6 +53,8 @@ import me.voltual.pyrolysis.ui.user.MyCommentsViewModel
 import me.voltual.pyrolysis.feature.store.repository.*
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import com.google.crypto.tink.Aead
 import com.google.crypto.tink.KeyTemplates
 import com.google.crypto.tink.RegistryConfiguration
@@ -134,7 +136,7 @@ val appModule = module {
             .keysetHandle
         keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
     }
-    single<UserCredentials>(named("auth_store")) {
+    single<DataStore<UserCredentials>>(named("auth_store")) {
         DataStoreFactory.create(
             serializer = UserCredentialsSerializer(get()),
             produceFile = { androidContext().dataStoreFile("user_credentials_v2.pb") }
