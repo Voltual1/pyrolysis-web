@@ -144,7 +144,7 @@ val appModule = module {
         )
     }
     single<DataStore<Preferences>>(named("draft_store")) {
-    PreferenceDataStoreFactory.create(
+    DataStoreFactory.create(
         produceFile = { androidContext().preferencesDataStoreFile("post_drafts") }
     )
 }
