@@ -55,6 +55,7 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStoreFile
 import com.google.crypto.tink.Aead
 import com.google.crypto.tink.KeyTemplates
 import com.google.crypto.tink.RegistryConfiguration
@@ -142,6 +143,11 @@ val appModule = module {
             produceFile = { androidContext().dataStoreFile("user_credentials_v2.pb") }
         )
     }
+    single<DataStore<Preferences>>(named("draft_store")) {
+    PreferenceDataStoreFactory.create(
+        produceFile = { androidContext().preferencesDataStoreFile("post_drafts") }
+    )
+}
     single { 
         AuthRepository(get(named("auth_store"))) 
     }
