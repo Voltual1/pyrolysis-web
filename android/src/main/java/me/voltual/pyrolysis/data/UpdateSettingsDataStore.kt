@@ -8,31 +8,28 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.data
 
-import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import me.voltual.pyrolysis.BBQApplication
+import org.koin.core.annotation.Single
 
-private val Context.updateSettingsDataStore by preferencesDataStore(name = "update_settings")
-
-object UpdateSettingsDataStore {
+@Single
+class UpdateSettingsDataStore(private val dataStore: DataStore<Preferences>) {
     
-    private val AUTO_CHECK_UPDATES = booleanPreferencesKey("auto_check_updates")
-
-    val autoCheckUpdates: Flow<Boolean>
-        get() = BBQApplication.instance.applicationContext.updateSettingsDataStore.data.map { preferences ->
-            preferences[AUTO_CHECK_UPDATES] ?: true
-        }
-
-suspend fun setAutoCheckUpdates(value: Boolean) {
-    BBQApplication.instance.applicationContext.updateSettingsDataStore.edit { 
-        it[AUTO_CHECK_UPDATES] = value
+    companion object {
+        private val AUTO_CHECK_UPDATES = booleanPreferencesKey("auto_check_updates")
     }
-}
+
+    val autoCheckUpdates: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[AUTO_CHECK_UPDATES] ?: true
+    }
+
+    suspend fun setAutoCheckUpdates(value: Boolean) {
+        dataStore.edit { 
+            it[AUTO_CHECK_UPDATES] = value
+        }
+    }
 }

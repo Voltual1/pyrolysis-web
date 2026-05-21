@@ -8,28 +8,23 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.data
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.koin.core.annotation.Single
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+@Single
+class DrawerMenuDataStore(private val dataStore: DataStore<Preferences>) {
 
-object DrawerMenuDataStore {
+    companion object {
+        private val MENU_ORDER_KEY = stringPreferencesKey("drawer_menu_order")
+    }
 
-    private val MENU_ORDER_KEY = stringPreferencesKey("drawer_menu_order")
-
-    /**
-     * 加载菜单顺序
-     * @param context Context
-     * @return Flow<List<String>> 菜单项ID的列表流
-     */
-    fun loadMenuOrder(context: Context): Flow<List<String>> {
-        return context.dataStore.data.map { preferences ->
+    fun loadMenuOrder(): Flow<List<String>> {
+        return dataStore.data.map { preferences ->
             val orderString = preferences[MENU_ORDER_KEY]
             if (orderString.isNullOrBlank()) {
                 emptyList()
@@ -39,13 +34,8 @@ object DrawerMenuDataStore {
         }
     }
 
-    /**
-     * 保存菜单顺序
-     * @param context Context
-     * @param order 菜单项ID的列表
-     */
-    suspend fun saveMenuOrder(context: Context, order: List<String>) {
-        context.dataStore.edit { settings ->
+    suspend fun saveMenuOrder(order: List<String>) {
+        dataStore.edit { settings ->
             settings[MENU_ORDER_KEY] = order.joinToString(",")
         }
     }

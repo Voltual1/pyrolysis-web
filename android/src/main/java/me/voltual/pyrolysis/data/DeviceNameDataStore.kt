@@ -8,16 +8,13 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.data
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first 
-import kotlinx.coroutines.flow.take  
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -39,12 +36,12 @@ private data class GuiseTemplate(
     val configuration: String
 )
 
-private val Context.deviceNameDataStore: DataStore<Preferences> by preferencesDataStore(name = "device_info")
-
 @Single
-class DeviceNameDataStore(context: Context) {
-    private val DEVICE_LIST_KEY = stringPreferencesKey("device_config_list_json")
-    private val dataStore = context.deviceNameDataStore
+class DeviceNameDataStore(private val dataStore: DataStore<Preferences>) {
+    
+    companion object {
+        private val DEVICE_LIST_KEY = stringPreferencesKey("device_config_list_json")
+    }
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -65,7 +62,6 @@ class DeviceNameDataStore(context: Context) {
             isSelected = true
         )
 
-        // 2. 这里的 map 是 List 的扩展函数，不是 Flow 的
         val updatedList = currentList.map { it.copy(isSelected = false) } + emergencyConfig
         updateDeviceList(updatedList)
     }
@@ -95,7 +91,6 @@ class DeviceNameDataStore(context: Context) {
     }
 
     suspend fun selectDevice(alias: String) {
-        // 使用 first() 获取当前状态并修改，避免 collect 可能导致的无限循环或挂起
         val currentList = deviceListFlow.first()
         val updatedList = currentList.map { it.copy(isSelected = it.alias == alias) }
         updateDeviceList(updatedList)

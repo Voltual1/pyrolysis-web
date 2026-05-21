@@ -6,25 +6,18 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-
 package me.voltual.pyrolysis.data
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
 
-private val Context.searchHistoryDataStore: DataStore<Preferences> by preferencesDataStore(name = "search_history")
-
 @Single
-class SearchHistoryDataStore(context: Context) {
-
-    private val dataStore = context.applicationContext.searchHistoryDataStore
+class SearchHistoryDataStore(private val dataStore: DataStore<Preferences>) {
 
     companion object {
         private val HISTORY_KEY = stringSetPreferencesKey("search_history_set")

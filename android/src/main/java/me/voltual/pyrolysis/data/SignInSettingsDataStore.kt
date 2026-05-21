@@ -8,27 +8,27 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.data
 
-import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import androidx.datastore.preferences.preferencesDataStore
-import me.voltual.pyrolysis.BBQApplication
+import org.koin.core.annotation.Single
 
-private val Context.signInSettingsDataStore by preferencesDataStore(name = "sign_in_settings")
-
-object SignInSettingsDataStore {
+@Single
+class SignInSettingsDataStore(private val dataStore: DataStore<Preferences>) {
     
-    private val AUTO_SIGN_IN = booleanPreferencesKey("auto_sign_in")
+    companion object {
+        private val AUTO_SIGN_IN = booleanPreferencesKey("auto_sign_in")
+    }
     
-    val autoSignIn: Flow<Boolean>
-        get() = BBQApplication.instance.applicationContext.signInSettingsDataStore.data.map { preferences ->
-            preferences[AUTO_SIGN_IN] ?: false // 默认关闭自动签到
-        }
+    val autoSignIn: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[AUTO_SIGN_IN] ?: false
+    }
     
     suspend fun setAutoSignIn(value: Boolean) {
-        BBQApplication.instance.applicationContext.signInSettingsDataStore.edit { 
+        dataStore.edit { 
             it[AUTO_SIGN_IN] = value
         }
     }

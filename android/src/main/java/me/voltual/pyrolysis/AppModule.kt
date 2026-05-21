@@ -53,6 +53,15 @@ private val AUTH_STORE_QUALIFIER = named("auth_store")
 private val DRAFT_STORE_QUALIFIER = named("draft_store")
 private val PAYMENT_STORE_QUALIFIER = named("payment_store")
 private val PLAZA_STORE_QUALIFIER = named("plaza_store")
+private val USER_FILTER_STORE_QUALIFIER = named("user_filter_store")
+private val USER_AGREEMENT_STORE_QUALIFIER = named("user_agreement_store")
+private val UPDATE_SETTINGS_STORE_QUALIFIER = named("update_settings_store")
+private val STORAGE_SETTINGS_STORE_QUALIFIER = named("storage_settings_store")
+private val SIGN_IN_SETTINGS_STORE_QUALIFIER = named("sign_in_settings_store")
+private val SEARCH_HISTORY_STORE_QUALIFIER = named("search_history_store")
+private val PLAYER_SETTINGS_STORE_QUALIFIER = named("player_settings_store")
+private val DRAWER_MENU_STORE_QUALIFIER = named("drawer_menu_store")
+private val DEVICE_INFO_STORE_QUALIFIER = named("device_info_store")
 
 val appModule = module {
 
@@ -79,15 +88,9 @@ val appModule = module {
     }
 
     // =========================================================================
-    // 2. 数据存储层 (DataStores)
+    // 2. 底层 DataStore 实例定义 (Platform Specific Instances)
     // =========================================================================
     
-    single { DeviceNameDataStore(androidContext()) }
-    single { UserFilterDataStore(get()) }    
-    single { UserAgreementDataStore(androidContext()) }    
-    single { SearchHistoryDataStore(androidApplication()) }
-    single { StorageSettingsDataStore(androidApplication()) }
-
     // Proto DataStore (用户凭据加密存储)
     single<DataStore<UserCredentials>>(AUTH_STORE_QUALIFIER) {
         DataStoreFactory.create(
@@ -96,29 +99,47 @@ val appModule = module {
         )
     }
 
-    // Preferences DataStores
-    single<DataStore<Preferences>>(DRAFT_STORE_QUALIFIER) {
-        PreferenceDataStoreFactory.create(
-            produceFile = { androidContext().dataStoreFile("post_drafts.preferences_pb") }
-        )
-    }
+    // Preferences DataStores 物理文件定义
+    val storeFiles = mapOf(
+        DRAFT_STORE_QUALIFIER to "post_drafts.preferences_pb",
+        PAYMENT_STORE_QUALIFIER to "payment_requests.preferences_pb",
+        PLAZA_STORE_QUALIFIER to "plaza_preferences.preferences_pb",
+        USER_FILTER_STORE_QUALIFIER to "user_filter.preferences_pb",
+        USER_AGREEMENT_STORE_QUALIFIER to "user_agreement_prefs.preferences_pb",
+        UPDATE_SETTINGS_STORE_QUALIFIER to "update_settings.preferences_pb",
+        STORAGE_SETTINGS_STORE_QUALIFIER to "storage_settings.preferences_pb",
+        SIGN_IN_SETTINGS_STORE_QUALIFIER to "sign_in_settings.preferences_pb",
+        SEARCH_HISTORY_STORE_QUALIFIER to "search_history.preferences_pb",
+        PLAYER_SETTINGS_STORE_QUALIFIER to "player_settings.preferences_pb",
+        DRAWER_MENU_STORE_QUALIFIER to "settings.preferences_pb",
+        DEVICE_INFO_STORE_QUALIFIER to "device_info.preferences_pb"
+    )
 
-    single<DataStore<Preferences>>(PAYMENT_STORE_QUALIFIER) {
-        PreferenceDataStoreFactory.create(
-            produceFile = { androidContext().dataStoreFile("payment_requests.preferences_pb") }
-        )
+    storeFiles.forEach { (qualifier, fileName) ->
+        single<DataStore<Preferences>>(qualifier) {
+            PreferenceDataStoreFactory.create(
+                produceFile = { androidContext().dataStoreFile(fileName) }
+            )
+        }
     }
-
-    single<DataStore<Preferences>>(PLAZA_STORE_QUALIFIER) {
-        PreferenceDataStoreFactory.create(
-            produceFile = { androidContext().dataStoreFile("plaza_preferences.preferences_pb") }
-        )
-    }
-    
-    single { PostDraftDataStore(get(DRAFT_STORE_QUALIFIER)) } 
 
     // =========================================================================
-    // 3. 业务仓库层 (Repositories)
+    // 3. 业务 DataStore 包装类 (Business Logic Wrappers)
+    // =========================================================================
+    
+    single { DeviceNameDataStore(get(DEVICE_INFO_STORE_QUALIFIER)) }
+    single { UserFilterDataStore(get(USER_FILTER_STORE_QUALIFIER)) }    
+    single { UserAgreementDataStore(get(USER_AGREEMENT_STORE_QUALIFIER)) }    
+    single { SearchHistoryDataStore(get(SEARCH_HISTORY_STORE_QUALIFIER)) }
+    single { StorageSettingsDataStore(get(STORAGE_SETTINGS_STORE_QUALIFIER)) }
+    single { PostDraftDataStore(get(DRAFT_STORE_QUALIFIER)) } 
+    single { UpdateSettingsDataStore(get(UPDATE_SETTINGS_STORE_QUALIFIER)) }
+    single { SignInSettingsDataStore(get(SIGN_IN_SETTINGS_STORE_QUALIFIER)) }
+    single { PlayerDataStore(get(PLAYER_SETTINGS_STORE_QUALIFIER)) }
+    single { DrawerMenuDataStore(get(DRAWER_MENU_STORE_QUALIFIER)) }
+
+    // =========================================================================
+    // 4. 业务仓库层 (Repositories)
     // =========================================================================
     
     single { AuthRepository(get(AUTH_STORE_QUALIFIER)) }
@@ -132,7 +153,6 @@ val appModule = module {
     single { PrivacyRepository(get(), get(), get(), get(), get()) }
     single { XiaoQuRepository(KtorClient.ApiServiceImpl, get()) }
     
-    // 多渠道应用商店映射桥接
     single<Map<AppStore, IAppStoreRepository>> {
         mutableMapOf<AppStore, IAppStoreRepository>().apply {
             put(AppStore.XIAOQU_SPACE, get<XiaoQuRepository>())
@@ -140,17 +160,15 @@ val appModule = module {
     }
 
     // =========================================================================
-    // 4. 表现层 (ViewModels)
+    // 5. 表现层 (ViewModels)
     // =========================================================================
     
-    // 用户与认证相关
     viewModel { LoginViewModel(get()) } 
     viewModel { UserProfileViewModel(get(), get()) }
     viewModel { UserListViewModel(get()) }
     viewModel { UserDetailViewModel(get()) }
     viewModel { SignInSettingsViewModel(get()) }
 
-    // 社区交流相关
     viewModel { CommunityViewModel() }
     viewModel { FollowingPostsViewModel(get()) } 
     viewModel { HotPostsViewModel() }
@@ -162,7 +180,6 @@ val appModule = module {
     viewModel { PostDetailViewModel(get()) } 
     viewModel { BrowseHistoryViewModel(androidApplication()) }
 
-    // 应用商店、广场与搜索
     viewModel { HomeViewModel(get()) }
     viewModel { PlazaViewModel(get(PLAZA_STORE_QUALIFIER), get(), get(), get(), get()) }
     viewModel { AppDetailComposeViewModel(androidApplication(), get()) }
@@ -175,7 +192,6 @@ val appModule = module {
     viewModel { RepoPageVM(get(), get()) }
     viewModel { RankingListViewModel() }
 
-    // 系统工具、账单及设置
     viewModel { BillingViewModel(get()) }
     viewModel { PaymentViewModel(get(), get(PAYMENT_STORE_QUALIFIER)) }
     viewModel { MessageViewModel(get()) }
