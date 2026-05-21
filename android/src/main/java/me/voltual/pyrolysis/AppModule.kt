@@ -88,7 +88,6 @@ val appModule = module {
     viewModel { UserListViewModel(androidApplication()) }
     viewModel { PostCreateViewModel(get(), get(), get()) }
     viewModel { MyPostsViewModel(get()) }
-    viewModel { PaymentViewModel(androidApplication()) }
     viewModel { VersionListViewModel(androidApplication(), get()) }
     viewModel { UserDetailViewModel(androidApplication()) }
     viewModel { StoreManagerViewModel(androidApplication()) }
@@ -144,6 +143,17 @@ val appModule = module {
             produceFile = { androidContext().dataStoreFile("user_credentials_v2.pb") }
         )
     }
+    private val PAYMENT_STORE_QUALIFIER = named("payment_store")
+
+// 提供 Payment DataStore
+single<DataStore<Preferences>>(PAYMENT_STORE_QUALIFIER) {
+    PreferenceDataStoreFactory.create(
+        produceFile = { androidContext().dataStoreFile("payment_requests.preferences_pb") }
+    )
+}
+
+// 更新 PaymentViewModel 的注入
+viewModel { PaymentViewModel(get(), get(PAYMENT_STORE_QUALIFIER)) }
     single<DataStore<Preferences>>(named("draft_store")) {
     PreferenceDataStoreFactory.create(
         produceFile = { androidContext().dataStoreFile("post_drafts.preferences_pb") }

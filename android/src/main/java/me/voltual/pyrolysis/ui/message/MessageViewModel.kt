@@ -2,23 +2,23 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.message
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import me.voltual.pyrolysis.AuthManager
-import me.voltual.pyrolysis.KtorClient
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
-import org.koin.android.annotation.KoinViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import me.voltual.pyrolysis.AuthRepository
+import me.voltual.pyrolysis.KtorClient
 
 data class MessageState(
     val messages: List<KtorClient.MessageNotification> = emptyList(),
@@ -29,12 +29,14 @@ data class MessageState(
     val isInitialized: Boolean = false
 )
 
-@KoinViewModel
-class MessageViewModel(application: Application) : AndroidViewModel(application) {
+class MessageViewModel(
+    private val authRepository: AuthRepository  // 注入 AuthRepository
+) : ViewModel() {  // 变为普通 ViewModel
+    
     private val _state = MutableStateFlow(MessageState())
     val state: StateFlow<MessageState> = _state.asStateFlow()    
     
-    // 使用 ViewModel 的生命周期来管理初始化，而不是 Compose 的重组
+    // 使用 ViewModel 的生命周期来管理初始化
     private var _isInitialized = false
 
     // 公开的初始化方法，但只在真正需要时加载
@@ -63,16 +65,17 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
         
         viewModelScope.launch {
             try {
-                val context = getApplication<Application>().applicationContext
-                val userCredentialsFlow = AuthManager.getCredentials(context)
-                val userCredentials = userCredentialsFlow.first()
-                val token = userCredentials?.token ?: ""
+                // 直接从 Repository 获取 token，不再需要 Context
+                val userCredentials = authRepository.credentials.first()
+                val token = userCredentials.token
 
-                val messageNotificationsResult = KtorClient.ApiServiceImpl.getMessageNotifications(
-                    token = token,
-                    limit = 5,
-                    page = page
-                )
+                val messageNotificationsResult = withContext(Dispatchers.IO) {
+                    KtorClient.ApiServiceImpl.getMessageNotifications(
+                        token = token,
+                        limit = 5,
+                        page = page
+                    )
+                }
                 
                 if (messageNotificationsResult.isSuccess) {
                     messageNotificationsResult.getOrNull()?.let { messageNotificationsResponse ->

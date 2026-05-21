@@ -2,30 +2,27 @@
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.payment
 
-import android.app.Application
-import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.ktor.client.call.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.voltual.pyrolysis.AuthManager
+import me.voltual.pyrolysis.AuthRepository
 import me.voltual.pyrolysis.KtorClient
-import org.koin.android.annotation.KoinViewModel
 import kotlin.random.Random
 import kotlin.time.Clock
-
-private val Context.dataStore by preferencesDataStore(name = "payment_requests")
 
 // 定义一个简单的包装类，传递下载所需信息
 data class DownloadEvent(
@@ -34,10 +31,10 @@ data class DownloadEvent(
     val headers: Map<String, String> = emptyMap()
 )
 
-@KoinViewModel
-class PaymentViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val dataStore = application.applicationContext.dataStore
+class PaymentViewModel(
+    private val authRepository: AuthRepository,           // 注入 AuthRepository
+    private val dataStore: DataStore<Preferences>         // 注入 DataStore
+) : ViewModel() {  // 变为普通 ViewModel
 
     private val _isLoadingBalance = MutableStateFlow(false)
     val isLoadingBalance: StateFlow<Boolean> = _isLoadingBalance.asStateFlow()
@@ -130,13 +127,15 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
     fun loadPostInfo(postId: Long) {
         viewModelScope.launch {
-            val credentials = AuthManager.getCredentials(getApplication()).first()
+            val credentials = authRepository.credentials.first()
             val token = credentials.token.ifEmpty {
                 _errorMessage.value = "用户未登录"
                 return@launch
             }
 
-            KtorClient.ApiServiceImpl.getPostDetail(token = token, postId = postId).onSuccess { result ->
+            withContext(Dispatchers.IO) {
+                KtorClient.ApiServiceImpl.getPostDetail(token = token, postId = postId)
+            }.onSuccess { result ->
                 val post = result.data
                 _paymentInfo.value = PaymentInfo(
                     type = PaymentType.POST_REWARD,
@@ -159,17 +158,19 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
             _isLoadingBalance.value = true
             _coinsBalance.value = null
             
-            val credentials = AuthManager.getCredentials(getApplication()).first()
+            val credentials = authRepository.credentials.first()
             if (credentials.userId == 0L) {
                 _errorMessage.value = "用户未登录"
                 _isLoadingBalance.value = false
                 return@launch
             }
 
-            KtorClient.ApiServiceImpl.getUserInformation(
-                userId = credentials.userId,
-                token = credentials.token
-            ).onSuccess { result ->
+            withContext(Dispatchers.IO) {
+                KtorClient.ApiServiceImpl.getUserInformation(
+                    userId = credentials.userId,
+                    token = credentials.token
+                )
+            }.onSuccess { result ->
                 _coinsBalance.value = result.data.money
             }.onFailure { error ->
                 _errorMessage.value = "获取余额失败: ${error.message}"
@@ -187,21 +188,25 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
             when (info.type) {
                 PaymentType.APP_PURCHASE -> {
-                    KtorClient.ApiServiceImpl.getAppsInformation(
-                        token = "",
-                        appsId = info.appId,
-                        appsVersionId = info.versionId
-                    ).onSuccess { result ->
+                    withContext(Dispatchers.IO) {
+                        KtorClient.ApiServiceImpl.getAppsInformation(
+                            token = "",
+                            appsId = info.appId,
+                            appsVersionId = info.versionId
+                        )
+                    }.onSuccess { result ->
                         _verificationResult.value = "验证成功: ${result.data.appname} (¥${result.data.pay_money})"
                     }.onFailure { error ->
                         _errorMessage.value = "应用验证失败: ${error.message}"
                     }
                 }
                 PaymentType.POST_REWARD -> {
-                    KtorClient.ApiServiceImpl.getPostDetail(
-                        token = "",
-                        postId = info.postId
-                    ).onSuccess { result ->
+                    withContext(Dispatchers.IO) {
+                        KtorClient.ApiServiceImpl.getPostDetail(
+                            token = "",
+                            postId = info.postId
+                        )
+                    }.onSuccess { result ->
                         _verificationResult.value = "验证成功: ${result.data.title}"
                     }.onFailure { error ->
                         _errorMessage.value = "帖子验证失败: ${error.message}"
@@ -229,7 +234,7 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
 
             savePaymentRequestId(requestId)
 
-            val credentials = AuthManager.getCredentials(getApplication()).first()
+            val credentials = authRepository.credentials.first()
             if (credentials.token.isEmpty()) {
                 _errorMessage.value = "用户未登录"
                 _paymentStatus.value = PaymentStatus.FAILED
@@ -237,20 +242,22 @@ class PaymentViewModel(application: Application) : AndroidViewModel(application)
                 return@launch
             }
 
-            val response = when (info.type) {
-                PaymentType.APP_PURCHASE -> KtorClient.ApiServiceImpl.payForApp(
-                    token = credentials.token,
-                    appsId = info.appId,
-                    appsVersionId = info.versionId,
-                    money = amount,
-                    type = 0
-                )
-                PaymentType.POST_REWARD -> KtorClient.ApiServiceImpl.rewardPost(
-                    token = credentials.token,
-                    postId = info.postId,
-                    money = amount,
-                    payment = 0
-                )
+            val response = withContext(Dispatchers.IO) {
+                when (info.type) {
+                    PaymentType.APP_PURCHASE -> KtorClient.ApiServiceImpl.payForApp(
+                        token = credentials.token,
+                        appsId = info.appId,
+                        appsVersionId = info.versionId,
+                        money = amount,
+                        type = 0
+                    )
+                    PaymentType.POST_REWARD -> KtorClient.ApiServiceImpl.rewardPost(
+                        token = credentials.token,
+                        postId = info.postId,
+                        money = amount,
+                        payment = 0
+                    )
+                }
             }
 
             response.onSuccess { result ->
