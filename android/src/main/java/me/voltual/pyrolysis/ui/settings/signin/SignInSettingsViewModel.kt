@@ -8,10 +8,9 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.settings.signin
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import me.voltual.pyrolysis.AuthManager
+import me.voltual.pyrolysis.AuthRepository
 import me.voltual.pyrolysis.KtorClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +20,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.voltual.pyrolysis.data.SignInSettingsDataStore
 import kotlinx.coroutines.Dispatchers
-import org.koin.android.annotation.KoinViewModel
 
 // 签到结果密封类
 sealed class SignInResult {
@@ -31,8 +29,9 @@ sealed class SignInResult {
     object AlreadySignedIn : SignInResult()
 }
 
-@KoinViewModel
-class SignInSettingsViewModel : ViewModel() {
+class SignInSettingsViewModel(
+    private val authRepository: AuthRepository
+) : ViewModel() {
 
     val autoSignIn: Flow<Boolean> = SignInSettingsDataStore.autoSignIn
     
@@ -44,17 +43,16 @@ class SignInSettingsViewModel : ViewModel() {
         SignInSettingsDataStore.setAutoSignIn(value)
     }
     
-    // 执行签到
-    fun signIn(context: Context) {
+    // 执行签到 - 不再需要 Context
+    fun signIn() {
         viewModelScope.launch {
             _signInState.value = SignInState.Loading
             
             try {
-                // 获取用户凭证
-                val userCredentialsFlow = AuthManager.getCredentials(context)
-                val userCredentials = userCredentialsFlow.first()
+                // 直接从注入的 Repository 获取用户凭证
+                val userCredentials = authRepository.credentials.first()
                 
-if (userCredentials.userId == 0L || userCredentials.token.isEmpty()) {
+                if (userCredentials.userId == 0L || userCredentials.token.isEmpty()) {
                     _signInState.value = SignInState.Error("请先登录")
                     return@launch
                 }

@@ -13,45 +13,33 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import me.voltual.pyrolysis.core.ui.theme.BBQButton
-import me.voltual.pyrolysis.core.ui.theme.BBQOutlinedButton
 import me.voltual.pyrolysis.core.ui.theme.SwitchWithText
 import me.voltual.pyrolysis.core.ui.theme.BBQSnackbarHost
-import me.voltual.pyrolysis.core.ui.theme.BBQSuccessSnackbar
-import me.voltual.pyrolysis.core.ui.theme.BBQErrorSnackbar
-import me.voltual.pyrolysis.core.ui.theme.BBQInfoSnackbar
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun SignInSettingsScreen(
-    viewModel: SignInSettingsViewModel = viewModel(),
+    viewModel: SignInSettingsViewModel = koinViewModel(), // 使用 koinViewModel 自动注入
     snackbarHostState: SnackbarHostState
 ) {
     val scope = rememberCoroutineScope()
     val autoSignIn by viewModel.autoSignIn.collectAsState(initial = false)
     val signInState by viewModel.signInState.collectAsState()
-    val context = LocalContext.current
     
     // 监听签到状态变化，显示Snackbar
     LaunchedEffect(signInState) {
         when (val state = signInState) {
             is SignInState.Success -> {
-                scope.launch {
-                    snackbarHostState.showSnackbar(state.message)
-                }
+                snackbarHostState.showSnackbar(state.message)
             }
             is SignInState.Error -> {
-                scope.launch {
-                    snackbarHostState.showSnackbar(state.message)
-                }
+                snackbarHostState.showSnackbar(state.message)
             }
             is SignInState.Info -> {
-                scope.launch {
-                    snackbarHostState.showSnackbar(state.message)
-                }
+                snackbarHostState.showSnackbar(state.message)
             }
             else -> {}
         }
@@ -72,7 +60,7 @@ fun SignInSettingsScreen(
                         viewModel.setAutoSignIn(checked)
                         // 如果开启自动签到，立即执行一次签到
                         if (checked) {
-                            viewModel.signIn(context)
+                            viewModel.signIn() // 干净的调用
                         }
                     }
                 },
@@ -88,7 +76,7 @@ fun SignInSettingsScreen(
                 // 签到按钮
                 BBQButton(
                     onClick = {
-                        viewModel.signIn(context)
+                        viewModel.signIn() // 干净的调用
                     },
                     enabled = signInState !is SignInState.Loading,
                     modifier = Modifier
