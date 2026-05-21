@@ -8,16 +8,14 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.plaza
 
-import android.app.Application
-import android.content.Context
 import android.util.Log
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.*
 import me.voltual.pyrolysis.core.database.entity.ProductIconDetails
 import me.voltual.pyrolysis.AppStore
-import me.voltual.pyrolysis.AuthManager
 import me.voltual.pyrolysis.data.unified.UnifiedAppItem
 import me.voltual.pyrolysis.data.unified.UnifiedCategory
 import me.voltual.pyrolysis.core.database.entity.CategoryDetails
@@ -28,21 +26,17 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.feature.store.repository.*
 import kotlinx.coroutines.withContext
-import org.koin.android.annotation.KoinViewModel
 
 // --- 统一的数据模型包装 ---
 data class PlazaData(val popularApps: List<UnifiedAppItem>)
 
-private val Context.dataStore by preferencesDataStore(name = "plaza_preferences")
-
-@KoinViewModel
 class PlazaViewModel(
-    private val app: Application,
+    private val dataStore: DataStore<Preferences>, // 注入 DataStore
     private val productsRepo: ProductsRepository, 
     private val reposRepo: RepositoriesRepository,
     private val extrasRepo: ExtrasRepository,
     private val repositories: Map<AppStore, IAppStoreRepository>
-) : AndroidViewModel(app) {
+) : ViewModel() { // 变为普通 ViewModel
 
     // ---  State ---
     private val _isLoading = MutableStateFlow(false)
@@ -74,7 +68,6 @@ class PlazaViewModel(
     private val _autoScrollMode = MutableStateFlow<Boolean>(false)
     val autoScrollMode: StateFlow<Boolean> = _autoScrollMode.asStateFlow()
 
-    // 公开 currentCategoryId
     private val _currentCategoryId = MutableStateFlow<String?>(null)
     val currentCategoryId: StateFlow<String?> = _currentCategoryId.asStateFlow()
 
@@ -90,7 +83,6 @@ class PlazaViewModel(
     private var _currentUserIdState: String? = null
     private var _currentModeState: String = ""
 
-    // 保存状态 (只保留 currentPage 和 query)
     private var savedCurrentPage: Int = 1
     private var savedCurrentQuery: String = ""
 
@@ -109,7 +101,6 @@ class PlazaViewModel(
     
     val sortFilterState: StateFlow<SortFilterState> = combine(
         reposRepo.getAllEnabled(),
-        // TODO merge the two calls into one
         combine(
             productsRepo.getAllCategories(),
             productsRepo.getAllCategoryDetails(),
@@ -157,55 +148,39 @@ class PlazaViewModel(
     }
     
     data class DataState(
-    val reposMap: Map<Long, Repository> = emptyMap(),
-    val favorites: List<String> = emptyList(),
-    val iconDetails: Map<String, ProductIconDetails> = emptyMap(),
-)
+        val reposMap: Map<Long, Repository> = emptyMap(),
+        val favorites: List<String> = emptyList(),
+        val iconDetails: Map<String, ProductIconDetails> = emptyMap(),
+    )
 
-    
-    //sortFilterState和dataState还有setFavorite只是暂时放在这里，以后会迁移走
-
-    /**
-     * 初始化方法：只有参数真正变化时才重置并重新加载
-     */
     fun initialize(isMyResource: Boolean, userId: String?, mode: String = "public", storeName: String = AppStore.XIAOQU_SPACE.name) {
-        Log.d("PlazaViewModel", "initialize called: isMyResource=$isMyResource, userId=$userId, mode=$mode, store=$storeName")
-        
-        // 只有当模式、用户ID、模式或商店真正改变时才重新初始化
         val needsReinit = _currentIsMyResourceMode != isMyResource ||
                           _currentUserIdState != userId ||
                           _currentModeState != mode ||
                           _currentStoreNameState != storeName
         
         if (needsReinit) {
-            Log.d("PlazaViewModel", "参数变化，重新初始化...")
-            // 更新跟踪状态
             _currentIsMyResourceMode = isMyResource
             _currentUserIdState = userId
             _currentModeState = mode
             _currentStoreNameState = storeName
             _isInitialized = false
             
-            // 更新内部状态
             this.isMyResourceMode = isMyResource
             this.currentUserId = userId
             this.currentMode = mode
             
-            // 设置商店
             val targetStore = try {
                 AppStore.valueOf(storeName)
             } catch (e: Exception) {
                 AppStore.XIAOQU_SPACE
             }
-            // 立即设置商店，确保后续加载使用正确的仓库
             if (_appStore.value != targetStore) {
                 _appStore.value = targetStore
             }
             
-            // 重置数据状态并加载
             resetStateAndLoadCategories()
         } else {
-            Log.d("PlazaViewModel", "参数未变化，确保数据已加载...")
             loadDataIfNeeded()
         }
     }
@@ -271,88 +246,74 @@ class PlazaViewModel(
 
     private fun loadDataIfNeeded() {
         if (!_isInitialized) {
-            resetStateAndLoadCategories() // 或者直接调用 loadPage(1) 如果状态已经准备好
-            // 实际上，如果参数没变，状态应该也基本准备好，直接加载第一页即可
+            resetStateAndLoadCategories()
         }
     }
 
     private fun resetStateAndLoadCategories() {
-    Log.d("PlazaViewModel", "resetStateAndLoadCategories called")
-    _isLoading.value = true
-    _currentCategoryId.value = null 
-    
-    viewModelScope.launch(Dispatchers.IO) {
-        try {
-            
-            // 根据当前商店和模式设置分类ID
-            when {
-                // 特殊模式，暂时硬编码为LOCAL
-                _appStore.value == AppStore.LOCAL -> {
-                    when (currentMode) {
-                        "my_upload" -> _currentCategoryId.value = "-3"
-                        "my_favourite" -> _currentCategoryId.value = "-4"
-                        "my_history" -> _currentCategoryId.value = "-5"
-                        else -> _currentCategoryId.value = null
-                    }
-                }              
-                // 其他商店
-                else -> _currentCategoryId.value = null
-            }
-            
-            // 如果当前是特殊模式且当前商店不支持该模式，则不需要加载分类
-            if (currentMode in listOf("my_upload", "my_favourite", "my_history")) {
-                // 检查当前商店是否支持该模式
-                val supportedModes = when (_appStore.value) {
-                    AppStore.LOCAL -> listOf("my_upload", "my_favourite", "my_history")
-                    //暂时硬编码为LOCAL
-                    else -> emptyList()
+        _isLoading.value = true
+        _currentCategoryId.value = null 
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                when {
+                    _appStore.value == AppStore.LOCAL -> {
+                        when (currentMode) {
+                            "my_upload" -> _currentCategoryId.value = "-3"
+                            "my_favourite" -> _currentCategoryId.value = "-4"
+                            "my_history" -> _currentCategoryId.value = "-5"
+                            else -> _currentCategoryId.value = null
+                        }
+                    }              
+                    else -> _currentCategoryId.value = null
                 }
                 
-                if (currentMode !in supportedModes) {
-                    // 当前商店不支持该模式，显示错误或空列表
+                if (currentMode in listOf("my_upload", "my_favourite", "my_history")) {
+                    val supportedModes = when (_appStore.value) {
+                        AppStore.LOCAL -> listOf("my_upload", "my_favourite", "my_history")
+                        else -> emptyList()
+                    }
+                    
+                    if (currentMode !in supportedModes) {
+                        _categories.value = emptyList()
+                        _isLoading.value = false
+                        _errorMessage.value = "当前商店不支持${currentMode}功能"
+                        return@launch
+                    }
+                    
                     _categories.value = emptyList()
-                    _isLoading.value = false
-                    _errorMessage.value = "当前商店不支持${currentMode}功能"
-                    return@launch
-                }
-                
-                // 支持该模式，不需要分类，直接加载数据
-                _categories.value = emptyList()
-                _isLoading.value = false
-                withContext(Dispatchers.Main) {
-                    loadPage(1, append = false)
-                }
-            } else {
-                // 正常模式，加载分类
-                val categoriesResult = currentRepository.getCategories()
-                if (categoriesResult.isSuccess) {
-                    val categoryList = categoriesResult.getOrThrow()
-                    _categories.value = categoryList
-                    
-                    if (_currentCategoryId.value == null) {
-                        _currentCategoryId.value = categoryList.firstOrNull()?.id 
-                    }
-                    
                     _isLoading.value = false
                     withContext(Dispatchers.Main) {
                         loadPage(1, append = false)
                     }
                 } else {
-                    handleFailure(categoriesResult.exceptionOrNull())
-                    _categories.value = emptyList()
-                    _isLoading.value = false
+                    val categoriesResult = currentRepository.getCategories()
+                    if (categoriesResult.isSuccess) {
+                        val categoryList = categoriesResult.getOrThrow()
+                        _categories.value = categoryList
+                        
+                        if (_currentCategoryId.value == null) {
+                            _currentCategoryId.value = categoryList.firstOrNull()?.id 
+                        }
+                        
+                        _isLoading.value = false
+                        withContext(Dispatchers.Main) {
+                            loadPage(1, append = false)
+                        }
+                    } else {
+                        handleFailure(categoriesResult.exceptionOrNull())
+                        _categories.value = emptyList()
+                        _isLoading.value = false
+                    }
                 }
+            } catch (e: Exception) {
+                handleFailure(e)
+                _isLoading.value = false
             }
-        } catch (e: Exception) {
-            handleFailure(e)
-            _isLoading.value = false
         }
     }
-}
 
-    // --- 修改：loadPage ---
     private fun loadPage(page: Int, append: Boolean = false) {
-        Log.d("PlazaViewModel", "loadPage called: page=$page, append=$append, _isInitialized=$_isInitialized, currentCategoryId=${_currentCategoryId.value}")
         if (_isLoading.value && !append) return
         
         val total = _totalPages.value
@@ -363,11 +324,6 @@ class PlazaViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                //val finalUserId = currentUserId ?: if (isMyResourceMode) {
-                //    AuthManager.getCredentials(getApplication()).first()?.userId?.toString()
-                //} else null
-                // 移除上面这段，强制使用 currentUserId
-
                 val finalUserId = currentUserId
 
                 val result = if (isSearchMode) {
@@ -390,10 +346,7 @@ class PlazaViewModel(
                         _plazaData.value = PlazaData(currentList + items)
                     }
                     
-                    // 关键修改：只有在成功加载第一页数据后，才将 _isInitialized 设为 true
-                    // 这表明初始数据加载已完成
                     if (!_isInitialized && page == 1 && !append) {
-                         Log.d("PlazaViewModel", "Initial data load successful, setting _isInitialized = true")
                          _isInitialized = true
                     }
                 } else {
@@ -409,12 +362,11 @@ class PlazaViewModel(
 
     private fun handleFailure(exception: Throwable?) {
         val message = "操作失败: ${exception?.message ?: "未知错误"}"
-        Log.e("PlazaViewModel", message, exception)
         _errorMessage.value = message
     }
 
     private fun readAutoScrollMode(): Flow<Boolean> {
-        return app.applicationContext.dataStore.data
+        return dataStore.data
             .map { preferences ->
                 preferences[AUTO_SCROLL_MODE_KEY] ?: false
             }
@@ -423,7 +375,7 @@ class PlazaViewModel(
 
     fun setAutoScrollMode(enabled: Boolean) {
         viewModelScope.launch {
-            app.applicationContext.dataStore.edit { preferences ->
+            dataStore.edit { preferences ->
                 preferences[AUTO_SCROLL_MODE_KEY] = enabled
             }
             _autoScrollMode.value = enabled

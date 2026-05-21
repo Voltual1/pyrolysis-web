@@ -77,9 +77,7 @@ val appModule = module {
     viewModel { MessageViewModel(androidApplication()) }   
     viewModel { AppDetailComposeViewModel(androidApplication(), get()) }
     
-    viewModel { AppReleaseViewModel(androidApplication()) }
-    
-    viewModel { PlazaViewModel(androidApplication(),get(),get(), get(), get()) }
+    viewModel { AppReleaseViewModel(androidApplication()) }    
     
     viewModel { PlayerViewModel(androidApplication()) }
     
@@ -162,6 +160,27 @@ viewModel { PaymentViewModel(get(), get(PAYMENT_STORE_QUALIFIER)) }
     single { 
         AuthRepository(get(named("auth_store"))) 
     }
+    
+    // 定义 Plaza DataStore 的限定符
+private val PLAZA_STORE_QUALIFIER = named("plaza_store")
+
+// 提供 Plaza DataStore
+single<DataStore<Preferences>>(PLAZA_STORE_QUALIFIER) {
+    PreferenceDataStoreFactory.create(
+        produceFile = { androidContext().dataStoreFile("plaza_preferences.preferences_pb") }
+    )
+}
+
+// 更新 PlazaViewModel 的注入
+viewModel { 
+    PlazaViewModel(
+        get(PLAZA_STORE_QUALIFIER), // 注入 DataStore
+        get(),                      // ProductsRepository
+        get(),                      // RepositoriesRepository
+        get(),                      // ExtrasRepository
+        get()                       // Map<AppStore, IAppStoreRepository>
+    ) 
+}
     viewModel { UserProfileViewModel(get(), get()) }
     
     single { DeviceNameDataStore(androidContext()) }
