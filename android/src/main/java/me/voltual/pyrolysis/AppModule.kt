@@ -40,6 +40,7 @@ import me.voltual.pyrolysis.data.SearchHistoryDataStore
 import me.voltual.pyrolysis.data.PostDraftDataStore
 import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.viewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import me.voltual.pyrolysis.ui.community.BrowseHistoryViewModel
 import me.voltual.pyrolysis.ui.community.PostDetailViewModel
