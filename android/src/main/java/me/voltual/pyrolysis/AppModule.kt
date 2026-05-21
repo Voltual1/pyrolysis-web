@@ -37,6 +37,7 @@ import me.voltual.pyrolysis.ui.user.UserDetailViewModel
 import me.voltual.pyrolysis.ui.settings.storage.StoreManagerViewModel 
 import me.voltual.pyrolysis.data.StorageSettingsDataStore 
 import me.voltual.pyrolysis.data.SearchHistoryDataStore
+import me.voltual.pyrolysis.data.PostDraftDataStore
 import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
