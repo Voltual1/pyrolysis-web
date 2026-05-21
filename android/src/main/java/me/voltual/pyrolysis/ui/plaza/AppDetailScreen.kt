@@ -385,7 +385,6 @@ fun AppDetailScreen(
         CommentDialog(
             hint = "输入评论...",
             onDismiss = { viewModel.closeCommentDialog() },
-            context = context,
             onSubmit = { content, _ ->
                 viewModel.submitComment(content)
             }
@@ -396,7 +395,6 @@ fun AppDetailScreen(
         CommentDialog(
             hint = "回复 @${currentReplyComment!!.sender.displayName}",
             onDismiss = { viewModel.closeReplyDialog() },
-            context = context,
             onSubmit = { content, _ ->
                 viewModel.submitComment(content)
             }
