@@ -98,7 +98,7 @@ val appModule = module {
     viewModel { RankingListViewModel() }
     viewModel { UpdateSettingsViewModel() }
 	viewModel { SignInSettingsViewModel(get()) }
-    viewModel { HomeViewModel() }
+    viewModel { HomeViewModel(get()) }
     viewModel { MyCommentsViewModel(androidApplication(), get()) }
     viewModel { MyReviewsViewModel(androidApplication(), get()) }
     viewModel { RepoPageVM(get(), get()) }

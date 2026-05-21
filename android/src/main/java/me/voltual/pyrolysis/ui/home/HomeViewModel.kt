@@ -8,7 +8,6 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.home
 
-import android.content.Context
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -18,11 +17,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.voltual.pyrolysis.AuthManager
+import me.voltual.pyrolysis.AuthRepository
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.core.ui.theme.ThemeManager
 import me.voltual.pyrolysis.data.SignInSettingsDataStore
-import org.koin.android.annotation.KoinViewModel
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDateTime
@@ -62,8 +60,10 @@ data class HomeUiState(
     val dataLoadState: DataLoadState = DataLoadState.NotLoaded,
 )
 
-@KoinViewModel
-class HomeViewModel : ViewModel() {
+class HomeViewModel(
+    private val authRepository: AuthRepository  // 注入 AuthRepository
+) : ViewModel() {
+    
     var uiState = mutableStateOf(HomeUiState())
         private set
     var snackbarHostState = mutableStateOf<SnackbarHostState?>(null)
@@ -80,9 +80,10 @@ class HomeViewModel : ViewModel() {
         LocalDateTime.parse(this.replace(" ", "T"))
     }.getOrNull()
 
-    fun loadUserData(context: Context, forceRefresh: Boolean = false) {
+    fun loadUserData(forceRefresh: Boolean = false) {
         viewModelScope.launch {
-            val userCredentials = AuthManager.getCredentials(context).first()
+            // 直接从 Repository 获取凭证，不再需要 Context
+            val userCredentials = authRepository.credentials.first()
 
             if (userCredentials.userId == 0L || userCredentials.token.isEmpty()) {
                 uiState.value = uiState.value.copy(
@@ -102,7 +103,9 @@ class HomeViewModel : ViewModel() {
                 dataLoadState = DataLoadState.Loading
             )
 
-            KtorClient.ApiServiceImpl.getUserInfo(token = userCredentials.token).onSuccess { response ->
+            withContext(Dispatchers.IO) {
+                KtorClient.ApiServiceImpl.getUserInfo(token = userCredentials.token)
+            }.onSuccess { response ->
                 val userData = response.data
                 val daysDiff = calculateDaysDiff(userData.create_time, userData.signlasttime)
                 
@@ -134,7 +137,7 @@ class HomeViewModel : ViewModel() {
                     dataLoadState = DataLoadState.Loaded
                 )
                 
-                checkAndAutoSignIn(context)
+                checkAndAutoSignIn()
             }.onFailure {
                 uiState.value = uiState.value.copy(
                     isLoading = false,
@@ -144,25 +147,27 @@ class HomeViewModel : ViewModel() {
         }
     }        
     
-    private fun checkAndAutoSignIn(context: Context) {
+    private fun checkAndAutoSignIn() {
         viewModelScope.launch {
             if (uiState.value.signToday) return@launch
             
             val autoSignInEnabled = SignInSettingsDataStore.autoSignIn.first()
             if (autoSignInEnabled) {
-                signIn(context, true)
+                signIn(isAutoSignIn = true)
             }
         }
     }
     
-    fun signIn(context: Context, isAutoSignIn: Boolean = false) {
+    fun signIn(isAutoSignIn: Boolean = false) {
         viewModelScope.launch {
-            val credentials = AuthManager.getCredentials(context).first()
+            val credentials = authRepository.credentials.first()
             val token = credentials.token
 
             uiState.value = uiState.value.copy(isLoading = true)
 
-            KtorClient.ApiServiceImpl.userSignIn(token = token).onSuccess { result ->
+            withContext(Dispatchers.IO) {
+                KtorClient.ApiServiceImpl.userSignIn(token = token)
+            }.onSuccess { result ->
                 if (result.code == 401) {
                     uiState.value = uiState.value.copy(
                         signStatusMessage = "登录已过期，请长按头像刷新",
@@ -184,7 +189,7 @@ class HomeViewModel : ViewModel() {
                         uiState.value = uiState.value.copy(signStatusMessage = null)
                     }
 
-                    refreshUserData(context)
+                    refreshUserData()
                 }
             }.onFailure { e ->
                 val message = if (isAutoSignIn) "自动签到失败: ${e.message}" else "签到失败: ${e.message}"
@@ -196,8 +201,8 @@ class HomeViewModel : ViewModel() {
         }
     }          
 
-    fun refreshUserData(context: Context) {
-        loadUserData(context, forceRefresh = true)
+    fun refreshUserData() {
+        loadUserData(forceRefresh = true)
     }
 
     fun resetLoadState() {

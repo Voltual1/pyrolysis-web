@@ -1,7 +1,7 @@
-// Copyright (C) 2025 Voltual
+//Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
-// 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
@@ -13,24 +13,28 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
-import me.voltual.pyrolysis.AuthManager
+import me.voltual.pyrolysis.AuthRepository // 导入新 Repository
 import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.restartMainActivity
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.theme.BBQTheme
 import me.voltual.pyrolysis.core.ui.theme.ThemeManager
+import org.koin.androidx.compose.koinViewModel // Koin ViewModel 注入
+import org.koin.compose.koinInject            // Koin 实例注入
 
 @Composable
 fun HomeDestination(
     snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
-    val viewModel: HomeViewModel = viewModel()
+    // 使用 Koin 注入 ViewModel
+    val viewModel: HomeViewModel = koinViewModel()
+    // 注入 AuthRepository 用于处理导航逻辑中的 ID 获取
+    val authRepository: AuthRepository = koinInject()
+    
     val uiState by viewModel.uiState
 
     // Navigation 3 导航器
@@ -38,14 +42,8 @@ fun HomeDestination(
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        val userCredentialsFlow = AuthManager.getCredentials(context)
-        val userCredentials = userCredentialsFlow.first()
-        val isLoggedIn = userCredentials.token.isNotEmpty()
-
-        viewModel.updateLoginState(isLoggedIn)
-        if (isLoggedIn && uiState.dataLoadState == DataLoadState.NotLoaded) {
-            viewModel.loadUserData(context)
-        }
+        // ViewModel 内部现在会自动处理登录状态检查和数据加载
+        viewModel.loadUserData()
     }
 
     val onAvatarClick = remember {
@@ -63,17 +61,15 @@ fun HomeDestination(
     val onAvatarLongClick = remember {
         {
             if (!uiState.showLoginPrompt) {
-                viewModel.refreshUserData(context)
+                viewModel.refreshUserData() // 不再需要 context
             }
-            restartMainActivity(context)
+            restartMainActivity(context) // 重启 Activity 仍需 context
         }
     }
 
     val onLoginClick = remember {
         { navigator.navigate(Login) }
     }
-
-    val userIdFlow = AuthManager.getUserId(context)
 
     BBQTheme(appDarkTheme = ThemeManager.isAppDarkTheme) {
         HomeScreen(
@@ -104,10 +100,10 @@ fun HomeDestination(
             onFansClick = { navigator.navigate(FanList) },
             onPostsClick = {
                 coroutineScope.launch {
-                    val userId = userIdFlow.first()
+                    // 使用 authRepository 获取 userId
+                    val userId = authRepository.userId.first()
                     if (userId > 0) {
-                        val nickname = uiState.nickname ?: "用户"
-                        // 类型安全导航，直接传递路由对象
+                        val nickname = uiState.nickname
                         navigator.navigate(MyPosts(userId, nickname))
                     } else {
                         viewModel.showSnackbar(context.getString(R.string.unable_to_get_userid))
@@ -116,9 +112,9 @@ fun HomeDestination(
             },
             onMyResourcesClick = {
                 coroutineScope.launch {
-                    val userId = userIdFlow.first()
+                    // 使用 authRepository 获取 userId
+                    val userId = authRepository.userId.first()
                     if (userId > 0) {
-                        // 类型安全导航
                         navigator.navigate(ResourcePlaza(isMyResource = true, userId = userId))
                     } else {
                         viewModel.showSnackbar(context.getString(R.string.login_first_my_resources))
@@ -129,7 +125,7 @@ fun HomeDestination(
             onBillingClick = { navigator.navigate(Billing) },
             onLoginClick = onLoginClick,
             onSettingsClick = { navigator.navigate(ThemeCustomize) },
-            onSignClick = { viewModel.signIn(context) },
+            onSignClick = { viewModel.signIn() }, // 不再需要 context
             onAboutClick = { navigator.navigate(About) },
             onAccountProfileClick = { navigator.navigate(AccountProfile(AppStore.XIAOQU_SPACE)) },
             onRecalculateDays = { viewModel.recalculateDaysDiff() },
@@ -140,7 +136,6 @@ fun HomeDestination(
             modifier = Modifier.fillMaxSize(),
             viewModel = viewModel,
             snackbarHostState = snackbarHostState
-            // navController 参数已移除
         )
     }
 }
