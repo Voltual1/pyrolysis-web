@@ -134,7 +134,7 @@ val appModule = module {
             .keysetHandle
         keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
     }
-    single<DataStore<UserCredentials>>(named("auth_store")) {
+    single<UserCredentials>(named("auth_store")) {
         DataStoreFactory.create(
             serializer = UserCredentialsSerializer(get()),
             produceFile = { androidContext().dataStoreFile("user_credentials_v2.pb") }

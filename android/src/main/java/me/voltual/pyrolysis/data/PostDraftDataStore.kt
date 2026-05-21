@@ -13,10 +13,11 @@ import androidx.datastore.preferences.core.*
 import io.ktor.http.Url
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.koin.core.annotation.Single
 
 // 注意：Context.draftDataStore 的定义依然可以留在文件顶部，供 Koin 调用
 // 但类本身不再持有 Context
-
+@Single
 class PostDraftDataStore(private val dataStore: DataStore<Preferences>) {
     companion object {
         private val DRAFT_TITLE = stringPreferencesKey("draft_title")
