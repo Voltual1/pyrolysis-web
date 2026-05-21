@@ -115,6 +115,7 @@ val appModule = module {
     single { UserAgreementDataStore(androidContext()) }    
     single { BBQApplication.instance.database }
     single { PostDraftDataStore(get()) }
+    single { PostDraftRepository() }
     single { get<AppDatabase>().logDao() }  
     single { get<AppDatabase>().browseHistoryDao() } 
     single { get<AppDatabase>().networkCacheDao() }  
