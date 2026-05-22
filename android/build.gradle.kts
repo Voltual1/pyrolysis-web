@@ -209,7 +209,7 @@ protobuf {
 compose.resources {
     publicResClass = true
     packageOfResClass = "me.voltual.pyrolysis"
-    generateResClass = always
+    generateResClass = auto
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
