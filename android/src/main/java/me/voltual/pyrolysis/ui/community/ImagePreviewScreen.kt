@@ -8,9 +8,6 @@
 
 package me.voltual.pyrolysis.ui.community
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,7 +33,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboardManager // 引入 Compose 剪贴板管理器
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString // 引入富文本包装类
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
@@ -53,7 +53,8 @@ fun ImagePreviewScreen(
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
-    val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    // 获取 Compose 专用的剪贴板管理器
+    val clipboardManager = LocalClipboardManager.current
     val internalSnackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     
@@ -95,7 +96,7 @@ fun ImagePreviewScreen(
                             }
                         }
                     }
-                    // 2. 应用图形变换（通过 graphicsLayer 避免触发不必要的重组，性能更好）
+                    // 2. 应用图形变换
                     .graphicsLayer(
                         scaleX = scale,
                         scaleY = scale,
@@ -108,9 +109,9 @@ fun ImagePreviewScreen(
                         indication = null,
                         onClick = { onClose() }, // 点击图片也可以关闭
                         onLongClick = {
-                            clipboardManager.setPrimaryClip(
-                                ClipData.newPlainText("image_url", cleanedImageUrl)
-                            )
+                            // 使用 LocalClipboardManager 写入剪贴板
+                            clipboardManager.setText(AnnotatedString(cleanedImageUrl))
+                            
                             scope.launch {
                                 internalSnackbarHostState.showSnackbar(
                                     message = context.getString(R.string.image_link_copied)

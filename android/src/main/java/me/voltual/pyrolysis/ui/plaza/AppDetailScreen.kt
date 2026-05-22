@@ -10,9 +10,6 @@
 package me.voltual.pyrolysis.ui.plaza
 
 import android.app.Activity
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,14 +33,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager // 引入 Compose 跨平台剪贴板管理器
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler // 引入 Compose 跨平台 UriHandler
+import androidx.compose.ui.platform.LocalUriHandler 
+import androidx.compose.ui.text.AnnotatedString // 引入富文本包装类
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
-import io.ktor.http.Url // 引入 Ktor Http URL 用于替代 android.net.Uri
+import io.ktor.http.Url 
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
@@ -68,8 +67,9 @@ fun AppDetailScreen(
     val context = LocalContext.current
     val navigator = LocalNavigator.current
     
-    // 1. 获取 Compose 跨平台的 UriHandler
+    // 获取 Compose 跨平台的 UriHandler 和 ClipboardManager
     val uriHandler = LocalUriHandler.current
+    val clipboardManager = LocalClipboardManager.current
 
     val appDetail by viewModel.appDetail.collectAsState()
     val comments by viewModel.comments.collectAsState()
@@ -122,14 +122,10 @@ fun AppDetailScreen(
         viewModel.initializeData(appId, versionId, storeName)
     }
 
-    // 2. 替换为 Ktor Url 解析与 Compose UriHandler 打开浏览器
     LaunchedEffect(Unit) {
         viewModel.openUrlEvent.collectLatest { urlString ->
             try {
-                // 使用 Ktor 的 Url 类进行安全校验/解析（如果传入的 URL 格式非法会抛出异常）
                 val ktorUrl = Url(urlString) 
-                
-                // 使用 Compose 跨平台自带的 uriHandler 打开链接
                 uriHandler.openUri(ktorUrl.toString())
             } catch (e: Exception) {
                 snackbarHostState.showSnackbar("无法打开链接: $urlString")
@@ -137,21 +133,18 @@ fun AppDetailScreen(
         }
     }
 
-    // 监听 ViewModel 中的 snackbarEvent
     LaunchedEffect(viewModel.snackbarEvent) {
         viewModel.snackbarEvent.collectLatest { message ->
             snackbarHostState.showSnackbar(message)
         }
     }
 
-    // 监听更新事件
     LaunchedEffect(viewModel.updateEvent) {
         viewModel.updateEvent.collectLatest { jsonString ->
             navigator.navigate(UpdateAppRelease(jsonString))
         }
     }
 
-    // 监听退款事件
     LaunchedEffect(Unit) {
         viewModel.refundEvent.collectLatest { refundInfo ->
             navigator.navigate(
@@ -165,7 +158,6 @@ fun AppDetailScreen(
         }
     }
 
-    // 监听支付导航事件
     LaunchedEffect(Unit) {
         viewModel.navigateToPaymentEvent.collectLatest { paymentInfo ->
             navigator.navigate(
@@ -181,7 +173,6 @@ fun AppDetailScreen(
         }
     }
 
-    // 监听 ViewModel 中的 navigateToDownloadEvent
     LaunchedEffect(viewModel.navigateToDownloadEvent) {
         viewModel.navigateToDownloadEvent.collectLatest { navigate ->
             if (navigate) {
@@ -201,6 +192,7 @@ fun AppDetailScreen(
         }
     }
 
+    // 重构后的分享（复制）逻辑
     fun handleShare() {
         appDetail?.let { detail ->
             when (detail.store) {
@@ -208,9 +200,8 @@ fun AppDetailScreen(
                     val raw = detail.raw as? me.voltual.pyrolysis.KtorClient.AppDetail
                     val shareUrl = raw?.posturl
                     if (!shareUrl.isNullOrBlank()) {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText("应用链接", shareUrl)
-                        clipboard.setPrimaryClip(clip)
+                        // 使用 Compose 专用的剪贴板管理器写入数据
+                        clipboardManager.setText(AnnotatedString(shareUrl))
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar("已复制分享链接: $shareUrl")
                         }

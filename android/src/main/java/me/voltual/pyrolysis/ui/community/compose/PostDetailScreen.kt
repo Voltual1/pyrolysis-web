@@ -10,8 +10,6 @@
 @file:Suppress("DEPRECATION")
 package me.voltual.pyrolysis.ui.community.compose
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
@@ -41,7 +39,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -85,6 +85,7 @@ fun PostDetailScreen(
 ) {
     val navigator = LocalNavigator.current
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     
     // 注入 AuthRepository 用于后续判断
     val authRepository: AuthRepository = koinInject()
@@ -100,10 +101,6 @@ fun PostDetailScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val isLoadingComments by viewModel.isLoadingComments.collectAsState()
     val hasMoreComments by viewModel.hasMoreComments.collectAsState()
-
-    val clipboardManager = remember {
-        context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    }
 
     val internalSnackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -384,8 +381,7 @@ fun PostDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        val clipData = ClipData.newPlainText("分享链接", shareText)
-                        clipboardManager.setPrimaryClip(clipData)
+                        clipboardManager.setText(AnnotatedString(shareText))
                         coroutineScope.launch {
                             internalSnackbarHostState.showSnackbar(
                                 message = context.getString(R.string.copied_link),
@@ -633,7 +629,7 @@ fun CommentItem(
     comment: KtorClient.Comment,
     onReply: () -> Unit,
     onDelete: () -> Unit,
-    clipboardManager: ClipboardManager,
+    clipboardManager: androidx.compose.ui.platform.ClipboardManager,
     context: Context,
     snackbarHostState: SnackbarHostState,
     authRepository: AuthRepository // 接收注入的 Repository
@@ -672,8 +668,7 @@ fun CommentItem(
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = {
-                        val clipData = ClipData.newPlainText("评论内容", comment.content)
-                        clipboardManager.setPrimaryClip(clipData)
+                        clipboardManager.setText(AnnotatedString(comment.content))
                         scope.launch {
                             snackbarHostState.showSnackbar(
                                 message = context.getString(R.string.comment_copied),
