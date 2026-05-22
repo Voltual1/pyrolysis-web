@@ -49,6 +49,7 @@ import me.voltual.pyrolysis.ui.search.SearchViewModel
 import me.voltual.pyrolysis.ui.settings.signin.SignInSettingsScreen
 import me.voltual.pyrolysis.ui.settings.storage.StoreManagerScreen
 import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsScreen
+import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsViewModel
 import me.voltual.pyrolysis.core.ui.theme.ThemeCustomizeScreen
 import me.voltual.pyrolysis.ui.update.UpdateScreen
 import me.voltual.pyrolysis.ui.update.UpdateViewModel
@@ -456,7 +457,11 @@ fun BBQNavDisplay(
                 }
 
                 is UpdateSettings -> NavEntry(key) {
-                    UpdateSettingsScreen(snackbarHostState = snackbarHostState)
+                val viewModel: UpdateSettingsViewModel = koinViewModel()
+                    UpdateSettingsScreen(
+                        viewModel = viewModel,
+                        snackbarHostState = snackbarHostState
+                    )
                 }
 
                 is Community -> NavEntry(key) {

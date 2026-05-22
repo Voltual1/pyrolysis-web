@@ -25,7 +25,7 @@ import me.voltual.pyrolysis.core.utils.UpdateChecker
 
 @Composable
 fun UpdateSettingsScreen(
-    viewModel: UpdateSettingsViewModel = viewModel(),
+    viewModel: UpdateSettingsViewModel,
     snackbarHostState: SnackbarHostState
 ) {
     val scope = rememberCoroutineScope()
