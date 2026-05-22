@@ -10,6 +10,7 @@
 @file:Suppress("DEPRECATION")
 package me.voltual.pyrolysis.ui.community.compose
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -59,9 +61,9 @@ import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.voltual.pyrolysis.AuthRepository
+import me.voltual.pyrolysis.AuthRepository // 导入新 Repository
 import me.voltual.pyrolysis.KtorClient
-import me.voltual.pyrolysis.Res
+import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.animation.materialSharedAxisYIn
 import me.voltual.pyrolysis.core.ui.animation.materialSharedAxisYOut
@@ -70,9 +72,8 @@ import me.voltual.pyrolysis.ui.community.PostDetailViewModel
 import me.voltual.pyrolysis.core.ui.components.LinkifyText
 import me.voltual.pyrolysis.core.ui.theme.*
 import me.voltual.pyrolysis.core.utils.cleanUrl
-import org.jetbrains.compose.resources.stringResource
-import org.koin.androidx.compose.koinViewModel
-import org.koin.compose.koinInject
+import org.koin.androidx.compose.koinViewModel // Koin 支持
+import org.koin.compose.koinInject            // Koin 支持
 
 @Composable
 fun PostDetailScreen(
@@ -83,8 +84,10 @@ fun PostDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val navigator = LocalNavigator.current
+    val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     
+    // 注入 AuthRepository 用于后续判断
     val authRepository: AuthRepository = koinInject()
 
     val postDetail by viewModel.postDetail.collectAsState()
@@ -209,21 +212,21 @@ fun PostDetailScreen(
                                             onDismissRequest = { showMoreOptions = false }
                                         ) {
                                             DropdownMenuItem(
-                                                text = { Text(stringResource(Res.string.copy_link)) },
+                                                text = { Text("复制链接") },
                                                 onClick = {
                                                     showMoreOptions = false
                                                     showShareDialog = true
                                                 }
                                             )
                                             DropdownMenuItem(
-                                                text = { Text(stringResource(Res.string.refresh_comments)) },
+                                                text = { Text("刷新评论") },
                                                 onClick = {
                                                     showMoreOptions = false
                                                     viewModel.refreshComments(postId)
                                                 }
                                             )
                                             DropdownMenuItem(
-                                                text = { Text(stringResource(Res.string.send_coin)) },
+                                                text = { Text("投币") },
                                                 onClick = {
                                                     showMoreOptions = false
                                                     navigator.navigate(
@@ -239,7 +242,7 @@ fun PostDetailScreen(
                                                 }
                                             )
                                             DropdownMenuItem(
-                                                text = { Text(stringResource(Res.string.delete_post)) },
+                                                text = { Text("删除帖子") },
                                                 onClick = {
                                                     showMoreOptions = false
                                                     viewModel.deletePost()
@@ -282,7 +285,7 @@ fun PostDetailScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = "${stringResource(Res.string.views)}: ${detail.view}",
+                                        text = "浏览: ${detail.view}",
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
 
@@ -292,18 +295,18 @@ fun PostDetailScreen(
                                     ) {
                                         Icon(
                                             imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Default.FavoriteBorder,
-                                            contentDescription = stringResource(Res.string.like),
+                                            contentDescription = "点赞",
                                             tint = if (isLiked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         Spacer(Modifier.width(4.dp))
                                         Text(
-                                            text = "${stringResource(Res.string.likes)}: $likeCount",
+                                            text = "点赞: $likeCount",
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
 
                                     Text(
-                                        text = "${stringResource(Res.string.comments)}: $commentCount",
+                                        text = "评论: $commentCount",
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -315,7 +318,7 @@ fun PostDetailScreen(
 
             item {
                 Text(
-                    text = "${stringResource(Res.string.comments)} ($commentCount)",
+                    text = "评论 ($commentCount)",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 16.dp)
@@ -328,8 +331,9 @@ fun PostDetailScreen(
                     onReply = { viewModel.openReplyDialog(comment) },
                     onDelete = { viewModel.deleteComment(comment.id) },
                     clipboardManager = clipboardManager,
+                    context = context,
                     snackbarHostState = internalSnackbarHostState,
-                    authRepository = authRepository
+                    authRepository = authRepository // 传递注入的 Repository
                 )
             }
 
@@ -343,11 +347,11 @@ fun PostDetailScreen(
                     when {
                         isLoadingComments -> CircularProgressIndicator()
                         !hasMoreComments -> Text(
-                            stringResource(Res.string.no_more_comments),
+                            "没有更多评论了",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         else -> Text(
-                            stringResource(Res.string.pull_to_load_more),
+                            "上拉加载更多",
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -363,7 +367,7 @@ fun PostDetailScreen(
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
         ) {
-            Icon(Icons.AutoMirrored.Filled.Comment, stringResource(Res.string.comment))
+            Icon(Icons.AutoMirrored.Filled.Comment, "评论")
         }
     }
 
@@ -371,36 +375,34 @@ fun PostDetailScreen(
         val shareText = "http://apk.xiaoqu.online/post/${postDetail?.id}.html"
         AlertDialog(
             onDismissRequest = { showShareDialog = false },
-            title = { Text(stringResource(Res.string.share_post)) },
+            title = { Text("分享帖子") },
             shape = AppShapes.medium,
-            text = { Text("${stringResource(Res.string.copy_link)}: $shareText") },
+            text = { Text("复制链接: $shareText") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         clipboardManager.setText(AnnotatedString(shareText))
                         coroutineScope.launch {
                             internalSnackbarHostState.showSnackbar(
-                                message = stringResource(Res.string.copied_link),
+                                message = context.getString(R.string.copied_link),
                                 duration = SnackbarDuration.Short
                             )
                         }
                         showShareDialog = false
                     }
                 ) {
-                    Text(stringResource(Res.string.copy_link))
+                    Text("复制链接")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showShareDialog = false }) { 
-                    Text(stringResource(Res.string.cancel)) 
-                }
+                TextButton(onClick = { showShareDialog = false }) { Text("取消") }
             }
         )
     }
 
     if (showCommentDialog) {
         CommentDialog(
-            hint = stringResource(Res.string.enter_comment_content),
+            hint = "输入评论内容...",
             onDismiss = { viewModel.closeCommentDialog() },
             onSubmit = { content, imageUrl ->
                 viewModel.submitComment(content, imageUrl)
@@ -409,7 +411,7 @@ fun PostDetailScreen(
     }
     if (showReplyDialog && currentReplyComment != null) {
         CommentDialog(
-            hint = "${stringResource(Res.string.reply_to)} @${currentReplyComment?.nickname}",
+            hint = "回复 @${currentReplyComment?.nickname}",
             onDismiss = { viewModel.closeReplyDialog() },
             onSubmit = { content, imageUrl ->
                 viewModel.submitComment(content, imageUrl)
@@ -430,7 +432,7 @@ fun CommentDialog(
     hint: String,
     onDismiss: () -> Unit,
     onSubmit: (String, String?) -> Unit,
-    viewModel: PostDetailViewModel = koinViewModel()
+    viewModel: PostDetailViewModel = koinViewModel() // 使用 Koin 注入
 ) {
     var commentText by remember { mutableStateOf("") }
     var includeImage by remember { mutableStateOf(false) }
@@ -444,7 +446,7 @@ fun CommentDialog(
 
     fun uploadImage(file: PlatformFile, onSuccess: (String) -> Unit) {
         showProgressDialog = true
-        progressMessage = stringResource(Res.string.uploading_image)
+        progressMessage = "上传图片中..."
 
         coroutineScope.launch(Dispatchers.IO) {
             runCatching {
@@ -519,12 +521,12 @@ fun CommentDialog(
                         .focusRequester(focusRequester),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
                     maxLines = 4,
-                    placeholder = { Text(stringResource(Res.string.enter_comment_content)) }
+                    placeholder = { Text("输入评论内容...") }
                 )
 
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
                     SwitchWithText(
-                        text = stringResource(Res.string.add_image),
+                        text = "添加图片",
                         checked = includeImage,
                         onCheckedChange = { includeImage = it },
                         modifier = Modifier.padding(top = 12.dp)
@@ -537,7 +539,7 @@ fun CommentDialog(
                             selectedFile?.let { file ->
                                 Image(
                                     painter = rememberAsyncImagePainter(model = file),
-                                    contentDescription = stringResource(Res.string.image_preview),
+                                    contentDescription = "预览图片",
                                     modifier = Modifier
                                         .size(64.dp)
                                         .clip(RoundedCornerShape(8.dp)),
@@ -550,7 +552,7 @@ fun CommentDialog(
                                         .background(Color.LightGray.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(stringResource(Res.string.no_image), style = MaterialTheme.typography.bodySmall)
+                                    Text("无图片", style = MaterialTheme.typography.bodySmall)
                                 }
                             }
 
@@ -561,7 +563,7 @@ fun CommentDialog(
                                     onClick = { imagePickerLauncher.launch() },
                                     modifier = Modifier.width(120.dp)
                                 ) {
-                                    Text(stringResource(Res.string.select_image))
+                                    Text("选择图片")
                                 }
 
                                 if (selectedFile != null) {
@@ -574,7 +576,7 @@ fun CommentDialog(
                                             contentColor = MaterialTheme.colorScheme.error
                                         )
                                     ) {
-                                        Text(stringResource(Res.string.remove_image))
+                                        Text("移除图片")
                                     }
                                 }
                             }
@@ -588,9 +590,7 @@ fun CommentDialog(
                         .padding(top = 16.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) { 
-                        Text(stringResource(Res.string.cancel)) 
-                    }
+                    TextButton(onClick = onDismiss) { Text("取消") }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
@@ -599,7 +599,7 @@ fun CommentDialog(
                         },
                         enabled = commentText.isNotEmpty() && !isSubmitting
                     ) {
-                        Text(if (isSubmitting) stringResource(Res.string.sending) else stringResource(Res.string.submit))
+                        Text(if (isSubmitting) "发送中..." else "提交")
                     }
                 }
             }
@@ -609,7 +609,7 @@ fun CommentDialog(
     if (showProgressDialog) {
         AlertDialog(
             onDismissRequest = { },
-            title = { Text(stringResource(Res.string.uploading)) },
+            title = { Text("上传中") },
             shape = AppShapes.medium,
             text = { Text(progressMessage) },
             confirmButton = { }
@@ -630,33 +630,33 @@ fun CommentItem(
     onReply: () -> Unit,
     onDelete: () -> Unit,
     clipboardManager: androidx.compose.ui.platform.ClipboardManager,
+    context: Context,
     snackbarHostState: SnackbarHostState,
-    authRepository: AuthRepository
+    authRepository: AuthRepository // 接收注入的 Repository
 ) {
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     var showDeleteDialog by remember { mutableStateOf(false) }
     
+    // 使用 authRepository 获取当前用户 ID
     val currentUserId by authRepository.userId.collectAsState(initial = null)
 
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text(stringResource(Res.string.delete_comment)) },
+            title = { Text("删除评论") },
             shape = AppShapes.medium,
-            text = { Text(stringResource(Res.string.confirm_delete_comment)) },
+            text = { Text("确定要删除这条评论吗？") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         onDelete()
                         showDeleteDialog = false
                     }
-                ) { Text(stringResource(Res.string.delete)) }
+                ) { Text("删除") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { 
-                    Text(stringResource(Res.string.cancel)) 
-                }
+                TextButton(onClick = { showDeleteDialog = false }) { Text("取消") }
             }
         )
     }
@@ -671,7 +671,7 @@ fun CommentItem(
                         clipboardManager.setText(AnnotatedString(comment.content))
                         scope.launch {
                             snackbarHostState.showSnackbar(
-                                message = stringResource(Res.string.comment_copied),
+                                message = context.getString(R.string.comment_copied),
                                 duration = SnackbarDuration.Short
                             )
                         }
@@ -688,7 +688,7 @@ fun CommentItem(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AsyncImage(
                     model = comment.usertx,
-                    contentDescription = stringResource(Res.string.avatar),
+                    contentDescription = "头像",
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
@@ -718,7 +718,7 @@ fun CommentItem(
                 Spacer(Modifier.height(8.dp))
                 AsyncImage(
                     model = imageUrl.cleanUrl(),
-                    contentDescription = stringResource(Res.string.comment_image),
+                    contentDescription = "评论图片",
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(150.dp)
@@ -731,7 +731,7 @@ fun CommentItem(
             if (!comment.parentnickname.isNullOrEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "${stringResource(Res.string.reply_to)} @${comment.parentnickname}:",
+                    text = "回复 @${comment.parentnickname}:",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -747,9 +747,7 @@ fun CommentItem(
                     .padding(top = 8.dp),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(onClick = onReply) { 
-                    Text(stringResource(Res.string.reply)) 
-                }
+                TextButton(onClick = onReply) { Text("回复") }
                 if (comment.userid == currentUserId) {
                     Spacer(Modifier.width(8.dp))
                     TextButton(
@@ -757,9 +755,7 @@ fun CommentItem(
                         colors = ButtonDefaults.textButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
                         )
-                    ) { 
-                        Text(stringResource(Res.string.delete)) 
-                    }
+                    ) { Text("删除") }
                 }
             }
         }
