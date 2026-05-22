@@ -16,23 +16,21 @@ import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
-import me.voltual.pyrolysis.AuthRepository // 导入新 Repository
+import me.voltual.pyrolysis.AuthRepository 
 import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.restartMainActivity
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.theme.BBQTheme
 import me.voltual.pyrolysis.core.ui.theme.ThemeManager
-import org.koin.androidx.compose.koinViewModel // Koin ViewModel 注入
-import org.koin.compose.koinInject            // Koin 实例注入
+import org.koin.androidx.compose.koinViewModel 
+import org.koin.compose.koinInject            
 
 @Composable
 fun HomeDestination(
     snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
-    // 使用 Koin 注入 ViewModel
     val viewModel: HomeViewModel = koinViewModel()
-    // 注入 AuthRepository 用于处理导航逻辑中的 ID 获取
     val authRepository: AuthRepository = koinInject()
     
     val uiState by viewModel.uiState
@@ -41,14 +39,14 @@ fun HomeDestination(
     val navigator = LocalNavigator.current
     val coroutineScope = rememberCoroutineScope()
 
+    //  恢复老代码的生命周期控制流，由 LaunchedEffect 驱动状态检查
     LaunchedEffect(Unit) {
-        val userCredentialsFlow = authRepository.credentials
-        val userCredentials = userCredentialsFlow.first()
+        val userCredentials = authRepository.credentials.first()
         val isLoggedIn = userCredentials.token.isNotEmpty()
 
         viewModel.updateLoginState(isLoggedIn)
         if (isLoggedIn && uiState.dataLoadState == DataLoadState.NotLoaded) {
-            viewModel.loadUserData()
+            viewModel.loadUserData() // 已经不需要传 context 了
         }
     }
 
@@ -67,9 +65,9 @@ fun HomeDestination(
     val onAvatarLongClick = remember {
         {
             if (!uiState.showLoginPrompt) {
-                viewModel.refreshUserData() // 不再需要 context
+                viewModel.refreshUserData() 
             }
-            restartMainActivity(context) // 重启 Activity 仍需 context
+            restartMainActivity(context) 
         }
     }
 
@@ -106,7 +104,6 @@ fun HomeDestination(
             onFansClick = { navigator.navigate(FanList) },
             onPostsClick = {
                 coroutineScope.launch {
-                    // 使用 authRepository 获取 userId
                     val userId = authRepository.userId.first()
                     if (userId > 0) {
                         val nickname = uiState.nickname
@@ -118,7 +115,6 @@ fun HomeDestination(
             },
             onMyResourcesClick = {
                 coroutineScope.launch {
-                    // 使用 authRepository 获取 userId
                     val userId = authRepository.userId.first()
                     if (userId > 0) {
                         navigator.navigate(ResourcePlaza(isMyResource = true, userId = userId))
@@ -131,7 +127,7 @@ fun HomeDestination(
             onBillingClick = { navigator.navigate(Billing) },
             onLoginClick = onLoginClick,
             onSettingsClick = { navigator.navigate(ThemeCustomize) },
-            onSignClick = { viewModel.signIn() }, // 不再需要 context
+            onSignClick = { viewModel.signIn() }, 
             onAboutClick = { navigator.navigate(About) },
             onAccountProfileClick = { navigator.navigate(AccountProfile(AppStore.XIAOQU_SPACE)) },
             onRecalculateDays = { viewModel.recalculateDaysDiff() },

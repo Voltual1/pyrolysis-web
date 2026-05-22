@@ -22,15 +22,11 @@ import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.core.ui.theme.ThemeManager
 import me.voltual.pyrolysis.data.SignInSettingsDataStore
 import kotlin.time.Clock
-import kotlin.time.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 
-/**
- * 数据加载状态密封类
- */
 sealed class DataLoadState {
     data object NotLoaded : DataLoadState()
     data object Loading : DataLoadState()
@@ -62,7 +58,7 @@ data class HomeUiState(
 
 class HomeViewModel(
     private val authRepository: AuthRepository,
-    private val signInSettingsDataStore: SignInSettingsDataStore // 注入
+    private val signInSettingsDataStore: SignInSettingsDataStore
 ) : ViewModel() {
     
     var uiState = mutableStateOf(HomeUiState())
@@ -74,28 +70,22 @@ class HomeViewModel(
         snackbarHostState.value = hostState
     }
 
-    /**
-     * 内部辅助：将 API 的 yyyy-MM-dd HH:mm:ss 转换为 LocalDateTime
-     */
     private fun String.toLocalDateTime(): LocalDateTime? = runCatching {
         LocalDateTime.parse(this.replace(" ", "T"))
     }.getOrNull()
 
     fun loadUserData(forceRefresh: Boolean = false) {
         viewModelScope.launch {
-            // 直接从 Repository 获取凭证，不再需要 Context
-            val userCredentials = authRepository.credentials.first()
-
-            if (userCredentials.userId == 0L || userCredentials.token.isEmpty()) {
-                uiState.value = uiState.value.copy(
-                    showLoginPrompt = true,
-                    isLoading = false,
-                    dataLoadState = DataLoadState.NotLoaded
-                )
+            if (!forceRefresh && uiState.value.dataLoadState == DataLoadState.Loaded) {
                 return@launch
             }
 
-            if (!forceRefresh && uiState.value.dataLoadState == DataLoadState.Loaded) {
+            val userCredentials = authRepository.credentials.first()
+            val token = userCredentials.token
+
+            // 防御：如果空 token 理论上不该走到这，直接重置
+            if (token.isEmpty()) {
+                updateLoginState(false)
                 return@launch
             }
 
@@ -105,7 +95,7 @@ class HomeViewModel(
             )
 
             withContext(Dispatchers.IO) {
-                KtorClient.ApiServiceImpl.getUserInfo(token = userCredentials.token)
+                KtorClient.ApiServiceImpl.getUserInfo(token = token)
             }.onSuccess { response ->
                 val userData = response.data
                 val daysDiff = calculateDaysDiff(userData.create_time, userData.signlasttime)
@@ -152,7 +142,6 @@ class HomeViewModel(
         viewModelScope.launch {
             if (uiState.value.signToday) return@launch
             
-            // 修复点：使用实例调用
             val autoSignInEnabled = signInSettingsDataStore.autoSignIn.first()
             if (autoSignInEnabled) {
                 signIn(isAutoSignIn = true)
@@ -214,10 +203,6 @@ class HomeViewModel(
         )
     }
 
-    /**
-     * 计算两个日期之间的天数差
-     * 使用 kotlinx-datetime 替代 java.util.Date
-     */
     @OptIn(kotlin.time.ExperimentalTime::class)
     fun calculateDaysDiff(startDate: String, endDate: String): Int {
         return try {
@@ -233,13 +218,9 @@ class HomeViewModel(
         }
     }
 
-    /**
-     * 重新计算时间差（创建时间到当前时间）
-     */
     @OptIn(kotlin.time.ExperimentalTime::class)
     fun recalculateDaysDiff() {
         val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-        // 手动构建 yyyy-MM-dd HH:mm:ss 格式字符串
         val currentTime = with(now) {
             "$year-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} " +
             "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}"
@@ -252,6 +233,7 @@ class HomeViewModel(
         ThemeManager.toggleTheme()
     }
 
+    // 🌟 修复：这个方法现在被 UI 层的 LaunchedEffect 正常调用了
     fun updateLoginState(isLoggedIn: Boolean) {
         uiState.value = uiState.value.copy(showLoginPrompt = !isLoggedIn)
         if (!isLoggedIn) {
