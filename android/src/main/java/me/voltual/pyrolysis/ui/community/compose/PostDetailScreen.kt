@@ -10,7 +10,8 @@
 @file:Suppress("DEPRECATION")
 package me.voltual.pyrolysis.ui.community.compose
 
-import android.content.Context
+import me.voltual.pyrolysis.FakeR
+import me.voltual.pyrolysis.FakeContext
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -384,7 +385,7 @@ fun PostDetailScreen(
                         clipboardManager.setText(AnnotatedString(shareText))
                         coroutineScope.launch {
                             internalSnackbarHostState.showSnackbar(
-                                message = context.getString(R.string.copied_link),
+                                message = FakeContext.getString(FakeR.string.copied_link),
                                 duration = SnackbarDuration.Short
                             )
                         }
@@ -671,7 +672,7 @@ fun CommentItem(
                         clipboardManager.setText(AnnotatedString(comment.content))
                         scope.launch {
                             snackbarHostState.showSnackbar(
-                                message = context.getString(R.string.comment_copied),
+                                message = FakeContext.getString(FakeR.string.comment_copied),
                                 duration = SnackbarDuration.Short
                             )
                         }
