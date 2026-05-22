@@ -143,6 +143,7 @@ compose-html-converter = { module = "be.digitalia.compose.htmlconverter:htmlconv
 [plugins]
 android-application = { id = "com.android.application", version.ref = "pyrolysis-agp" }
 android-library = { id = "com.android.library", version.ref = "pyrolysis-agp" }
+android-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "pyrolysis-agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "pyrolysis-kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "pyrolysis-kotlin" }
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
