@@ -10,6 +10,7 @@
 @file:Suppress("DEPRECATION")
 package me.voltual.pyrolysis.ui.community.compose
 
+import android.content.Context
 import me.voltual.pyrolysis.FakeR
 import me.voltual.pyrolysis.FakeContext
 import androidx.compose.animation.AnimatedVisibility
