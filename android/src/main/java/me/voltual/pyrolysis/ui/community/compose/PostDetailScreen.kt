@@ -11,6 +11,8 @@
 package me.voltual.pyrolysis.ui.community.compose
 
 import android.content.Context
+import me.voltual.pyrolysis.Res
+import org.jetbrains.compose.resources.StringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
