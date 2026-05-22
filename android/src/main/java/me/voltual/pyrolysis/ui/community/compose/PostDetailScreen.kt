@@ -10,9 +10,6 @@
 @file:Suppress("DEPRECATION")
 package me.voltual.pyrolysis.ui.community.compose
 
-import android.content.Context
-import me.voltual.pyrolysis.FakeR
-import me.voltual.pyrolysis.FakeContext
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -86,7 +83,7 @@ fun PostDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val navigator = LocalNavigator.current
-    val context = LocalContext.current
+//    val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     
     // 注入 AuthRepository 用于后续判断
@@ -333,7 +330,7 @@ fun PostDetailScreen(
                     onReply = { viewModel.openReplyDialog(comment) },
                     onDelete = { viewModel.deleteComment(comment.id) },
                     clipboardManager = clipboardManager,
-                    context = context,
+//                    context = context,
                     snackbarHostState = internalSnackbarHostState,
                     authRepository = authRepository // 传递注入的 Repository
                 )
@@ -632,7 +629,7 @@ fun CommentItem(
     onReply: () -> Unit,
     onDelete: () -> Unit,
     clipboardManager: androidx.compose.ui.platform.ClipboardManager,
-    context: Context,
+//    context: Context,
     snackbarHostState: SnackbarHostState,
     authRepository: AuthRepository // 接收注入的 Repository
 ) {
