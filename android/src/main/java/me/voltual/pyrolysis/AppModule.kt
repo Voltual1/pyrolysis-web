@@ -195,9 +195,9 @@ val appModule = module {
     viewModel { BillingViewModel(get()) }
     viewModel { PaymentViewModel(get(), get(PAYMENT_STORE_QUALIFIER)) }
     viewModel { MessageViewModel(get()) }
-    viewModel { PlayerViewModel(androidApplication()) }
+    viewModel { PlayerViewModel(get()) }
     viewModel { LogViewModel(androidApplication()) }
-    viewModel { StoreManagerViewModel(androidApplication()) }
+    viewModel { StoreManagerViewModel(androidApplication(),get()) }
     viewModel { UpdateSettingsViewModel(get()) }
     viewModel { PrefsVM(get(), get(), get()) }
 }
