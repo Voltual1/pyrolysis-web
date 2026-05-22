@@ -42,8 +42,14 @@ fun HomeDestination(
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        // ViewModel 内部现在会自动处理登录状态检查和数据加载
-        viewModel.loadUserData()
+        val userCredentialsFlow = authRepository.credentials
+        val userCredentials = userCredentialsFlow.first()
+        val isLoggedIn = userCredentials.token.isNotEmpty()
+
+        viewModel.updateLoginState(isLoggedIn)
+        if (isLoggedIn && uiState.dataLoadState == DataLoadState.NotLoaded) {
+            viewModel.loadUserData()
+        }
     }
 
     val onAvatarClick = remember {
