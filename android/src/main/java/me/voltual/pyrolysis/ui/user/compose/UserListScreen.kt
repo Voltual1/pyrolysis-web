@@ -240,7 +240,7 @@ private fun EmptyState() {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = stringResource(R.string.no_users_found),
+            text = "没有找到用户",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -267,7 +267,7 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(onClick = onRetry) {
-                Text(stringResource(R.string.retry))
+                Text("重试")
             }
         }
     }

@@ -69,7 +69,7 @@ fun LogScreen(
             
             coroutineScope.launch {
                 snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.copied_logs, count),
+                    message = "已复制 $count 条日志",
                     duration = SnackbarDuration.Short
                 )
             }

@@ -386,7 +386,7 @@ fun PostDetailScreen(
                         clipboardManager.setText(AnnotatedString(shareText))
                         coroutineScope.launch {
                             internalSnackbarHostState.showSnackbar(
-                                message = FakeContext.getString(FakeR.string.copied_link),
+                                message = "链接已复制",
                                 duration = SnackbarDuration.Short
                             )
                         }
@@ -673,7 +673,7 @@ fun CommentItem(
                         clipboardManager.setText(AnnotatedString(comment.content))
                         scope.launch {
                             snackbarHostState.showSnackbar(
-                                message = FakeContext.getString(FakeR.string.comment_copied),
+                                message = "评论已复制",
                                 duration = SnackbarDuration.Short
                             )
                         }

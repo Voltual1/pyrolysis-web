@@ -62,7 +62,6 @@ fun BaseComposeListScreen(
     var showJumpDialog by remember { mutableStateOf(false) }
     var inputPage by remember { mutableStateOf("") }
     var menuExpanded by mutableStateOf(false)
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
     // 注入 AuthRepository
@@ -127,7 +126,7 @@ fun BaseComposeListScreen(
                                     // 使用 authRepository 替代 AuthManager
                                     val currentUserId = authRepository.userId.first()
                                     if (currentUserId > 0) onNavigate("my_posts/$currentUserId")
-                                    else snackbarHostState.showSnackbar(context.getString(R.string.login_first))
+                                    else snackbarHostState.showSnackbar("请先登录")
                                 }
                             }
                         )

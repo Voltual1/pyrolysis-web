@@ -107,6 +107,7 @@ fun AboutScreen(
     snackbarHostState: SnackbarHostState 
 ) {
     val context = LocalContext.current
+    val app_name = "Pyrolysis"
     val uriHandler = LocalUriHandler.current // 获取当前平台的 UriHandler 实例
     val versionName = BuildConfig.VERSION_NAME
     val versionCode = BuildConfig.VERSION_CODE
@@ -129,7 +130,7 @@ fun AboutScreen(
     ) {
         Image(
             painter = painterResource(R.drawable.fire),
-            contentDescription = stringResource(R.string.app_name),
+            contentDescription = app_name,
             modifier = Modifier
                 .size(100.dp)
                 .clip(RoundedCornerShape(20.dp)),
@@ -137,7 +138,7 @@ fun AboutScreen(
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = stringResource(R.string.app_name),
+            text = app_name,
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold

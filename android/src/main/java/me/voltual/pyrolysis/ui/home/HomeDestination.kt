@@ -55,7 +55,7 @@ fun HomeDestination(
             if (!uiState.showLoginPrompt) {
                 viewModel.toggleDarkMode()
                 val modeName = if (ThemeManager.isAppDarkTheme) "深色" else "亮色"
-                viewModel.showSnackbar(context.getString(R.string.theme_changed, modeName))
+                viewModel.showSnackbar("已切换至$modeName")
             } else {
                 navigator.navigate(Login)
             }
@@ -109,7 +109,7 @@ fun HomeDestination(
                         val nickname = uiState.nickname
                         navigator.navigate(MyPosts(userId, nickname))
                     } else {
-                        viewModel.showSnackbar(context.getString(R.string.unable_to_get_userid))
+                        viewModel.showSnackbar("未能获取用户id")
                     }
                 }
             },
@@ -119,7 +119,7 @@ fun HomeDestination(
                     if (userId > 0) {
                         navigator.navigate(ResourcePlaza(isMyResource = true, userId = userId))
                     } else {
-                        viewModel.showSnackbar(context.getString(R.string.login_first_my_resources))
+                        viewModel.showSnackbar("请先登录")
                         navigator.navigate(Login)
                     }
                 }

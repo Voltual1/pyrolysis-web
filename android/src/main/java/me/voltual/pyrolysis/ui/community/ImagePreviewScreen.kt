@@ -41,7 +41,6 @@ import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.core.ui.theme.BBQSnackbarHost
 import me.voltual.pyrolysis.core.utils.cleanUrl
 
@@ -52,7 +51,6 @@ fun ImagePreviewScreen(
     @Suppress("UNUSED_PARAMETER") snackbarHostState: SnackbarHostState, 
     onClose: () -> Unit
 ) {
-    val context = LocalContext.current
     // 获取 Compose 专用的剪贴板管理器
     val clipboardManager = LocalClipboardManager.current
     val internalSnackbarHostState = remember { SnackbarHostState() }
@@ -114,7 +112,7 @@ fun ImagePreviewScreen(
                             
                             scope.launch {
                                 internalSnackbarHostState.showSnackbar(
-                                    message = context.getString(R.string.image_link_copied)
+                                    message = "已复制图片链接"
                                 )
                             }
                         }
