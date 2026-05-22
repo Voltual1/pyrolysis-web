@@ -116,6 +116,7 @@ dependencies {
     
     // Compose
     implementation(platform(libs.compose.bom))
+    implementation(libs.compose.components.resources)    
     implementation(libs.androidx.ui)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.activity.compose)
@@ -203,6 +204,12 @@ protobuf {
             }
         }
     }
+}
+
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "me.voltual.pyrolysis"
+    generateResClass = auto
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
