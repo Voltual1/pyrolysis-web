@@ -8,7 +8,6 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.settings.update
 
-import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -42,8 +41,8 @@ class UpdateSettingsViewModel(
         updateSettingsDataStore.setAutoCheckUpdates(value)
     }
 
-    fun checkForUpdates(context: Context, onUpdateResult: (me.voltual.pyrolysis.core.utils.UpdateCheckResult) -> Unit) {
-        UpdateChecker.checkForUpdates(context, onUpdateResult)
+    fun checkForUpdates( onUpdateResult: (me.voltual.pyrolysis.core.utils.UpdateCheckResult) -> Unit) {
+        UpdateChecker.checkForUpdates(onUpdateResult)
     }
     
     @Composable

@@ -6,13 +6,11 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.core.utils
 
-import android.content.Context
 import me.voltual.pyrolysis.BuildConfig
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.data.UpdateInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import me.voltual.pyrolysis.R
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -25,7 +23,7 @@ sealed class UpdateCheckResult {
 
 object UpdateChecker {
     // 修改函数签名，使用回调传递结果
-    fun checkForUpdates(context: Context, onUpdateResult: (UpdateCheckResult) -> Unit) {
+    fun checkForUpdates(onUpdateResult: (UpdateCheckResult) -> Unit) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val result = KtorClient.ApiServiceImpl.getLatestRelease()
@@ -42,18 +40,18 @@ object UpdateChecker {
                         } else {
                             // 当前已是最新版本
                             withContext(Dispatchers.Main) {
-                                onUpdateResult(UpdateCheckResult.NoUpdate(context.getString(R.string.already_latest_version)))
+                                onUpdateResult(UpdateCheckResult.NoUpdate("当前已是最新版本"))
                             }
                         }
                     } else {
                         // 获取更新信息失败
                         withContext(Dispatchers.Main) {
-                            onUpdateResult(UpdateCheckResult.Error(context.getString(R.string.failed_to_get_update_info)))
+                            onUpdateResult(UpdateCheckResult.Error("获取更新信息失败"))
                         }
                     }
                 } else {
                     // 检查更新失败
-                    val errorMsg = context.getString(R.string.check_update_failed) + ": ${result.exceptionOrNull()?.message}"
+                    val errorMsg = "检查更新失败" + ": ${result.exceptionOrNull()?.message}"
                     withContext(Dispatchers.Main) {
                         onUpdateResult(UpdateCheckResult.Error(errorMsg))
                     }
@@ -61,7 +59,7 @@ object UpdateChecker {
             } catch (e: Exception) {
                 e.printStackTrace()
                 // 检查更新出错
-                val errorMsg = context.getString(R.string.check_update_error) + ": ${e.message}"
+                val errorMsg = "检查更新出错" + ": ${e.message}"
                 withContext(Dispatchers.Main) {
                     onUpdateResult(UpdateCheckResult.Error(errorMsg))
                 }

@@ -8,7 +8,6 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.settings.update
 
-import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,8 +21,6 @@ import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.data.UpdateInfo
 import me.voltual.pyrolysis.core.ui.components.UpdateDialog
 import me.voltual.pyrolysis.core.utils.UpdateCheckResult
-import me.voltual.pyrolysis.R
-import androidx.compose.ui.res.stringResource
 import me.voltual.pyrolysis.core.utils.UpdateChecker
 
 @Composable
@@ -31,7 +28,6 @@ fun UpdateSettingsScreen(
     viewModel: UpdateSettingsViewModel = viewModel(),
     snackbarHostState: SnackbarHostState
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val autoCheckUpdates by viewModel.autoCheckUpdates.collectAsState(initial = false)
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
@@ -56,7 +52,7 @@ fun UpdateSettingsScreen(
 
         Button(
             onClick = {
-                viewModel.checkForUpdates(context) { result ->
+                viewModel.checkForUpdates() { result ->
                     when (result) {
                         is UpdateCheckResult.Success -> {
                             updateInfo = result.updateInfo

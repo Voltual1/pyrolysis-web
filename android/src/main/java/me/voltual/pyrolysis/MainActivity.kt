@@ -359,7 +359,6 @@ fun MainScreenContent(
 
 @Composable
 fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
-    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     val updateSettingsDataStore: UpdateSettingsDataStore = koinInject()
@@ -369,7 +368,7 @@ fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
     LaunchedEffect(Unit) {
         val autoCheckUpdates = updateSettingsDataStore.autoCheckUpdates.first()
         if (autoCheckUpdates) {
-            UpdateChecker.checkForUpdates(context) { result ->
+            UpdateChecker.checkForUpdates() { result ->
                 when (result) {
                     is UpdateCheckResult.Success -> {
                         updateInfo = result.updateInfo
