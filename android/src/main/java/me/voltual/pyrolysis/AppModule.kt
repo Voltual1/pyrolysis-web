@@ -167,7 +167,7 @@ val appModule = module {
     viewModel { UserProfileViewModel(get(), get()) }
     viewModel { UserListViewModel(get()) }
     viewModel { UserDetailViewModel(get()) }
-    viewModel { SignInSettingsViewModel(get()) }
+    viewModel { SignInSettingsViewModel(get(),get()) }
 
     viewModel { CommunityViewModel() }
     viewModel { FollowingPostsViewModel(get()) } 
@@ -180,7 +180,7 @@ val appModule = module {
     viewModel { PostDetailViewModel(get()) } 
     viewModel { BrowseHistoryViewModel(androidApplication()) }
 
-    viewModel { HomeViewModel(get()) }
+    viewModel { HomeViewModel(get(),get()) }
     viewModel { PlazaViewModel(get(PLAZA_STORE_QUALIFIER), get(), get(), get(), get()) }
     viewModel { AppDetailComposeViewModel(androidApplication(), get()) }
     viewModel { AppReleaseViewModel(androidApplication(), get()) }

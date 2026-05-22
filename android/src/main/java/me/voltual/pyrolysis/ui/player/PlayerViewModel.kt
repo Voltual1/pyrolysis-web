@@ -19,6 +19,14 @@ import java.io.IOException
 import java.util.zip.Inflater
 import org.koin.android.annotation.KoinViewModel
 
+
+enum class VideoScaleMode { FIT, FILL, ZOOM }
+
+data class PlayerSettings(
+    val scaleMode: VideoScaleMode = VideoScaleMode.FIT,
+    val danmakuSize: Float = 1.2f
+)
+
 @KoinViewModel
 class PlayerViewModel(
     private val playerDataStore: PlayerDataStore // 注入
