@@ -3,7 +3,7 @@ pyrolysis-agp = "8.13.0"
 pyrolysis-kotlin = "2.2.21"
 pyrolysis-compose-bom = "2026.01.00"
 pyrolysis-navigation = "2.9.6"
-compose-multiplatform = "1.11.0"
+compose-multiplatform = "1.10.0"
 
 # 功能库
 desugar = "2.0.3"
