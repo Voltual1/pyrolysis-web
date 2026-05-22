@@ -22,10 +22,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import me.voltual.pyrolysis.core.ui.icons.phosphor.*
+import me.voltual.pyrolysis.core.ui.icons.drawable.* // 导入转换后的图标
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey        
@@ -33,10 +33,9 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.AuthRepository // 导入新 Repository
-import me.voltual.pyrolysis.R
+import me.voltual.pyrolysis.AuthRepository 
 import me.voltual.pyrolysis.data.DrawerMenuDataStore
-import org.koin.compose.koinInject // Koin 注入支持
+import org.koin.compose.koinInject 
 
 sealed class IconSource {
     data class Resource(val resId: Int) : IconSource()
@@ -75,28 +74,27 @@ fun NavigationDrawerItems(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
-    // 注入 AuthRepository
     val authRepository: AuthRepository = koinInject()
 
     val allDrawerItems = remember {
         mutableListOf(
-            DrawerItem("home", "首页", IconSource.Resource(R.drawable.ic_menu_home), Home),
-            DrawerItem("resources", "资源广场", IconSource.Resource(R.drawable.ic_menu_apps), ResourcePlaza(isMyResource = false)),
+            DrawerItem("home", "首页", IconSource.Vector(IcMenuHome), Home),
+            DrawerItem("resources", "资源广场", IconSource.Vector(IcMenuApps), ResourcePlaza(isMyResource = false)),
             DrawerItem("explore", "仓库探索", IconSource.Vector(Phosphor.Compass), Explore),
             DrawerItem("repos_search", "仓库搜索", IconSource.Vector(Phosphor.MagnifyingGlass), SearchPage),
             DrawerItem("prefsrepos", "仓库管理", IconSource.Vector(Phosphor.Graph), PrefsReposPage),
-            DrawerItem("community", "交流社区", IconSource.Resource(R.drawable.ic_menu_community), Community),
-            DrawerItem("messages", "消息中心", IconSource.Resource(R.drawable.ic_menu_message), MessageCenter),
-            DrawerItem("ranking_list", "天梯竞赛", IconSource.Resource(R.drawable.ic_menu_ranking), RankingList),
-            DrawerItem("release_app", "发布应用", IconSource.Resource(R.drawable.bg), CreateAppRelease),
-            DrawerItem("bot_logs", "日志", IconSource.Resource(R.drawable.work_log), LogViewer),
-            DrawerItem("store_manager", "存储管理", IconSource.Resource(R.drawable.appbackuprestore), StoreManager),
-            DrawerItem("download", "下载管理", IconSource.Resource(R.drawable.dsdownload), Download),
-            DrawerItem("update_settings", "更新设置", IconSource.Resource(R.drawable.asusupdate), UpdateSettings),
-            DrawerItem("settings", "主题设置", IconSource.Resource(R.drawable.ic_menu_settings), ThemeCustomize),
-            DrawerItem("signin_settings", "签到设置", IconSource.Resource(R.drawable.sign_in), SignInSettings),
-            DrawerItem("login", "登录账号", IconSource.Resource(R.drawable.ic_menu_login), Login),
-            DrawerItem("logout", "退出登录", IconSource.Resource(R.drawable.ic_menu_logout), Home)
+            DrawerItem("community", "交流社区", IconSource.Vector(IcMenuCommunity), Community),
+            DrawerItem("messages", "消息中心", IconSource.Vector(IcMenuMessage), MessageCenter),
+            DrawerItem("ranking_list", "天梯竞赛", IconSource.Vector(Fire), RankingList),
+            DrawerItem("release_app", "发布应用", IconSource.Vector(Bg), CreateAppRelease),
+            DrawerItem("bot_logs", "日志", IconSource.Vector(WorkLog), LogViewer),
+            DrawerItem("store_manager", "存储管理", IconSource.Vector(Appbackuprestore), StoreManager),
+            DrawerItem("download", "下载管理", IconSource.Vector(Dsdownload), Download),
+            DrawerItem("update_settings", "更新设置", IconSource.Vector(Asusupdate), UpdateSettings),
+            DrawerItem("settings", "主题设置", IconSource.Vector(Phosphor.GearSix), ThemeCustomize),
+            DrawerItem("signin_settings", "签到设置", IconSource.Vector(SignIn), SignInSettings),
+            DrawerItem("login", "登录账号", IconSource.Vector(IcMenuLogin), Login),
+            DrawerItem("logout", "退出登录", IconSource.Vector(IcMenuLogout), Home)
         )
     }
     val allItemsMap = remember { allDrawerItems.associateBy { it.id } }
@@ -105,7 +103,7 @@ fun NavigationDrawerItems(
     var draggedItem by remember { mutableStateOf<DrawerItem?>(null) }
     var dragOffsetY by remember { mutableStateOf(0f) }
     var itemHeight by remember { mutableStateOf(0) }
-   val drawerMenuDataStore: DrawerMenuDataStore = koinInject()
+    val drawerMenuDataStore: DrawerMenuDataStore = koinInject()
 
     var selectedItemId by remember { mutableStateOf("home") }
 
@@ -256,7 +254,7 @@ private fun ItemContent(
     scope: CoroutineScope,
     drawerState: DrawerState,
     navigator: Navigator,
-    authRepository: AuthRepository, // 接收注入的 Repository
+    authRepository: AuthRepository,
     modifier: Modifier = Modifier
 ) {
     val isSelected = selectedItemId == item.id
@@ -266,7 +264,10 @@ private fun ItemContent(
         icon = {
             val iconModifier = Modifier.size(24.dp)
             when (val source = item.icon) {
-                is IconSource.Resource -> Icon(painterResource(source.resId), null, modifier = iconModifier)
+                is IconSource.Resource -> {
+                    // 仅作为回退逻辑，当前列表已全部替换为 Vector
+                    Icon(androidx.compose.ui.res.painterResource(source.resId), null, modifier = iconModifier)
+                }
                 is IconSource.Vector -> Icon(source.imageVector, null, modifier = iconModifier)
                 is IconSource.Remote -> AsyncImage(
                     model = source.url,
@@ -283,7 +284,6 @@ private fun ItemContent(
             when (item.id) {
                 "logout" -> {
                     scope.launch {
-                        // 使用 authRepository 替代 AuthManager
                         authRepository.clearCredentials()
                         navigator.logoutAndReset()   
                     }
