@@ -3,9 +3,9 @@ package dev.rushii.arsc.builders
 import dev.rushii.arsc.*
 
 public fun ArscPackage.type(name: ArscTypeName, block: ArscType.() -> Unit): ArscType {
-	val type = types.computeIfAbsent(name) {
+	val type = types.getOrPut(name) {
 		ArscType(
-			id = highestTypeId() + 1U,
+			id = this.highestTypeId() + 1U,
 			name = name,
 			configs = mutableListOf(),
 			specs = null,
@@ -14,17 +14,21 @@ public fun ArscPackage.type(name: ArscTypeName, block: ArscType.() -> Unit): Ars
 
 	block(type)
 
-	if (type.specs == null) throw IllegalArgumentException("No specs defined")
-	if (type.name.isEmpty()) throw IllegalArgumentException("Empty name")
+	if (type.specs == null)
+		throw IllegalArgumentException("No specs defined for new type")
+	if (type.name.isEmpty())
+		throw IllegalArgumentException("Type cannot have an empty name")
 	return type
 }
 
 public fun ArscType.spec(id: UInt? = null, block: ArscSpecs.Spec.() -> Unit): ArscSpecs.Spec {
-	val specsObj = specs ?: ArscSpecs(0u, mutableMapOf()).also { specs = it }
-	val targetId = (id ?: specsObj.highestSpecId()) + 1U
-	val spec = specsObj.specs.computeIfAbsent(targetId) {
+	val currentSpecs = specs ?: ArscSpecs(0u, mutableMapOf()).also { specs = it }
+	val targetId = id ?: (currentSpecs.highestSpecId() + 1U)
+
+	val spec = currentSpecs.specs.getOrPut(targetId) {
 		ArscSpecs.Spec(id = targetId, flags = 0u)
 	}
+
 	block(spec)
 	return spec
 }
