@@ -108,7 +108,8 @@ fun AboutScreen(
     val versionCode = BuildConfig.VERSION_CODE
     val scope = rememberCoroutineScope() 
     
-    val currentYear = kotlinx.datetime.Clock.System.now()
+    @OptIn(kotlin.time.ExperimentalTime::class)
+    val currentYear = Clock.System.now()
         .toLocalDateTime(TimeZone.currentSystemDefault())
         .year
     val copyrightText = if (currentYear > 2025) "2025 - $currentYear" else "2025"
