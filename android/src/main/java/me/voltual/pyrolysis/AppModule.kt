@@ -207,7 +207,7 @@ single<Aead> {
     viewModel { AppReleaseViewModel(androidApplication(), get()) }
     viewModel { VersionListViewModel(androidApplication(), get()) }
     viewModel { AppPageVM(get(), get(), get(), get(), get(), get()) }
-    viewModel { SearchViewModel(get(), get()) }
+    viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { SearchVM(get(), get(), get()) }    
     viewModel { ExploreVM(get(), get(), get()) }
     viewModel { RepoPageVM(get(), get()) }

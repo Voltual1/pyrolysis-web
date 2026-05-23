@@ -9,6 +9,8 @@
 
 package me.voltual.pyrolysis.ui.search
 
+import me.voltual.pyrolysis.core.database.BrowseHistoryDao
+import me.voltual.pyrolysis.core.database.LogDao 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.BBQApplication
@@ -32,12 +34,14 @@ sealed class SearchResultItem {
 }
 
 @KoinViewModel
+KoinViewModel
 class SearchViewModel(
     private val searchHistoryDataStore: SearchHistoryDataStore,
-    private val userFilterDataStore: UserFilterDataStore 
-) : ViewModel() {
-    private val browseHistoryDao = BBQApplication.instance.database.browseHistoryDao()
-    private val logDao = BBQApplication.instance.database.logDao()
+    private val userFilterDataStore: UserFilterDataStore,
+    private val browseHistoryDao: BrowseHistoryDao, 
+    private val logDao: LogDao 
+) : ViewModel() { {
+    
 
     private val _searchMode = MutableStateFlow(SearchMode.POSTS)
     val searchMode: StateFlow<SearchMode> = _searchMode.asStateFlow()
