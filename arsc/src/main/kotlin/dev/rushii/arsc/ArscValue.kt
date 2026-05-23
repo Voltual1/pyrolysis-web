@@ -1,7 +1,8 @@
 package dev.rushii.arsc
 
 import dev.rushii.arsc.internal.*
-import java.nio.ByteBuffer
+import kotlinx.io.Source
+import kotlinx.io.Sink
 
 public sealed interface ArscValue {
 	public sealed class Plain : ArscValue {
@@ -12,11 +13,11 @@ public sealed interface ArscValue {
 			private const val TYPE_STRING: UByte = 0x03u
 
 			@JvmStatic
-			public fun parse(bytes: ByteBuffer, globalStringPool: ArscStringPool): Plain {
-				val size = bytes.readU16() // const u16 = 8
-				val zero = bytes.readU8() // const u8 = 0
-				val type = bytes.readU8()
-				val data = bytes.readU32()
+			public fun parse(source: Source, globalStringPool: ArscStringPool): Plain {
+				val size = source.readU16() // const u16 = 8
+				val zero = source.readU8() // const u8 = 0
+				val type = source.readU8()
+				val data = source.readU32()
 
 				return if (type == TYPE_STRING) {
 					String(
@@ -31,18 +32,18 @@ public sealed interface ArscValue {
 			}
 
 			@JvmStatic
-			public fun write(bytes: ByteBuffer, value: Plain, writtenGlobalPool: ArscStringPool.WrittenPool) {
-				bytes.putShort(8) // size
-				bytes.put(0) // zero
-				bytes.put(value.type.toByte()) // type
+			public fun write(sink: Sink, value: Plain, writtenGlobalPool: ArscStringPool.WrittenPool) {
+				sink.writeU16(8u) // size
+				sink.writeU8(0u) // zero
+				sink.writeU8(value.type) // type
 
 				when (value) {
 					is Raw -> {
-						bytes.putInt(value.data.toInt())
+						sink.writeU32(value.data)
 					}
 
 					is String -> {
-						bytes.putInt(writtenGlobalPool.strings[value.data]!!)
+						sink.writeU32(writtenGlobalPool.strings[value.data]!!.toUInt())
 					}
 				}
 			}

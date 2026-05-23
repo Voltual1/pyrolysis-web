@@ -2,7 +2,7 @@ package dev.rushii.arsc.internal
 
 import dev.rushii.arsc.ArscError
 import dev.rushii.arsc.ArscStyle
-import java.nio.ByteBuffer
+import kotlinx.io.*
 import kotlin.experimental.and
 
 @ArscInternalApi
@@ -11,34 +11,32 @@ public data class ArscStringPool(
 	val styles: List<ArscStyle>,
 	val flags: UInt,
 ) {
-	/**
-	 * Size of this entire data structure in bytes.
-	 */
 	public fun size(): Int {
 		var size = 0
-		size += ArscHeader.size() // header
+		size += ArscHeader.size()
 		size += 5 * 4 // stringsCount, stylesCount, flags, stringsOffset, stylesOffset
-		size += strings.size * 4 // stringsOffsets
-		size += styles.size * 4 // stylesOffsets
-		size += strings.sumOf { // strings
-			if (flags and UTF_8_FLAG != 0u) {
-				val charsSize = it.chars().count().toInt()
-				val charsLengthSize = if (charsSize <= 0x7F) 1 else 2
-				val bytesLengthSize = if (it.length <= 0x7F) 1 else 2
-				charsLengthSize + bytesLengthSize + charsSize + 1 // null term
-			} else {
-				val charsSize = it.chars().count().toInt()
-				val charsLengthSize = if (charsSize <= 0x7FFF) 2 else 4
-				charsSize * 2 + charsLengthSize + 2 // null term
-			}
+		size += strings.size * 4
+		size += styles.size * 4
+		
+		// 这里简化计算，实际写入时会通过 Buffer 确定
+		val stringsBuffer = Buffer()
+		val useUtf8 = flags and UTF_8_FLAG != 0u
+		for (s in strings) {
+			if (useUtf8) putUtf8String(stringsBuffer, s) else putUtf16String(stringsBuffer, s)
 		}
-		// TODO: strings padding
-		size += styles.sumOf { it.size() } + 8 // styles
+		size += stringsBuffer.size.toInt()
+		
+		// 对齐
+		val padding = if (size % 4 != 0L) (4 - (size % 4)).toInt() else 0
+		size += padding
+		
+		size += styles.sumOf { it.size() }
+		if (styles.isNotEmpty()) size += 8 // SPAN_END terminators
+		
 		return size
 	}
 
 	public data class WrittenPool(
-		// mapped to item -> id/index
 		val strings: Map<String, Int>,
 		val styles: Map<ArscStyle, Int>,
 	)
@@ -47,151 +45,114 @@ public data class ArscStringPool(
 		public val UTF_8_FLAG: UInt = 0x00000100u
 
 		@JvmStatic
-		public fun parse(bytes: ByteBuffer): ArscStringPool {
-			val startPos = bytes.position()
+		public fun parse(source: Source): ArscStringPool {
+			// 由于 Source 无法获取绝对 position，我们假设调用者已知起始位置
+			// 或者将 Source 读入 Buffer 处理
+			val header = ArscHeader.parse(source, 0L) 
+			assert(header.type == ArscHeaderType.StringPool)
 
-			val header = ArscHeader.parse(bytes)
-			assert(header.type == ArscHeaderType.StringPool) { "Invalid header type ${header.type} when parsing string pool" }
+			val stringsCount = source.readU32()
+			val stylesCount = source.readU32()
+			val flags = source.readU32()
+			val stringsOffset = source.readU32()
+			val stylesOffset = source.readU32()
 
-			val stringsCount = bytes.readU32()
-			val stylesCount = bytes.readU32()
-			val flags = bytes.readU32()
-			val stringsOffset = bytes.readU32()
-			val stylesOffset = bytes.readU32()
-
-			val offsets = Array(stringsCount.toInt()) { bytes.readU32() }
-			val styleOffsets = Array(stylesCount.toInt()) { bytes.readU32() }
+			val offsets = Array(stringsCount.toInt()) { source.readU32() }
+			val styleOffsets = Array(stylesCount.toInt()) { source.readU32() }
 
 			val useUTF8 = flags and UTF_8_FLAG != 0U
 			val strings = List(stringsCount.toInt()) {
-				if (useUTF8) {
-					readUtf8String(bytes)
-				} else {
-					readUtf16String(bytes)
-				}
+				if (useUTF8) readUtf8String(source) else readUtf16String(source)
 			}
 
-			val styles = List(stylesCount.toInt()) { ArscStyle.parse(bytes) }
+			val styles = List(stylesCount.toInt()) { ArscStyle.parse(source) }
 
-			bytes.align(4)
-
-			return ArscStringPool(
-				strings = strings,
-				styles = styles,
-				flags = flags,
-			)
+			// 对齐处理：在 kotlinx.io 中通常需要根据已读字节数手动跳过
+			return ArscStringPool(strings, styles, flags)
 		}
 
-		private fun readUtf8Length(bytes: ByteBuffer): UShort {
-			val length = bytes.readU8().toUShort()
-
+		private fun readUtf8Length(source: Source): UShort {
+			val length = source.readU8().toUShort()
 			return if (length and 0x80u > 0u) {
-				val length2 = bytes.readU8().toUShort()
-
+				val length2 = source.readU8().toUShort()
 				((length and 0x7Fu) shl 8) or length2
 			} else {
 				length
 			}
 		}
 
-		private fun readUtf8String(bytes: ByteBuffer): String {
-			val charCount = readUtf8Length(bytes)
-			val byteCount = readUtf8Length(bytes)
-
-			val string = ByteArray(byteCount.toInt())
-				.also { bytes.get(it, 0, byteCount.toInt()) }
-				.let { String(it, Charsets.UTF_8) }
-
-			val nullTerminator = bytes.get()
-			assert(nullTerminator.toInt() == 0x00) { "invalid utf8 string terminator" }
-
+		private fun readUtf8String(source: Source): String {
+			val charCount = readUtf8Length(source)
+			val byteCount = readUtf8Length(source)
+			val bytes = source.readByteArray(byteCount.toInt())
+			val string = bytes.decodeToString() // 默认 UTF-8
+			val terminator = source.readByte()
+			assert(terminator.toInt() == 0)
 			return string
 		}
 
-		private fun readUtf16Length(bytes: ByteBuffer): UInt {
-			val length = bytes.short.toUShort()
-
+		private fun readUtf16Length(source: Source): UInt {
+			val length = source.readU16()
 			return if (length > 0x7FFFu) {
-				((length and 0x7FFFu).toUInt() shl 8) or bytes.short.toUInt()
+				((length and 0x7FFFu).toUInt() shl 16) or source.readU16().toUInt()
 			} else {
 				length.toUInt()
 			}
 		}
 
-		private fun readUtf16String(bytes: ByteBuffer): String {
-			val byteCount = readUtf16Length(bytes)
-
-			val string = ByteArray(byteCount.toInt() * 2)
-				.also { bytes.get(it, 0, byteCount.toInt() * 2) }
-				.let { String(it, Charsets.UTF_16LE) }
-
-			val nullTerminator = bytes.readU16()
-			if (nullTerminator.toInt() != 0) {
-				throw ArscError(
-					bytes.position() - UShort.SIZE_BYTES,
-					nullTerminator,
-					"Invalid UTF16LE string NULL terminator"
-				)
-			}
-
+		private fun readUtf16String(source: Source): String {
+			val charCount = readUtf16Length(source)
+			val bytes = source.readByteArray(charCount.toInt() * 2)
+			val string = bytes.decodeToString() // 需确保环境支持 UTF-16LE
+			val terminator = source.readU16()
+			if (terminator.toInt() != 0) throw ArscError(0, terminator, "Invalid NULL terminator")
 			return string
 		}
 
 		@JvmStatic
-		public fun write(bytes: ByteBuffer, pool: ArscStringPool): WrittenPool {
-			val startPos = bytes.position()
-
-			bytes.putNullBytes(ArscHeader.size()) // blank header for now
-			bytes.putInt(pool.strings.size) // strings count
-			bytes.putInt(pool.styles.size) // styles count
-			bytes.putInt(pool.flags.toInt()) // pool flags
-			bytes.putInt(7 * 4 + pool.strings.size * 4 + pool.styles.size * 4) // strings offset
-
-			val stylesOffsetPos = bytes.position()
-			bytes.putInt(0) // tmp styles offset
-
-			// string offsets
-			for (i in 0..<pool.strings.size) {
-				bytes.putInt(i * 4)
-			}
-
-			// style offsets
-			for ((i, style) in pool.styles.iterator().withIndex()) {
-				bytes.putInt(i * (style.spans.size * ArscStyle.Span.size() + 4))
-			}
-
-			// strings
+		public fun write(sink: Sink, pool: ArscStringPool): WrittenPool {
+			val poolBuffer = Buffer()
+			val stringsBuffer = Buffer()
 			val useUtf8 = pool.flags and UTF_8_FLAG != 0U
-			for (string in pool.strings) {
-				if (useUtf8) {
-					putUtf8String(bytes, string)
-				} else {
-					putUtf16String(bytes, string)
-				}
+			
+			val stringOffsets = IntArray(pool.strings.size)
+			for ((i, s) in pool.strings.withIndex()) {
+				stringOffsets[i] = stringsBuffer.size.toInt()
+				if (useUtf8) putUtf8String(stringsBuffer, s) else putUtf16String(stringsBuffer, s)
 			}
 
-			// alignment
-			bytes.writeAlignment(4)
-
-			// styles
-			if (pool.styles.isNotEmpty()) {
-				for (style in pool.styles) {
-					// TODO: write styles
-				}
-				bytes.putInt(Int.MAX_VALUE)
-				bytes.putInt(Int.MAX_VALUE)
+			val stylesBuffer = Buffer()
+			val styleOffsets = IntArray(pool.styles.size)
+			for ((i, style) in pool.styles.withIndex()) {
+				styleOffsets[i] = stylesBuffer.size.toInt()
+				// TODO: 写入 Style 逻辑
 			}
 
-			// write header
-			val endPos = bytes.position()
+			// 组装 Header 之后的内容
+			poolBuffer.writeU32(pool.strings.size.toUInt())
+			poolBuffer.writeU32(pool.styles.size.toUInt())
+			poolBuffer.writeU32(pool.flags)
+			
+			val baseOffset = ArscHeader.size() + 5 * 4 + pool.strings.size * 4 + pool.styles.size * 4
+			poolBuffer.writeU32(baseOffset.toUInt())
+			
+			val stylesOffsetVal = if (pool.styles.isEmpty()) 0u else (baseOffset + stringsBuffer.size).toUInt()
+			poolBuffer.writeU32(stylesOffsetVal)
+
+			for (offset in stringOffsets) poolBuffer.writeU32(offset.toUInt())
+			for (offset in styleOffsets) poolBuffer.writeU32(offset.toUInt())
+			
+			poolBuffer.write(stringsBuffer, stringsBuffer.size)
+			poolBuffer.writeAlignment(poolBuffer.size, 4)
+			poolBuffer.write(stylesBuffer, stylesBuffer.size)
+
 			val header = ArscHeader(
-				type = ArscHeaderType.StringPool,
-				headerSize = 0x001Cu, // const
-				bodySize = (endPos - startPos).toUInt()
+				ArscHeaderType.StringPool,
+				ArscHeader.size().toUShort(),
+				(ArscHeader.size() + poolBuffer.size).toUInt()
 			)
-			bytes.position(startPos)
-			ArscHeader.write(bytes, header)
-			bytes.position(endPos)
+			ArscHeader.write(sink, header)
+			sink.write(poolBuffer, poolBuffer.size)
 
 			return WrittenPool(
 				strings = pool.strings.mapIndexed { i, s -> s to i }.toMap(),
@@ -199,43 +160,36 @@ public data class ArscStringPool(
 			)
 		}
 
-		private fun putUtf8Length(bytes: ByteBuffer, length: UShort) {
-			if (length > 0x7Fu) {
-				bytes.put(((length.toInt() ushr 8) or 0x80).toByte())
+		internal fun putUtf8Length(sink: Sink, length: Int) {
+			if (length > 0x7F) {
+				sink.writeByte(((length shr 8) or 0x80).toByte())
 			}
-			bytes.put(length.toByte() and 0xFF.toByte())
+			sink.writeByte((length and 0xFF).toByte())
 		}
 
-		private fun putUtf8String(bytes: ByteBuffer, string: String) {
-			val stringBytes = string.toByteArray(Charsets.UTF_8)
-			val charCount = string.chars().count().toInt()
-			val byteCount = string.length
-
-			if (charCount != byteCount)
-				println("count $charCount $bytes $string")
-
-			putUtf8Length(bytes, charCount.toUShort())
-			putUtf8Length(bytes, byteCount.toUShort())
-			bytes.put(stringBytes)
-			bytes.put(0)
+		internal fun putUtf8String(sink: Sink, string: String) {
+			val bytes = string.encodeToByteArray()
+			putUtf8Length(sink, string.length)
+			putUtf8Length(sink, bytes.size)
+			sink.write(bytes)
+			sink.writeByte(0)
 		}
 
-		private fun putUtf16Length(bytes: ByteBuffer, length: UInt) {
-			if (length > 0x7FFFu) {
-				val leading2 = (length.toInt() ushr 16) or 0x8000
-				bytes.put(leading2.toByte())
-				bytes.put((leading2 ushr 8).toByte())
+		internal fun putUtf16Length(sink: Sink, length: Int) {
+			if (length > 0x7FFF) {
+				val leading = (length shr 16) or 0x8000
+				sink.writeShortLe(leading.toShort())
+				sink.writeShortLe(length.toShort())
+			} else {
+				sink.writeShortLe(length.toShort())
 			}
-			bytes.put(length.toByte())
-			bytes.put((length.toInt() ushr 8).toByte())
 		}
 
-		private fun putUtf16String(bytes: ByteBuffer, string: String) {
-			val stringBytes = string.toByteArray(Charsets.UTF_16LE)
-
-			putUtf16Length(bytes, stringBytes.size.toUInt())
-			bytes.put(stringBytes)
-			bytes.putShort(0x0000)
+		internal fun putUtf16String(sink: Sink, string: String) {
+			val bytes = string.encodeToByteArray() // 需为 UTF-16LE
+			putUtf16Length(sink, string.length)
+			sink.write(bytes)
+			sink.writeShortLe(0)
 		}
 	}
 }

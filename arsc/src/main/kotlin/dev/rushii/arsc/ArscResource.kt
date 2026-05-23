@@ -1,7 +1,7 @@
 package dev.rushii.arsc
 
 import dev.rushii.arsc.internal.*
-import java.nio.ByteBuffer
+import kotlinx.io.*
 
 public data class ArscResource(
 	val specId: UInt = 0u,
@@ -14,39 +14,65 @@ public data class ArscResource(
 		private const val FLAG_COMPLEX: UShort = 0x0001u
 
 		@JvmStatic
+		public fun write(
+			sink: Sink,
+			resource: ArscResource,
+			writtenGlobalPool: ArscStringPool.WrittenPool,
+			writtenKeyPool: ArscStringPool.WrittenPool
+		) {
+			val nameIndex = writtenKeyPool.strings[resource.name]
+				?: throw IllegalStateException("Resource name '${resource.name}' not in key string pool")
+
+			// 写入 Entry Header
+			val isComplex = resource.value is ArscValue.Bag
+			val entrySize = if (isComplex) 16u else 8u
+			
+			sink.writeU16(entrySize.toUShort())
+			sink.writeU16(resource.flags)
+			sink.writeU32(nameIndex.toUInt())
+
+			when (val v = resource.value) {
+				is ArscValue.Plain -> {
+					ArscValue.Plain.write(sink, v, writtenGlobalPool)
+				}
+				is ArscValue.Bag -> {
+					sink.writeU32(v.parent)
+					sink.writeU32(v.values.size.toUInt())
+					v.values.forEach { (key, plainValue) ->
+						sink.writeU32(key)
+						ArscValue.Plain.write(sink, plainValue, writtenGlobalPool)
+					}
+				}
+			}
+		}
+        @JvmStatic
 		public fun parse(
-			bytes: ByteBuffer,
+			source: Source,
 			resourceCount: Int,
 			globalStringPool: ArscStringPool,
 			keyStringPool: ArscStringPool,
 		): MutableList<ArscResource> {
-			val entries = (0..<resourceCount)
-				.map { bytes.readU32() }
-
+			val entries = (0..<resourceCount).map { source.readU32() }
 			val resources = mutableListOf<ArscResource>()
 
 			entries.forEachIndexed { specIndex, entry ->
-				if (entry == UInt.MAX_VALUE)
-					return@forEachIndexed
+				if (entry == UInt.MAX_VALUE) return@forEachIndexed
 
-				val size = bytes.readU16()
-				val flags = bytes.readU16()
-				val nameIndex = bytes.readU32()
+				val size = source.readU16()
+				val flags = source.readU16()
+				val nameIndex = source.readU32()
+				
 				val value = if (flags and FLAG_COMPLEX != 0.toUShort()) {
-					val parent = bytes.readU32()
-					val count = bytes.readU32()
+					val parent = source.readU32()
+					val count = source.readU32()
 					val values = (0..<count.toInt()).associate {
-						val index = bytes.readU32()
-						val value = ArscValue.Plain.parse(bytes, globalStringPool)
-						index to value
+						val index = source.readU32()
+						val v = ArscValue.Plain.parse(source, globalStringPool)
+						index to v
 					}
-
-					ArscValue.Bag(
-						parent = parent,
-						values = values,
-					)
+					ArscValue.Bag(parent, values)
 				} else {
-					ArscValue.Plain.parse(bytes, globalStringPool)
+					ArscValue.Plain.parse(source, globalStringPool)
 				}
 
 				resources += ArscResource(
@@ -56,8 +82,7 @@ public data class ArscResource(
 					value = value,
 				)
 			}
-
 			return resources
-		}
-	}
+		}	
+    }
 }

@@ -1,13 +1,8 @@
 package dev.rushii.arsc.internal
 
-import java.nio.ByteBuffer
+import kotlinx.io.Source
+import kotlinx.io.Sink
 
-/**
- * A header prefixed at the start of the file, and before each package/chunk.
- * @param type The body type
- * @param headerSize u16 header size
- * @param bodySize u64 body size
- */
 @ArscInternalApi
 public data class ArscHeader(
 	val type: ArscHeaderType,
@@ -15,20 +10,14 @@ public data class ArscHeader(
 	val bodySize: UInt,
 ) {
 	public companion object {
-		/**
-		 * Size of this data structure in bytes.
-		 */
 		@JvmStatic
-		public fun size(): Int = ArscHeaderType.size() + UShort.SIZE_BYTES + UInt.SIZE_BYTES
+		public fun size(): Int = 8 // 2 + 2 + 4
 
-		/**
-		 * Parse an arsc header from the current position in the buffer and advance the position.
-		 */
 		@JvmStatic
-		public fun parse(bytes: ByteBuffer): ArscHeader {
-			val type = ArscHeaderType.parse(bytes)
-			val headerSize = bytes.readU16()
-			val bodySize = bytes.readU32()
+		public fun parse(source: Source, currentPos: Long): ArscHeader {
+			val type = ArscHeaderType.parse(source, currentPos)
+			val headerSize = source.readU16()
+			val bodySize = source.readU32()
 
 			return ArscHeader(
 				type = type,
@@ -37,14 +26,11 @@ public data class ArscHeader(
 			)
 		}
 
-		/**
-		 * Write an arsc header to the current position in the buffer and advance the position.
-		 */
 		@JvmStatic
-		public fun write(bytes: ByteBuffer, value: ArscHeader) {
-			ArscHeaderType.write(bytes, value.type)
-			bytes.putShort(value.headerSize.toShort())
-			bytes.putInt(value.bodySize.toInt())
+		public fun write(sink: Sink, value: ArscHeader) {
+			ArscHeaderType.write(sink, value.type)
+			sink.writeU16(value.headerSize)
+			sink.writeU32(value.bodySize)
 		}
 	}
 }

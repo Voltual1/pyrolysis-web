@@ -1,16 +1,13 @@
 package dev.rushii.arsc
 
-import dev.rushii.arsc.internal.ArscInternalApi
-import dev.rushii.arsc.internal.readU32
-import java.nio.ByteBuffer
+import dev.rushii.arsc.internal.*
+import kotlinx.io.*
 
 public data class ArscStyle(
 	val spans: List<Span>,
 ) {
-	/** Size of this data structure in bytes. */
 	public fun size(): Int {
-		return (spans.size * Span.size()) +
-			UInt.SIZE_BYTES // SPAN_END
+		return (spans.size * Span.size()) + 4 // SPAN_END
 	}
 
 	public data class Span(
@@ -19,42 +16,37 @@ public data class ArscStyle(
 		val end: UInt,
 	) {
 		public companion object {
-			/** Size of the full data structure in bytes. */
-			public fun size(): Int = UInt.SIZE_BYTES * 3 // name, start, end
+			public fun size(): Int = 12
 		}
 	}
 
 	@ArscInternalApi
 	public companion object {
-		/**
-		 * If a name of a parsed span is this value then it is the terminator
-		 * of the spans list and should immediately stop parsing the rest of the span.
-		 */
 		private const val SPAN_END = UInt.MAX_VALUE
 
 		@JvmStatic
-		public fun parse(bytes: ByteBuffer): ArscStyle {
+		public fun parse(source: Source): ArscStyle {
 			val spans = mutableListOf<Span>()
-
 			while (true) {
-				val name = bytes.readU32()
-
-				if (name == SPAN_END) {
-					break
-				}
-
-				val start = bytes.readU32()
-				val end = bytes.readU32()
-
-				spans += Span(
-					// name = name,
-					name = "", // TODO: retrieve string from string pool
-					start = start,
-					end = end
-				)
+				val name = source.readU32()
+				if (name == SPAN_END) break
+				val start = source.readU32()
+				val end = source.readU32()
+				spans += Span(name = "", start = start, end = end)
 			}
-
 			return ArscStyle(spans)
+		}
+
+		@JvmStatic
+		public fun write(sink: Sink, style: ArscStyle, writtenPool: ArscStringPool.WrittenPool) {
+			for (span in style.spans) {
+				val nameIndex = writtenPool.strings[span.name] 
+					?: throw IllegalStateException("Style span name '${span.name}' not in string pool")
+				sink.writeU32(nameIndex.toUInt())
+				sink.writeU32(span.start)
+				sink.writeU32(span.end)
+			}
+			sink.writeU32(SPAN_END)
 		}
 	}
 }
