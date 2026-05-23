@@ -40,7 +40,7 @@ class SearchViewModel(
     private val userFilterDataStore: UserFilterDataStore,
     private val browseHistoryDao: BrowseHistoryDao, 
     private val logDao: LogDao 
-) : ViewModel() { {
+) : ViewModel() { 
     
 
     private val _searchMode = MutableStateFlow(SearchMode.POSTS)

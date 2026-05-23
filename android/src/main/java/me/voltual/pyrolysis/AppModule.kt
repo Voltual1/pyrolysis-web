@@ -164,7 +164,7 @@ single<Aead> {
     // =========================================================================
     
     single { AuthRepository(get(AUTH_STORE_QUALIFIER)) }
-    single { PostDraftRepository() }
+    single { PostDraftRepository(get()) }
     single { InstallsRepository(get()) }  
     single { ExtrasRepository(get()) }    
     single { DownloadedRepository(get()) }    
