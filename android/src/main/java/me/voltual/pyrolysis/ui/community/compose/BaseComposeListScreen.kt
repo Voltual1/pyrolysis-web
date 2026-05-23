@@ -20,14 +20,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.core.ui.theme.BBQDropdownMenu
-import me.voltual.pyrolysis.AuthRepository // 导入新 Repository
+import me.voltual.pyrolysis.AuthRepository
+import me.voltual.pyrolysis.core.ui.icons.drawable.IcMenuMessage // 导入消息图标
+import me.voltual.pyrolysis.core.ui.icons.drawable.KakaoPage // 导入跳页图标
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -35,7 +35,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import me.voltual.pyrolysis.core.ui.theme.BBQPullRefreshIndicator
 import me.voltual.pyrolysis.ui.LocalTopAppBarController
 import me.voltual.pyrolysis.ui.TopAppBarAction
-import org.koin.compose.koinInject // Koin 注入支持
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +64,6 @@ fun BaseComposeListScreen(
     var menuExpanded by mutableStateOf(false)
     val scope = rememberCoroutineScope()
     
-    // 注入 AuthRepository
     val authRepository: AuthRepository = koinInject()
     
     val topAppBarController = LocalTopAppBarController.current
@@ -123,7 +122,6 @@ fun BaseComposeListScreen(
                             onClick = {
                                 menuExpanded = false
                                 scope.launch {
-                                    // 使用 authRepository 替代 AuthManager
                                     val currentUserId = authRepository.userId.first()
                                     if (currentUserId > 0) onNavigate("my_posts/$currentUserId")
                                     else snackbarHostState.showSnackbar("请先登录")
@@ -138,12 +136,12 @@ fun BaseComposeListScreen(
         topAppBarController.updateActions(
             listOf(
                 TopAppBarAction(
-                    icon = { tint -> Icon(painterResource(id = R.drawable.ic_menu_message), "消息", tint = tint) },
+                    icon = { tint -> Icon(imageVector = IcMenuMessage, "消息", tint = tint) },
                     description = "消息中心",
                     onClick = onMessageClick
                 ),
                 TopAppBarAction(
-                    icon = { tint -> Icon(painterResource(id = R.drawable.kakao_page), "跳页", tint = tint) },
+                    icon = { tint -> Icon(imageVector = KakaoPage, "跳页", tint = tint) },
                     description = "跳页",
                     onClick = { showJumpDialog = true; inputPage = "" }
                 )
@@ -151,7 +149,6 @@ fun BaseComposeListScreen(
         )
     }
 
-    // 下拉刷新逻辑
     var isRefreshing by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullToRefreshState()
 

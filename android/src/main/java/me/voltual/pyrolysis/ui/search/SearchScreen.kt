@@ -38,8 +38,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.lazy.LazyListState
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.res.painterResource
-import me.voltual.pyrolysis.R
+import me.voltual.pyrolysis.core.ui.icons.drawable.KakaoPage // 导入 KakaoPage 图标
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -58,30 +57,25 @@ fun SearchScreen(
     val totalPages by viewModel.totalPages.collectAsState()
     val hasMoreData by viewModel.hasMoreData.collectAsState()
     
-    // 用户筛选相关状态（多个用户）
     val allUserFilters by viewModel.allUserFilters.collectAsState()
     val activeNickname by viewModel.activeNickname.collectAsState()
     val activeUserId by viewModel.activeUserId.collectAsState()
     val isUserFilterMode by viewModel.isUserFilterMode.collectAsState()
 
-    // 跳页对话框状态
     var showJumpDialog by remember { mutableStateOf(false) }
     var inputPage by remember { mutableStateOf("") }
 
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
-    // 为帖子模式创建列表状态用于自动翻页
     val listState = rememberLazyListState()
 
-    // 自动翻页逻辑（仅限帖子模式）
     if (searchMode == SearchMode.POSTS) {
         val shouldLoadMore = remember {
             derivedStateOf {
                 val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
                 val totalItems = listState.layoutInfo.totalItemsCount
                 
-                // 修复：确保有数据且不在加载中且有更多数据时才触发
                 lastVisibleItem?.let {
                     it.index >= totalItems - 2 && hasMoreData && !isLoading && searchResults.isNotEmpty()
                 } ?: false
@@ -99,7 +93,6 @@ fun SearchScreen(
         focusRequester.requestFocus()
     }
 
-    // 跳页对话框
     if (showJumpDialog) {
         AlertDialog(
             onDismissRequest = { showJumpDialog = false },
@@ -142,37 +135,34 @@ fun SearchScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        // 搜索栏 - 优化布局避免按钮被挤出去
         SearchHeader(
-        query = query,
-        searchMode = searchMode,
-        totalPages = totalPages,
-        onQueryChange = viewModel::onQueryChange,
-        onSearchSubmit = { viewModel.submitSearch(it)
-            keyboardController?.hide() },
-        onModeChange = viewModel::onSearchModeChange,
-        onJumpClick = { showJumpDialog = true
-            inputPage = "" },
-        focusRequester = focusRequester,
-        allUserFilters = allUserFilters, // 所有用户
-        activeUserId = activeUserId, // 当前激活用户ID
-        activeNickname = activeNickname, // 当前激活用户昵称
-        isUserFilterMode = isUserFilterMode, 
-        onSetActiveFilter = viewModel::setActiveUserFilter, // 回调：设置激活用户
-        onRemoveFilter = viewModel::removeUserFilter, // 回调：移除用户
-        onClearAllFilters = viewModel::clearAllUserFilters, // 回调：清除所有用户
-        onClearFilter = viewModel::clearUserFilter, // 回调：清除激活状态
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    )
+            query = query,
+            searchMode = searchMode,
+            totalPages = totalPages,
+            onQueryChange = viewModel::onQueryChange,
+            onSearchSubmit = { viewModel.submitSearch(it)
+                keyboardController?.hide() },
+            onModeChange = viewModel::onSearchModeChange,
+            onJumpClick = { showJumpDialog = true
+                inputPage = "" },
+            focusRequester = focusRequester,
+            allUserFilters = allUserFilters,
+            activeUserId = activeUserId,
+            activeNickname = activeNickname,
+            isUserFilterMode = isUserFilterMode, 
+            onSetActiveFilter = viewModel::setActiveUserFilter,
+            onRemoveFilter = viewModel::removeUserFilter,
+            onClearAllFilters = viewModel::clearAllUserFilters,
+            onClearFilter = viewModel::clearUserFilter,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        )
 
-        // 搜索结果和状态显示
         when {
             searchResults.isNotEmpty() -> {
                 when (searchMode) {
                     SearchMode.POSTS -> {
-                        // 帖子模式使用带自动翻页的列表
                         PostSearchResultsList(
                             results = searchResults,
                             isLoading = isLoading,
@@ -182,7 +172,6 @@ fun SearchScreen(
                         )
                     }
                     else -> {
-                        // 历史和日志模式使用普通列表
                         SearchResultsList(
                             results = searchResults,
                             onPostClick = onPostClick,
@@ -223,7 +212,6 @@ fun SearchScreen(
                         }
                     }
 
-                    // 底部加载指示器（仅帖子模式）
                     if (isLoading && searchMode == SearchMode.POSTS && searchResults.isNotEmpty()) {
                         Box(
                             modifier = Modifier
@@ -250,27 +238,25 @@ private fun SearchHeader(
     onModeChange: (SearchMode) -> Unit,
     onJumpClick: () -> Unit,
     focusRequester: FocusRequester,
-    allUserFilters: Map<Long, String>,  // 所有用户筛选信息
-    activeUserId: Long?,  // 当前激活用户ID
-    activeNickname: String?,  // 当前激活用户昵称
+    allUserFilters: Map<Long, String>,
+    activeUserId: Long?,
+    activeNickname: String?,
     isUserFilterMode: Boolean,  
-    onSetActiveFilter: (Long?) -> Unit,  // 设置激活用户
-    onRemoveFilter: (Long) -> Unit,  // 移除用户
-    onClearAllFilters: () -> Unit,  // 清除所有用户
-    onClearFilter: () -> Unit,  // 清除激活状态
+    onSetActiveFilter: (Long?) -> Unit,
+    onRemoveFilter: (Long) -> Unit,
+    onClearAllFilters: () -> Unit,
+    onClearFilter: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showModeMenu by remember { mutableStateOf(false) }
-    var showFilterMenu by remember { mutableStateOf(false) }  // 筛选菜单状态
+    var showFilterMenu by remember { mutableStateOf(false) }
     
     Column(modifier = modifier) {
-        // 第一行：模式选择和用户筛选指示器
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 模式选择按钮
             Box {
                 AssistChip(
                     onClick = { showModeMenu = true },
@@ -320,7 +306,6 @@ private fun SearchHeader(
                 }
             }
             
-            // 用户筛选指示器和菜单按钮
             Box {
                 if (allUserFilters.isNotEmpty()) {
                     val chipText = if (isUserFilterMode && activeNickname != null) {
@@ -332,10 +317,10 @@ private fun SearchHeader(
                     }
                     
                     val contentColor = if (isUserFilterMode) {
-    MaterialTheme.colorScheme.onPrimaryContainer
-} else {
-    MaterialTheme.colorScheme.onSurfaceVariant
-}
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                     
                     AssistChip(
                         onClick = { showFilterMenu = true },
@@ -370,12 +355,10 @@ private fun SearchHeader(
                         )
                     )
                     
-                    // 用户筛选菜单
                     BBQDropdownMenu(
                         expanded = showFilterMenu, 
                         onDismissRequest = { showFilterMenu = false }
                     ) {
-                        // 菜单标题
                         DropdownMenuItem(
                             text = { 
                                 Text(
@@ -389,7 +372,6 @@ private fun SearchHeader(
                         
                         HorizontalDivider()
                         
-                        // 当前激活的用户（如果有）
                         if (isUserFilterMode && activeNickname != null && activeUserId != null) {
                             DropdownMenuItem(
                                 text = { 
@@ -415,16 +397,14 @@ private fun SearchHeader(
                                     }
                                 }, 
                                 onClick = { 
-                                    onSetActiveFilter(null) // 取消激活
+                                    onSetActiveFilter(null)
                                     showFilterMenu = false
                                 }
                             )
                             HorizontalDivider()
                         }
                         
-                        // 其他用户列表
                         allUserFilters.forEach { (userId, nickname) ->
-                            // 跳过当前激活的用户（已经在上面显示）
                             if (isUserFilterMode && userId == activeUserId) return@forEach
                             
                             DropdownMenuItem(
@@ -451,7 +431,7 @@ private fun SearchHeader(
                                     }
                                 }, 
                                 onClick = { 
-                                    onSetActiveFilter(userId) // 设置为激活用户
+                                    onSetActiveFilter(userId)
                                     showFilterMenu = false
                                 }
                             )
@@ -459,7 +439,6 @@ private fun SearchHeader(
                         
                         HorizontalDivider()
                         
-                        // 操作菜单项
                         DropdownMenuItem(
                             text = { Text("清除所有用户") }, 
                             onClick = { 
@@ -479,20 +458,19 @@ private fun SearchHeader(
                         }
                     }
                 } else if (searchMode == SearchMode.POSTS && totalPages > 1) {
-                    // 如果没有用户筛选，显示跳页按钮
+                    // 使用 KakaoPage ImageVector 替换 R.drawable.kakao_page
                     IconButton(
                         onClick = onJumpClick,
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.kakao_page),
+                            imageVector = KakaoPage,
                             contentDescription = "跳页",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                 } else {
-                    // 占位空间，保持布局平衡
                     Spacer(modifier = Modifier.size(32.dp))
                 }
             }
@@ -500,7 +478,6 @@ private fun SearchHeader(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // 搜索输入框
         TextField(
             value = query,
             onValueChange = onQueryChange,
@@ -554,7 +531,6 @@ private fun PostSearchResultsList(
     onPostClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 修复：确保列表有足够的内容来触发自动加载
     val itemCount = results.size
     
     LazyColumn(
@@ -566,9 +542,7 @@ private fun PostSearchResultsList(
         items(results, key = { 
             when (it) {
                 is SearchResultItem.PostItem -> "post_${it.post.postid}"
-                // 修复：BrowseHistory 使用 postId 而不是 id
                 is SearchResultItem.HistoryItem -> "history_${it.history.postId}"
-                // 修复：LogEntry 使用 id，但它是 Int 类型
                 is SearchResultItem.LogItem -> "log_${it.log.id}"
             }
         }) { item ->
@@ -579,13 +553,10 @@ private fun PostSearchResultsList(
                         onClick = { onPostClick(item.post.postid) }
                     )
                 }
-                else -> {
-                    // 理论上不会发生，因为这是专门为帖子模式设计的组件
-                }
+                else -> {}
             }
         }
         
-        // 添加加载更多指示器项
         if (isLoading && itemCount > 0) {
             item {
                 Box(
@@ -601,7 +572,6 @@ private fun PostSearchResultsList(
     }
 }
 
-// 原有的 SearchResultsList 保持不变
 @Composable
 private fun SearchResultsList(
     results: List<SearchResultItem>,
@@ -616,9 +586,7 @@ private fun SearchResultsList(
         items(results, key = { 
             when (it) {
                 is SearchResultItem.PostItem -> "post_${it.post.postid}"
-                // 修复：BrowseHistory 使用 postId 而不是 id
                 is SearchResultItem.HistoryItem -> "history_${it.history.postId}"
-                // 修复：LogEntry 使用 id，但它是 Int 类型
                 is SearchResultItem.LogItem -> "log_${it.log.id}"
             }
         }) { item ->
@@ -662,7 +630,6 @@ private fun SearchResultsList(
     }
 }
 
-// SearchHistoryList 保持不变
 @Composable
 private fun SearchHistoryList(
     history: List<String>,
@@ -671,7 +638,6 @@ private fun SearchHistoryList(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
-        // 历史记录标题和清空按钮
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -688,7 +654,6 @@ private fun SearchHistoryList(
             }
         }
 
-        // 历史记录列表
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 16.dp)

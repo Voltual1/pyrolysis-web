@@ -39,8 +39,6 @@ import me.voltual.pyrolysis.core.ui.theme.billing_expense_dark
 import me.voltual.pyrolysis.core.ui.theme.billing_income
 import me.voltual.pyrolysis.core.ui.theme.billing_income_dark
 import kotlinx.coroutines.launch
-import androidx.compose.ui.res.stringResource
-import me.voltual.pyrolysis.R
 
 @Composable
 fun LogScreen(

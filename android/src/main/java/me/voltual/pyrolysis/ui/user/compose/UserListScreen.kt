@@ -26,7 +26,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import me.voltual.pyrolysis.KtorClient
-import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.ui.user.UserListViewModel
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -204,7 +203,6 @@ private fun StableUserListItem(
                     .data(avatarUrl)
                     // .crossfade(true)
                     .build(),
-                placeholder = painterResource(R.drawable.ic_menu_profile),
                 contentDescription = "用户头像",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier

@@ -43,7 +43,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.KtorClient
-import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.data.unified.FollowStatus
 import me.voltual.pyrolysis.data.unified.UnifiedUserDetail
 import me.voltual.pyrolysis.core.ui.theme.*
@@ -339,8 +338,7 @@ private fun UserAvatar(
             .diskCachePolicy(CachePolicy.DISABLED)
             .build(),
         contentDescription = "用户头像",
-        contentScale = ContentScale.Crop,
-        placeholder = painterResource(R.drawable.ic_menu_profile),
+        contentScale = ContentScale.Crop
         modifier = modifier
             .size(80.dp)
             .clip(CircleShape)
