@@ -257,7 +257,7 @@ private var _GoogleCloudSearch: ImageVector? = null
 
 private fun ImageVector.Builder.ext_path_GoogleCloudSearch_1() {
     path(
-                    fill = SolidColor(Color(0xFF000000))
+         
                 ) {
                     moveTo(0f, 0f)
                     horizontalLineToRelative(144f)
