@@ -18,7 +18,7 @@ val IcMenuRanking: ImageVector
             viewportHeight = 256f
         ).apply {
             path(
-                fill = SolidColor(Color(0xFF000000))
+         
             ) {
                 _icMenuRankingPath2170()
                 _icMenuRankingPath2171()
