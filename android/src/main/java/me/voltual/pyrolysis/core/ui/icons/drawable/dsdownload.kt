@@ -17,11 +17,6 @@ val Dsdownload: ImageVector
             viewportWidth = 144f,
             viewportHeight = 144f
         ).apply {
-        group(
-                name = "global_black_group",
-                tintColor = Color(0xFF000000), // 统一涂黑
-                tintMode = BlendMode.SrcIn
-            ) {
             ext_path_Dsdownload_1()
             ext_path_Dsdownload_2()
             ext_path_Dsdownload_3()
@@ -130,7 +125,6 @@ val Dsdownload: ImageVector
             ext_path_Dsdownload_106()
             ext_path_Dsdownload_107()
             ext_path_Dsdownload_108()
-            }
         }.build()
         
         return _Dsdownload!!
@@ -141,7 +135,7 @@ private var _Dsdownload: ImageVector? = null
 
 private fun ImageVector.Builder.ext_path_Dsdownload_1() {
     path(
-                    
+                    fill = SolidColor(Color(0xFF000000))
                 ) {
                     moveTo(0f, 0f)
                     horizontalLineToRelative(144f)
