@@ -164,7 +164,7 @@ single<Aead> {
     // =========================================================================
     
     single { AuthRepository(get(AUTH_STORE_QUALIFIER)) }
-    single { PostDraftRepository(get(),get()) }
+    single { PostDraftRepository(get()) }
     single { BrowseHistoryRepository(get()) }
     single { InstallsRepository(get()) }  
     single { ExtrasRepository(get()) }    
@@ -199,7 +199,7 @@ single<Aead> {
     viewModel { MyCommentsViewModel(androidApplication(), get()) }
     viewModel { MyReviewsViewModel(androidApplication(), get()) }
     viewModel { PostCreateViewModel(get(), get(), get()) }
-    viewModel { PostDetailViewModel(get()) } 
+    viewModel { PostDetailViewModel(get(),get()) } 
     viewModel { BrowseHistoryViewModel(get()) }
 
     viewModel { HomeViewModel(get(),get()) }
