@@ -196,8 +196,8 @@ single<Aead> {
     viewModel { HotPostsViewModel() }
     viewModel { MyLikesViewModel(get()) } 
     viewModel { MyPostsViewModel(get()) }
-    viewModel { MyCommentsViewModel(androidApplication(), get()) }
-    viewModel { MyReviewsViewModel(androidApplication(), get()) }
+    viewModel { MyCommentsViewModel(get()) }
+    viewModel { MyReviewsViewModel(get()) }
     viewModel { PostCreateViewModel(get(), get(), get()) }
     viewModel { PostDetailViewModel(get(),get()) } 
     viewModel { BrowseHistoryViewModel(get()) }
@@ -206,7 +206,7 @@ single<Aead> {
     viewModel { PlazaViewModel(get(PLAZA_STORE_QUALIFIER), get(), get(), get(), get()) }
     viewModel { AppDetailComposeViewModel(androidApplication(), get()) }
     viewModel { AppReleaseViewModel(androidApplication(), get()) }
-    viewModel { VersionListViewModel(androidApplication(), get()) }
+    viewModel { VersionListViewModel(get()) }
     viewModel { AppPageVM(get(), get(), get(), get(), get(), get()) }
     viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { SearchVM(get(), get(), get()) }    

@@ -7,8 +7,7 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.plaza
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
@@ -20,9 +19,8 @@ import org.koin.android.annotation.KoinViewModel
 
 @KoinViewModel
 class VersionListViewModel(
-    application: Application,
     private val repositories: Map<AppStore, IAppStoreRepository>
-) : AndroidViewModel(application) {
+) : ViewModel {
 
     private val _versions = MutableStateFlow<List<UnifiedAppItem>>(emptyList())
     val versions: StateFlow<List<UnifiedAppItem>> = _versions

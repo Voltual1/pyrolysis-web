@@ -8,7 +8,6 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.plaza
 
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey

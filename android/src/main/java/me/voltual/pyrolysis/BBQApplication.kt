@@ -72,7 +72,6 @@ class BBQApplication : Application(), KoinStartup {
         //优先初始化存储，因为它被其他初始化依赖
         Preferences.init(this)
         wm.prune()    
-        database = AppDatabase.getDatabase(this)
         ThemeManager.initialize(this)
         ThemeManager.customColorSet = ThemeColorStore.loadColors(this)
     }

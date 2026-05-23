@@ -8,8 +8,7 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.user
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
@@ -22,9 +21,8 @@ import kotlinx.coroutines.launch
 
 @KoinViewModel
 class MyReviewsViewModel(
-    application: Application,
     private val repositories: Map<AppStore, IAppStoreRepository>
-) : AndroidViewModel(application) {
+) : ViewModel {
 
     private val _reviews = MutableStateFlow<List<UnifiedComment>>(emptyList())
     val reviews: StateFlow<List<UnifiedComment>> = _reviews.asStateFlow()

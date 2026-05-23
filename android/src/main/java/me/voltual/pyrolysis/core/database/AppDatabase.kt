@@ -8,7 +8,6 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.core.database
 
-import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -89,28 +88,6 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("DROP TABLE IF EXISTS `download_tasks`")
             }
         }
-
-        fun getDatabase(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "pyrolysis_database"
-                )
-                    .addMigrations(
-                        MIGRATION_1_2, 
-                        MIGRATION_2_3, 
-                        MIGRATION_3_4,
-                        MIGRATION_4_5,
-                        MIGRATION_5_6,
-                        MIGRATION_6_7,
-                        MIGRATION_4_7,
-                        MIGRATION_5_7
-                    )
-                    .build()
-                INSTANCE = instance
-                instance
-            }
-        }
+        
     }
 }
