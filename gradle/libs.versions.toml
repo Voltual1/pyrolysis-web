@@ -2,7 +2,6 @@
 pyrolysis-agp = "8.13.0"
 kotlin = "2.2.21"
 pyrolysis-compose-bom = "2026.01.00"
-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 compose-multiplatform = "1.10.0"
 
 # 功能库
@@ -40,6 +39,7 @@ markdown = "0.7.3"
 kotlinx-datetime = "0.7.1"
 kotlinx-collections = "0.4.0"
 html-converter = "1.1.0"
+kotlinx-io = "0.8.0" # 👈 新增：与你的其他库对齐的 kotlinx.io 版本
 
 [libraries]
 # 基础
@@ -126,6 +126,7 @@ ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "pyrolysis-k
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "pyrolysis-ktor" }
 ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "pyrolysis-ktor" }
 ktor-io = { module = "io.ktor:ktor-io", version.ref = "pyrolysis-ktor" }
+kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
 ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "pyrolysis-ktor" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "pyrolysis-serialization" }
 
@@ -144,6 +145,7 @@ android-application = { id = "com.android.application", version.ref = "pyrolysis
 android-library = { id = "com.android.library", version.ref = "pyrolysis-agp" }
 android-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "pyrolysis-agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
