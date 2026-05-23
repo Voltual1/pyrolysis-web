@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.voltual.pyrolysis.AuthRepository
+import me.voltual.pyrolysis.core.database.BrowseHistory
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.core.database.BrowseHistoryRepository
 import kotlinx.coroutines.flow.first

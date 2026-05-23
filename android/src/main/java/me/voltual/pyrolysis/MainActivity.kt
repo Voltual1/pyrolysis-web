@@ -56,8 +56,7 @@ import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
     private val agreementDataStore: UserAgreementDataStore by inject()
-    private val authRepository: AuthRepository by inject()
-    private val logDao: LogDao by inject()
+    private val authRepository: AuthRepository by inject()    
     
     companion object {
         private const val TAG = "NeoActivity"
@@ -134,6 +133,7 @@ class MainActivity : AppCompatActivity() {
     init {
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             val crashReport = getCrashReport(throwable)
+            private val logDao: LogDao by inject()
             CoroutineScope(Dispatchers.IO).launch {
                 val logEntry = LogEntry(
                     type = "CRASH",

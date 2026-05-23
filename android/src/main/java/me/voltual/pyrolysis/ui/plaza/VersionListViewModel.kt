@@ -20,7 +20,7 @@ import org.koin.android.annotation.KoinViewModel
 @KoinViewModel
 class VersionListViewModel(
     private val repositories: Map<AppStore, IAppStoreRepository>
-) : ViewModel {
+) : ViewModel() {
 
     private val _versions = MutableStateFlow<List<UnifiedAppItem>>(emptyList())
     val versions: StateFlow<List<UnifiedAppItem>> = _versions

@@ -10,7 +10,6 @@
 package me.voltual.pyrolysis.ui.log
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.core.database.LogEntry
@@ -20,7 +19,7 @@ import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 
 @KoinViewModel
-class LogViewModel(private val logRepository : LogRepository) : ViewModel {
+class LogViewModel(private val logRepository : LogRepository) : ViewModel() {
 
     val logs: StateFlow<List<LogEntry>> = logRepository.allLogs
         .stateIn(

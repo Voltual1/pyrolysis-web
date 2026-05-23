@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 @KoinViewModel
 class MyCommentsViewModel(
     private val repositories: Map<AppStore, IAppStoreRepository>
-) : ViewModel {
+) : ViewModel() {
 
     private val _comments = MutableStateFlow<List<UnifiedComment>>(emptyList())
     val comments: StateFlow<List<UnifiedComment>> = _comments.asStateFlow()

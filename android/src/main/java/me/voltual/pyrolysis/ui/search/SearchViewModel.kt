@@ -12,6 +12,7 @@ package me.voltual.pyrolysis.ui.search
 import me.voltual.pyrolysis.core.database.BrowseHistoryDao
 import me.voltual.pyrolysis.core.database.LogDao 
 import androidx.lifecycle.ViewModel
+import me.voltual.pyrolysis.core.database.BrowseHistory
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.KtorClient 
 import kotlinx.coroutines.flow.*
@@ -28,7 +29,7 @@ enum class SearchMode {
 
 sealed class SearchResultItem {
     data class PostItem(val post: KtorClient.Post) : SearchResultItem()
-    data class HistoryItem(val history: me.voltual.pyrolysis.ui.community.BrowseHistory) : SearchResultItem()
+    data class HistoryItem(val history: BrowseHistory) : SearchResultItem()
     data class LogItem(val log: me.voltual.pyrolysis.core.database.LogEntry) : SearchResultItem()
 }
 
