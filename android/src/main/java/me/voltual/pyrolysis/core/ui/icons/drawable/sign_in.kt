@@ -234,7 +234,7 @@ private var _SignIn: ImageVector? = null
 
 private fun ImageVector.Builder.ext_path_SignIn_1() {
     path(
-                    fill = SolidColor(Color(0xFF000000))
+           
                 ) {
                     moveTo(0f, 0f)
                     horizontalLineToRelative(55f)

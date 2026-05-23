@@ -242,7 +242,7 @@ private var _Bg: ImageVector? = null
 
 private fun ImageVector.Builder.ext_path_Bg_1() {
     path(
-                    fill = SolidColor(Color(0xFF000000))
+              
                 ) {
                     moveTo(0f, 0f)
                     horizontalLineToRelative(256f)
