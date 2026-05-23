@@ -5,11 +5,7 @@ import org.duangsuse.bin.pat.Tuple2
 import org.duangsuse.bin.pat.Pattern
 import org.duangsuse.bin.type.Cnt
 
-/** Make stream aligned when read(pre)/write(post)
- *
- * Since alignments are just zero-padding, they are ignored in data storage
- *
- * __WARN__: Using this pattern __WILL BREAK__ [Pattern.writeSize] */
+/** Make stream aligned when read(pre)/write(post) */
 class Aligned<T>(private val alignment: Cnt, item: Pattern<T>): PrePost<T>(item) {
   override fun onReadPre(s: Reader) { s.makeAligned(alignment) }
   override fun onWritePost(s: Writer) { s.makeAligned(alignment) }

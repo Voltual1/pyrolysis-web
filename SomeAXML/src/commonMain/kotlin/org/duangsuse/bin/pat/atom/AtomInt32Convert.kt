@@ -5,10 +5,8 @@ import org.duangsuse.bin.type.*
 
 abstract class Int32ConvertedPattern<T>(source: Pattern<T>): ConvertedPattern<T, Int32>(source)
 
-val int8Cnt: Pattern.Sized<Cnt> = int8.widen8()
-val int16Cnt: Pattern.Sized<Cnt> = int16.widen16()
-
-// NOTE: widen/narrow operations are suffixed with bit-width, since generics overloading conflict
+val int8Cnt: Pattern.Sized<Cnt> = int8.widen8().converted({ it.toLong() }, { it.toInt() })
+val int16Cnt: Pattern.Sized<Cnt> = int16.widen16().converted({ it.toLong() }, { it.toInt() })
 
 fun Pattern.Sized<Int8>.widen8() = object: Int32ConvertedPattern<Int8>(this) {
   override fun from(src: Int8): Int32 = src.toInt()

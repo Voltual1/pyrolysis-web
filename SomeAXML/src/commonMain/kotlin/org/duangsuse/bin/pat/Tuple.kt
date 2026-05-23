@@ -3,16 +3,8 @@ package org.duangsuse.bin.pat
 import org.duangsuse.bin.Sized
 import org.duangsuse.bin.type.Cnt
 import org.duangsuse.bin.type.Idx
-
 import kotlin.reflect.KProperty
 
-/** Tuple is an array-like object with `val (x0, x1) = (tup)` destruct and index access support
- *
- * + __tuple items__ are stored in array [items], since Kotlin does not support reified type parameters in class,
- * __it should be overridden and created in subclasses using [size]__
- * + named indices using first-class delegation [Index] are supported, declare them using `var name: Type by index(idx)`
- * + destruct component 1..4 are provided, see [Tuple.component1]
- */
 abstract class Tuple<E>(override val size: Cnt): Sized {
   protected abstract val items: Array<E>
   operator fun get(index: Idx) = items[index]
@@ -30,6 +22,6 @@ abstract class Tuple<E>(override val size: Cnt): Sized {
     return if (other == null || other !is Tuple<*>) false
     else (size == other.size) && items.contentEquals(other.items)
   }
-  override fun hashCode(): Int  = 31 * size + items.contentHashCode()
+  override fun hashCode(): Int  = 31 * size.toInt() + items.contentHashCode()
   override fun toString(): String = "(${items.joinToString(", ")})"
 }

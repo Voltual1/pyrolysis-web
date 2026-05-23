@@ -22,11 +22,9 @@ abstract class PrePost<T>(private val item: Pattern<T>): Pattern.BySizedFully<T>
   protected open fun onWritePost(s: Writer) {}
 }
 
-/** Read/write child [item] in byte order of [newEndian], then restore old order.
- *
- * NOTE: Thread safety __IS NOT__ guaranteed */
+/** Read/write child [item] in byte order of [newEndian], then restore old order. */
 sealed class EndianSwitch<T>(item: Pattern<T>, private val newEndian: ByteOrder): PrePost<T>(item) {
-  private lateinit var old: ByteOrder
+  private var old: ByteOrder = ByteOrder.BigEndian
   override fun onReadPre(s: Reader) {
     old = s.byteOrder
     s.byteOrder = newEndian
