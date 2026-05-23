@@ -133,7 +133,7 @@ class MainActivity : AppCompatActivity() {
     init {
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             val crashReport = getCrashReport(throwable)
-            private val logDao: LogDao by inject()
+            val logDao: LogDao by inject()
             CoroutineScope(Dispatchers.IO).launch {
                 val logEntry = LogEntry(
                     type = "CRASH",

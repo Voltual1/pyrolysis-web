@@ -54,7 +54,7 @@ class CrashLogActivity : ComponentActivity() {
             val scope = rememberCoroutineScope() // 创建 CoroutineScope
 
             LaunchedEffect(Unit) {
-            private val logDao: LogDao by inject()
+            val logDao: LogDao by inject()
                 if (initialCrashReport == null) { // 如果没有传递参数，才从数据库加载
                     CoroutineScope(Dispatchers.IO).launch {
                         val logEntry = logDao().getAllLogs().first()
