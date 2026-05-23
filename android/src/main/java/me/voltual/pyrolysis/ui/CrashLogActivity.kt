@@ -37,9 +37,10 @@ import android.content.ClipboardManager
 import android.content.ClipData
 import androidx.compose.ui.res.stringResource
 import me.voltual.pyrolysis.R
+import me.voltual.pyrolysis.core.database.LogDao
 
 class CrashLogActivity : ComponentActivity() {
-
+private val logDao: LogDao by inject()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -55,7 +56,7 @@ class CrashLogActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 if (initialCrashReport == null) { // 如果没有传递参数，才从数据库加载
                     CoroutineScope(Dispatchers.IO).launch {
-                        val logEntry = BBQApplication.instance.database.logDao().getAllLogs().first()
+                        val logEntry = logDao().getAllLogs().first()
                             .firstOrNull { it.type == "CRASH" }
                         val crashReport = logEntry?.responseBody ?: "No crash report available."
                         crashReportState.value = crashReport

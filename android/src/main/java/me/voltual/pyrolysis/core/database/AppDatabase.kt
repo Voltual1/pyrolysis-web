@@ -14,7 +14,6 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import me.voltual.pyrolysis.ui.community.BrowseHistory
 
 @Database(
     entities = [LogEntry::class, BrowseHistory::class, NetworkCacheEntry::class, PostDraft::class],

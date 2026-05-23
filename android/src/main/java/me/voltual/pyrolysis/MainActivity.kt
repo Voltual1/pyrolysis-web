@@ -42,6 +42,7 @@ import kotlinx.coroutines.withContext
 import me.voltual.pyrolysis.data.UpdateInfo
 import me.voltual.pyrolysis.data.UpdateSettingsDataStore
 import me.voltual.pyrolysis.core.database.LogEntry
+import me.voltual.pyrolysis.core.database.LogDao
 import me.voltual.pyrolysis.data.UserAgreementDataStore
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.components.UserAgreementDialog
@@ -55,7 +56,8 @@ import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
     private val agreementDataStore: UserAgreementDataStore by inject()
-    private val authRepository: AuthRepository by inject() // 注入 AuthRepository
+    private val authRepository: AuthRepository by inject()
+    private val logDao: LogDao by inject()
     
     companion object {
         private const val TAG = "NeoActivity"
@@ -139,7 +141,7 @@ class MainActivity : AppCompatActivity() {
                     responseBody = crashReport,
                     status = "FAILURE"
                 )
-                BBQApplication.instance.database.logDao().insert(logEntry)
+                logDao().insert(logEntry)
             }.invokeOnCompletion {
                 CrashLogActivity.start(BBQApplication.instance, crashReport)
                 android.os.Process.killProcess(android.os.Process.myPid())

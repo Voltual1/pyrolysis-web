@@ -6,10 +6,8 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-
 package me.voltual.pyrolysis.core.database
 
-import me.voltual.pyrolysis.BBQApplication
 import org.koin.core.annotation.Single
 
 /**
@@ -17,10 +15,10 @@ import org.koin.core.annotation.Single
  * 它封装了对 LogDao 的直接访问。
  */
 @Single
-class LogRepository {
+class LogRepository(
 
-    // 从 Application 单例中获取 DAO 实例
-    private val logDao = BBQApplication.instance.database.logDao()
+    private val logDao: LogDao
+) {
 
     // 提供一个 Flow 来观察所有的日志
     val allLogs = logDao.getAllLogs()
@@ -48,7 +46,7 @@ class LogRepository {
         logDao.insert(logEntry)
     }
     
-    // 新增：提供一个公共方法来访问 DAO 的删除功能
+    // 提供一个公共方法来访问 DAO 的删除功能
     suspend fun deleteLogsByIds(logIds: List<Int>) {
         logDao.deleteLogsByIds(logIds)
     }

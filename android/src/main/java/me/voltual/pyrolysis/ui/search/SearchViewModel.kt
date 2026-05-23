@@ -34,7 +34,6 @@ sealed class SearchResultItem {
 }
 
 @KoinViewModel
-KoinViewModel
 class SearchViewModel(
     private val searchHistoryDataStore: SearchHistoryDataStore,
     private val userFilterDataStore: UserFilterDataStore,

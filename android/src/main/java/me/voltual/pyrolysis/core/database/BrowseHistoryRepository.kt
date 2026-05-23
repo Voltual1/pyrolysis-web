@@ -6,16 +6,15 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-
 package me.voltual.pyrolysis.core.database
 
-import me.voltual.pyrolysis.BBQApplication
-import me.voltual.pyrolysis.ui.community.BrowseHistory
 import org.koin.core.annotation.Single
 
 @Single
-class BrowseHistoryRepository {
-    private val browseHistoryDao = BBQApplication.instance.database.browseHistoryDao()
+class BrowseHistoryRepository
+    private val browseHistoryDao: BrowseHistoryDao
+) {
+    
     private val MAX_HISTORY = 100
 
     val allHistory = browseHistoryDao.getAllHistory()
