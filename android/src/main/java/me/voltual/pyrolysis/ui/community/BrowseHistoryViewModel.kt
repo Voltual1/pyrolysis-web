@@ -9,8 +9,7 @@
 
 package me.voltual.pyrolysis.ui.community
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.core.database.BrowseHistoryRepository
 import kotlinx.coroutines.flow.*
@@ -18,8 +17,7 @@ import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
 
 @KoinViewModel
-class BrowseHistoryViewModel(application: Application) : AndroidViewModel(application) {
-    private val browseHistoryRepository = BrowseHistoryRepository()
+class BrowseHistoryViewModel(private val browseHistoryRepository : BrowseHistoryRepository) : ViewModel {
     
     private val _historyList = MutableStateFlow<List<BrowseHistory>>(emptyList())
     val historyList: StateFlow<List<BrowseHistory>> = _historyList.asStateFlow()

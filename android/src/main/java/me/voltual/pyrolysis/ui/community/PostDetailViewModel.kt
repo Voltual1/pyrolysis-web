@@ -22,7 +22,8 @@ import me.voltual.pyrolysis.core.database.BrowseHistoryRepository
 import kotlinx.coroutines.flow.first
 
 class PostDetailViewModel(
-    private val authRepository: AuthRepository  // 注入 AuthRepository
+    private val authRepository: AuthRepository,  
+    private val browseHistoryRepository : BrowseHistoryRepository
 ) : ViewModel() {  // 变为普通 ViewModel
 
     private val _postDetail = MutableStateFlow<KtorClient.PostDetail?>(null)
@@ -72,8 +73,6 @@ class PostDetailViewModel(
 
     private val _hasMoreComments = MutableStateFlow(true)
     val hasMoreComments: StateFlow<Boolean> = _hasMoreComments.asStateFlow()
-
-    private val browseHistoryRepository = BrowseHistoryRepository()
 
     fun loadPostDetail(postId: Long) {
         viewModelScope.launch {
