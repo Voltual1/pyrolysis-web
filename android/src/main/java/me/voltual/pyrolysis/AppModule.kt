@@ -218,7 +218,7 @@ single<Aead> {
     viewModel { PaymentViewModel(get(), get(PAYMENT_STORE_QUALIFIER)) }
     viewModel { MessageViewModel(get()) }
     viewModel { PlayerViewModel(get()) }
-    viewModel { LogViewModel(androidApplication()) }
+    viewModel { LogViewModel(get()) }
     viewModel { StoreManagerViewModel(androidApplication(),get()) }
     viewModel { UpdateSettingsViewModel(get()) }
     viewModel { PrefsVM(get(), get(), get()) }

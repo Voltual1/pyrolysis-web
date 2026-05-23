@@ -13,7 +13,6 @@ import me.voltual.pyrolysis.core.database.BrowseHistoryDao
 import me.voltual.pyrolysis.core.database.LogDao 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import me.voltual.pyrolysis.BBQApplication
 import me.voltual.pyrolysis.KtorClient 
 import kotlinx.coroutines.flow.*
 import org.koin.android.annotation.KoinViewModel
