@@ -85,7 +85,7 @@ fun NavigationDrawerItems(
             DrawerItem("prefsrepos", "仓库管理", IconSource.Vector(Phosphor.Graph), PrefsReposPage),
             DrawerItem("community", "交流社区", IconSource.Vector(IcMenuCommunity), Community),
             DrawerItem("messages", "消息中心", IconSource.Vector(IcMenuMessage), MessageCenter),
-            DrawerItem("ranking_list", "天梯竞赛", IconSource.Vector(Fire), RankingList),
+            DrawerItem("ranking_list", "天梯竞赛", IconSource.Vector(IcMenuRanking), RankingList),
             DrawerItem("release_app", "发布应用", IconSource.Vector(Bg), CreateAppRelease),
             DrawerItem("bot_logs", "日志", IconSource.Vector(WorkLog), LogViewer),
             DrawerItem("store_manager", "存储管理", IconSource.Vector(Appbackuprestore), StoreManager),
