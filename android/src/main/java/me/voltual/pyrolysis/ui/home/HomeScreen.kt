@@ -33,7 +33,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -41,10 +40,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.theme.AppShapes
 import me.voltual.pyrolysis.core.ui.theme.BBQBackgroundCard
+import me.voltual.pyrolysis.core.ui.icons.drawable.* // 导入转换后的图标
 
 @Composable
 fun HomeScreen(
@@ -74,7 +73,6 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     snackbarHostState: SnackbarHostState
 ) {
-    // Navigation 3 导航器
     val navigator = LocalNavigator.current
 
     val pagerState = rememberPagerState(pageCount = { 3 })
@@ -112,8 +110,8 @@ fun HomeScreen(
                     snackbarHostState = snackbarHostState
                 )
             }
+        }
     }
-}
 }
 
 @Composable
@@ -240,14 +238,12 @@ private fun PersonalCenterSection(
         modifier = modifier
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            // 背景部分
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp)
                     .background(MaterialTheme.colorScheme.primary)
             ) {
-                // 渐变叠加层
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -262,7 +258,6 @@ private fun PersonalCenterSection(
                 )
             }
 
-            // 头像
             Box(
                 modifier = Modifier
                     .padding(start = 16.dp, top = 10.dp)
@@ -280,17 +275,15 @@ private fun PersonalCenterSection(
                     contentDescription = "用户头像",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
-                    placeholder = painterResource(R.drawable.ic_menu_profile)
+                    placeholder = painterResource(androidx.compose.ui.R.drawable.ic_menu_gallery) // 使用系统默认占位符，或创建自定义占位符
                 )
             }
 
-            // 用户信息
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp, start = 112.dp, end = 16.dp, bottom = 16.dp)
             ) {
-                // 昵称和等级
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -316,7 +309,6 @@ private fun PersonalCenterSection(
                     )
                 }
 
-                // 硬币和ID信息
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -350,7 +342,6 @@ private fun PersonalCenterSection(
                     )
                 }
 
-                // 统计信息
                 StatsRow(
                     followersCount = state.followersCount,
                     fansCount = state.fansCount,
@@ -463,7 +454,6 @@ private fun FunctionCardSection(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // 签到区域
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -489,9 +479,8 @@ private fun FunctionCardSection(
                 )
             }
 
-            // 功能区列表
             FunctionItem(
-                icon = R.drawable.ic_menu_message,
+                icon = IcMenuMessage,
                 label = "消息",
                 onClick = onMessageCenterClick
             )
@@ -499,7 +488,7 @@ private fun FunctionCardSection(
             Divider()
 
             FunctionItem(
-                icon = R.drawable.ic_visibility,
+                icon = IcVisibility,
                 label = "看过的",
                 onClick = onBrowseHistoryClick
             )
@@ -507,7 +496,7 @@ private fun FunctionCardSection(
             Divider()
 
             FunctionItem(
-                icon = R.drawable.heart_favorites_open,
+                icon = HeartFavoritesOpen,
                 label = "喜欢的",
                 onClick = onMyLikesClick
             )
@@ -515,7 +504,7 @@ private fun FunctionCardSection(
             Divider()
 
             FunctionItem(
-                icon = R.drawable.ic_menu_settings,
+                icon = IcMenuSettings,
                 label = "主题",
                 onClick = onSettingsClick
             )
@@ -523,7 +512,7 @@ private fun FunctionCardSection(
             Divider()
 
             FunctionItem(
-                icon = R.drawable.google_cloud_search,
+                icon = GoogleCloudSearch,
                 label = "资源",
                 onClick = onMyResourcesClick
             )
@@ -531,7 +520,7 @@ private fun FunctionCardSection(
             Divider()
 
             FunctionItem(
-                icon = R.drawable.mobills,
+                icon = Mobills,
                 label = "账单",
                 onClick = onBillingClick
             )
@@ -539,7 +528,7 @@ private fun FunctionCardSection(
             Divider()
 
             FunctionItem(
-                icon = R.drawable.banking_4a,
+                icon = Banking4a,
                 label = "投币",
                 onClick = onPaymentCenterClick
             )
@@ -555,7 +544,7 @@ private fun FunctionCardSection(
             Divider()           
 
             FunctionItem(
-                icon = R.drawable.ic_info_outline,
+                icon = IcInfoOutline,
                 label = "关于",
                 onClick = onAboutClick
             )            
@@ -615,7 +604,7 @@ private fun FunctionItem(
         )
 
         Icon(
-            imageVector = ImageVector.vectorResource(R.drawable.ic_arrow_right),
+            imageVector = IcArrowRight,
             contentDescription = null,
             modifier = Modifier.size(arrowSize),
             tint = MaterialTheme.colorScheme.onSurfaceVariant

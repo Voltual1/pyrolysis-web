@@ -91,7 +91,7 @@ fun NavigationDrawerItems(
             DrawerItem("store_manager", "存储管理", IconSource.Vector(Appbackuprestore), StoreManager),
             DrawerItem("download", "下载管理", IconSource.Vector(Dsdownload), Download),
             DrawerItem("update_settings", "更新设置", IconSource.Vector(Asusupdate), UpdateSettings),
-            DrawerItem("settings", "主题设置", IconSource.Vector(Phosphor.GearSix), ThemeCustomize),
+            DrawerItem("settings", "主题设置", IconSource.Vector(IcMenuSettings), ThemeCustomize),
             DrawerItem("signin_settings", "签到设置", IconSource.Vector(SignIn), SignInSettings),
             DrawerItem("login", "登录账号", IconSource.Vector(IcMenuLogin), Login),
             DrawerItem("logout", "退出登录", IconSource.Vector(IcMenuLogout), Home)
