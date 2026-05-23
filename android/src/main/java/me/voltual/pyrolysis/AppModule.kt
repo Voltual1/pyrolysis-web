@@ -204,7 +204,7 @@ single<Aead> {
 
     viewModel { HomeViewModel(get(),get()) }
     viewModel { PlazaViewModel(get(PLAZA_STORE_QUALIFIER), get(), get(), get(), get()) }
-    viewModel { AppDetailComposeViewModel(androidApplication(), get()) }
+    viewModel { AppDetailComposeViewModel(get()) }
     viewModel { AppReleaseViewModel(androidApplication(), get()) }
     viewModel { VersionListViewModel(get()) }
     viewModel { AppPageVM(get(), get(), get(), get(), get(), get()) }

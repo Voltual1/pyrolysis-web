@@ -8,9 +8,7 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.plaza
 
-import android.app.Application
-import android.os.Build
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
@@ -32,9 +30,8 @@ import kotlinx.coroutines.coroutineScope
 
 @KoinViewModel
 class AppDetailComposeViewModel(
-    application: Application,
     private val repositories: Map<AppStore, IAppStoreRepository>
-) : AndroidViewModel(application) {
+) : ViewModel() {
 
     private val _appDetail = MutableStateFlow<UnifiedAppDetail?>(null)
     val appDetail: StateFlow<UnifiedAppDetail?> = _appDetail.asStateFlow()
@@ -130,8 +127,8 @@ class AppDetailComposeViewModel(
     )    
 
     // 新增：获取设备SDK版本
-    val deviceSdkVersion: Int
-        get() = Build.VERSION.SDK_INT
+//    val deviceSdkVersion: Int
+//        get() = Build.VERSION.SDK_INT
 
     fun initializeData(appId: String, versionId: Long, storeName: String) {
         val store = try {
