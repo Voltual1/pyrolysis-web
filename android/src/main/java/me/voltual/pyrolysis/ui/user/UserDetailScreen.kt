@@ -338,7 +338,7 @@ private fun UserAvatar(
             .diskCachePolicy(CachePolicy.DISABLED)
             .build(),
         contentDescription = "用户头像",
-        contentScale = ContentScale.Crop
+        contentScale = ContentScale.Crop,
         modifier = modifier
             .size(80.dp)
             .clip(CircleShape)
