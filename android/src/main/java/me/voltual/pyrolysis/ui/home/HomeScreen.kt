@@ -274,8 +274,7 @@ private fun PersonalCenterSection(
                     model = state.avatarUrl,
                     contentDescription = "用户头像",
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    placeholder = Icons.Filled.Person
+                    contentScale = ContentScale.Crop
                 )
             }
 
