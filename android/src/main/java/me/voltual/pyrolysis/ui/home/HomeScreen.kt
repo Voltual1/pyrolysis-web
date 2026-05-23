@@ -275,7 +275,7 @@ private fun PersonalCenterSection(
                     contentDescription = "用户头像",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
-                    placeholder = painterResource(androidx.compose.ui.R.drawable.ic_menu_gallery) // 使用系统默认占位符，或创建自定义占位符
+                    placeholder = Icons.Filled.Person
                 )
             }
 
