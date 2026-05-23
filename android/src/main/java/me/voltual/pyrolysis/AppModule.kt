@@ -65,27 +65,47 @@ private val DEVICE_INFO_STORE_QUALIFIER = named("device_info_store")
 
 val appModule = module {
 
-    // =========================================================================
-    // 1. 核心基础设施 & 数据库 (Core Infrastructure & Database)
-    // =========================================================================
-    
-    single { BBQApplication.instance.database }
-    single { get<AppDatabase>().logDao() }  
-    single { get<AppDatabase>().browseHistoryDao() } 
-    single { get<AppDatabase>().networkCacheDao() }  
-    single { get<AppDatabase>().postDraftDao() }         
+// =========================================================================
+// 1. 核心基础设施 & 数据库 (Core Infrastructure & Database)
+// =========================================================================
 
-    // Crypto (Tink 安全加密)
-    single<Aead> {
-        AeadConfig.register()
-        val keysetHandle = AndroidKeysetManager.Builder()
-            .withSharedPref(androidContext(), "master_keyset", "tink_auth_prefs")
-            .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
-            .withMasterKeyUri("android-keystore://auth_master_key")
-            .build()
-            .keysetHandle
-        keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
-    }
+// 1. 纯 Koin 方式托管 AppDatabase 单例，完全不再依赖传统伴生对象方法
+single<AppDatabase> {
+    Room.databaseBuilder(
+        androidContext(),
+        AppDatabase::class.java,
+        "pyrolysis_database"
+    )
+    .addMigrations(
+        AppDatabase.MIGRATION_1_2, 
+        AppDatabase.MIGRATION_2_3, 
+        AppDatabase.MIGRATION_3_4,
+        AppDatabase.MIGRATION_4_5,
+        AppDatabase.MIGRATION_5_6,
+        AppDatabase.MIGRATION_6_7,
+        AppDatabase.MIGRATION_4_7,
+        AppDatabase.MIGRATION_5_7
+    )
+    .build()
+}
+
+// 2. 所有的 Dao 统一由 Koin 容器管理，它们会自动等待上面的 AppDatabase 构建完成后注入完成
+single { get<AppDatabase>().logDao() }  
+single { get<AppDatabase>().browseHistoryDao() } 
+single { get<AppDatabase>().networkCacheDao() }  // 如果是死代码，后续直接在这行注释掉即可
+single { get<AppDatabase>().postDraftDao() }         
+
+// Crypto (Tink 安全加密维持原样)
+single<Aead> {
+    AeadConfig.register()
+    val keysetHandle = AndroidKeysetManager.Builder()
+        .withSharedPref(androidContext(), "master_keyset", "tink_auth_prefs")
+        .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
+        .withMasterKeyUri("android-keystore://auth_master_key")
+        .build()
+        .keysetHandle
+    keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
+}
 
     // =========================================================================
     // 2. 底层 DataStore 实例定义 (Platform Specific Instances)
