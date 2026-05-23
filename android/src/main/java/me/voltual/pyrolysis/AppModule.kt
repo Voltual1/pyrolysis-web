@@ -93,7 +93,6 @@ single<AppDatabase> {
 // 2. 所有的 Dao 统一由 Koin 容器管理，它们会自动等待上面的 AppDatabase 构建完成后注入完成
 single { get<AppDatabase>().logDao() }  
 single { get<AppDatabase>().browseHistoryDao() } 
-single { get<AppDatabase>().networkCacheDao() }  // 如果是死代码，后续直接在这行注释掉即可
 single { get<AppDatabase>().postDraftDao() }         
 
 // Crypto (Tink 安全加密维持原样)
