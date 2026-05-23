@@ -3,6 +3,7 @@ package dev.rushii.arsc.builders
 import dev.rushii.arsc.*
 
 public fun ArscPackage.type(name: ArscTypeName, block: ArscType.() -> Unit): ArscType {
+	// 使用 this@type 明确指向 ArscPackage 实例
 	val type = types.getOrPut(name) {
 		ArscType(
 			id = this.highestTypeId() + 1U,
@@ -18,6 +19,7 @@ public fun ArscPackage.type(name: ArscTypeName, block: ArscType.() -> Unit): Ars
 		throw IllegalArgumentException("No specs defined for new type")
 	if (type.name.isEmpty())
 		throw IllegalArgumentException("Type cannot have an empty name")
+
 	return type
 }
 
