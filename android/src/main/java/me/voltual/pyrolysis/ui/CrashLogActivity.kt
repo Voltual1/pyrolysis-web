@@ -57,7 +57,7 @@ class CrashLogActivity : ComponentActivity() {
             val logDao: LogDao by inject()
                 if (initialCrashReport == null) { // 如果没有传递参数，才从数据库加载
                     CoroutineScope(Dispatchers.IO).launch {
-                        val logEntry = logDao().getAllLogs().first()
+                        val logEntry = logDao.getAllLogs().first()
                             .firstOrNull { it.type == "CRASH" }
                         val crashReport = logEntry?.responseBody ?: "No crash report available."
                         crashReportState.value = crashReport

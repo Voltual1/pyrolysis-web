@@ -141,7 +141,7 @@ class MainActivity : AppCompatActivity() {
                     responseBody = crashReport,
                     status = "FAILURE"
                 )
-                logDao().insert(logEntry)
+                logDao.insert(logEntry)
             }.invokeOnCompletion {
                 CrashLogActivity.start(BBQApplication.instance, crashReport)
                 android.os.Process.killProcess(android.os.Process.myPid())
