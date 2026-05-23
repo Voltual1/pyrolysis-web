@@ -11,7 +11,7 @@ package me.voltual.pyrolysis.core.database
 import org.koin.core.annotation.Single
 
 @Single
-class BrowseHistoryRepository
+class BrowseHistoryRepository(
     private val browseHistoryDao: BrowseHistoryDao
 ) {
     
