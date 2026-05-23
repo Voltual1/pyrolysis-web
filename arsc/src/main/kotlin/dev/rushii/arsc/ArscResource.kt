@@ -13,7 +13,6 @@ public data class ArscResource(
 	public companion object {
 		private const val FLAG_COMPLEX: UShort = 0x0001u
 
-		@JvmStatic
 		public fun write(
 			sink: Sink,
 			resource: ArscResource,
@@ -45,8 +44,7 @@ public data class ArscResource(
 				}
 			}
 		}
-        @JvmStatic
-		public fun parse(
+        public fun parse(
 			source: Source,
 			resourceCount: Int,
 			globalStringPool: ArscStringPool,

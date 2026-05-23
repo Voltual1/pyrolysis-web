@@ -12,7 +12,6 @@ public sealed interface ArscValue {
 		public companion object {
 			private const val TYPE_STRING: UByte = 0x03u
 
-			@JvmStatic
 			public fun parse(source: Source, globalStringPool: ArscStringPool): Plain {
 				val size = source.readU16() // const u16 = 8
 				val zero = source.readU8() // const u8 = 0
@@ -31,7 +30,6 @@ public sealed interface ArscValue {
 				}
 			}
 
-			@JvmStatic
 			public fun write(sink: Sink, value: Plain, writtenGlobalPool: ArscStringPool.WrittenPool) {
 				sink.writeU16(8u) // size
 				sink.writeU8(0u) // zero

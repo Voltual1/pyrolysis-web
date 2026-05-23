@@ -19,7 +19,6 @@ public data class ArscPackage(
 
 	@ArscInternalApi
 	public companion object {
-		@JvmStatic
 		public fun parse(source: Source, globalStringPool: ArscStringPool): ArscPackage {
 			val header = ArscHeader.parse(source, 0L)
 			assert(header.type == ArscHeaderType.TablePackage)
@@ -76,7 +75,6 @@ public data class ArscPackage(
 			)
 		}
 
-		@JvmStatic
 		public fun write(
 			sink: Sink,
 			pkg: ArscPackage,

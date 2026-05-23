@@ -10,7 +10,6 @@ public data class ArscConfig(
 ) {
 	@ArscInternalApi
 	public companion object {
-		@JvmStatic
 		public fun parse(
 			source: Source,
 			globalStringPool: ArscStringPool,
@@ -27,7 +26,6 @@ public data class ArscConfig(
 			return ArscConfig(typeId, configId, resources)
 		}
 
-		@JvmStatic
 		public fun write(
 			sink: Sink,
 			config: ArscConfig,
@@ -73,7 +71,6 @@ public data class ArscConfig(
 	public data class ConfigId(var data: UByteArray) {
 		@ArscInternalApi
 		public companion object {
-			@JvmStatic
 			public fun parse(source: Source): ConfigId {
 				val size = source.readU32()
 				val idBytes = ByteArray(size.toInt() - 4)

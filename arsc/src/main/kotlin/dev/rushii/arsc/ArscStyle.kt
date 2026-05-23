@@ -24,7 +24,6 @@ public data class ArscStyle(
 	public companion object {
 		private const val SPAN_END = UInt.MAX_VALUE
 
-		@JvmStatic
 		public fun parse(source: Source): ArscStyle {
 			val spans = mutableListOf<Span>()
 			while (true) {
@@ -37,7 +36,6 @@ public data class ArscStyle(
 			return ArscStyle(spans)
 		}
 
-		@JvmStatic
 		public fun write(sink: Sink, style: ArscStyle, writtenPool: ArscStringPool.WrittenPool) {
 			for (span in style.spans) {
 				val nameIndex = writtenPool.strings[span.name] 

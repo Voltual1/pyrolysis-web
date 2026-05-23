@@ -14,10 +14,8 @@ public enum class ArscHeaderType(public val value: UShort) {
 	TableLibrary(0x0203u);
 
 	public companion object {
-		@JvmStatic
 		public fun size(): Int = 2 // UShort.SIZE_BYTES
 
-		@JvmStatic
 		public fun parse(source: Source, position: Long): ArscHeaderType {
 			val value = source.readU16()
 			return when (value) {
@@ -31,7 +29,6 @@ public enum class ArscHeaderType(public val value: UShort) {
 			}
 		}
 
-		@JvmStatic
 		public fun write(sink: Sink, value: ArscHeaderType) {
 			sink.writeU16(value.value)
 		}

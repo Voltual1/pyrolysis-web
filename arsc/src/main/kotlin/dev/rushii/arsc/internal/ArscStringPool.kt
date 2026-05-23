@@ -33,7 +33,6 @@ public data class ArscStringPool(
 	public companion object {
 		public val UTF_8_FLAG: UInt = 0x00000100u
 
-		@JvmStatic
 		public fun parse(source: Source): ArscStringPool {
 			val header = ArscHeader.parse(source, 0L)
 			val stringsCount = source.readU32()
@@ -85,7 +84,6 @@ public data class ArscStringPool(
 			return if (l > 0x7FFFu) (((l and 0x7FFFu).toUInt() shl 16) or source.readU16().toUInt()) else l.toUInt()
 		}
 
-		@JvmStatic
 		public fun write(sink: Sink, pool: ArscStringPool): WrittenPool {
 			val stringsBuffer = Buffer()
 			val useUtf8 = pool.flags and UTF_8_FLAG != 0U

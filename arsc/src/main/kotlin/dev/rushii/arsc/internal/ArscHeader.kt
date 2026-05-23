@@ -10,10 +10,8 @@ public data class ArscHeader(
 	val bodySize: UInt,
 ) {
 	public companion object {
-		@JvmStatic
 		public fun size(): Int = 8 // 2 + 2 + 4
 
-		@JvmStatic
 		public fun parse(source: Source, currentPos: Long): ArscHeader {
 			val type = ArscHeaderType.parse(source, currentPos)
 			val headerSize = source.readU16()
@@ -26,7 +24,6 @@ public data class ArscHeader(
 			)
 		}
 
-		@JvmStatic
 		public fun write(sink: Sink, value: ArscHeader) {
 			ArscHeaderType.write(sink, value.type)
 			sink.writeU16(value.headerSize)

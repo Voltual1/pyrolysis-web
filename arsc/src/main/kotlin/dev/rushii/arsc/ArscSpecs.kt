@@ -18,7 +18,6 @@ public data class ArscSpecs(
 
 	@ArscInternalApi
 	public companion object {
-		@JvmStatic
 		public fun parse(source: Source): ArscSpecs {
 			val typeId = source.readU8()
 			val res0 = source.readU8()
