@@ -24,5 +24,6 @@ rootProject.name = "Pyrolysis"
 //include(":shared")
 include(":android")
 include(":arsc")
+include(":SomeAXML")
 //include(":web")
 include(":DanmakuFlameMaster")
