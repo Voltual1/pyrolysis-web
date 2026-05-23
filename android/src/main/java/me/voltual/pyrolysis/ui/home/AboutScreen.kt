@@ -1,11 +1,11 @@
 // Copyright (C) 2025 Voltual
-// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
-//（或任意更新的版本）的条款重新分发和/或修改它。
-// 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
+// 本程序是自由软件:你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//(或任意更新的版本)的条款重新分发和/或修改它。
+// 本程序是基于希望它有用而分发的,但没有任何担保;甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节,请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+// 如果没有,请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.home
 
 import android.content.Context
@@ -27,19 +27,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler  // 引入 Compose 的 UriHandler
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import io.ktor.http.Url          // 引入 Ktor 的 Url 核心类
+import io.ktor.http.Url
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.BuildConfig
-import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.core.ui.components.MarkDownText
+import me.voltual.pyrolysis.core.ui.icons.drawable.Fire
+import me.voltual.pyrolysis.core.ui.icons.drawable.IcArrowRight
 import java.security.MessageDigest
 import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
@@ -47,7 +47,7 @@ import kotlinx.datetime.toLocalDateTime
 
 /**
  * 获取当前应用签名的 SHA-256 指纹
- * 按照要求：保留 java.security.MessageDigest 逻辑，仅针对 Android 签名自检。
+ * 按照要求:保留 java.security.MessageDigest 逻辑,仅针对 Android 签名自检。
  */
 fun getAppSignatureSha256(context: Context): String {
     return try {
@@ -93,7 +93,7 @@ fun getAppSignatureSha256(context: Context): String {
 }
 
 /**
- * 辅助方法：使用 Ktor 校验和规范化 URL，然后通过 Compose 的 UriHandler 打开
+ * 辅助方法:使用 Ktor 校验和规范化 URL,然后通过 Compose 的 UriHandler 打开
  */
 private fun openKtorUrlWithHandler(uriHandler: UriHandler, urlString: String) {
     val ktorUrl = Url(urlString)
@@ -108,14 +108,14 @@ fun AboutScreen(
 ) {
     val context = LocalContext.current
     val app_name = "Pyrolysis"
-    val uriHandler = LocalUriHandler.current // 获取当前平台的 UriHandler 实例
+    val uriHandler = LocalUriHandler.current
     val versionName = BuildConfig.VERSION_NAME
     val versionCode = BuildConfig.VERSION_CODE
     val scope = rememberCoroutineScope() 
     
     // 使用 kotlinx-datetime 0.7.1 替代 java.util.Calendar
     @OptIn(kotlin.time.ExperimentalTime::class)
-    val currentYear = kotlin.time.Clock.System.now()
+    val currentYear = Clock.System.now()
         .toLocalDateTime(TimeZone.currentSystemDefault())
         .year
     val copyrightText = if (currentYear > 2025) "2025 - $currentYear" else "2025"
@@ -129,7 +129,7 @@ fun AboutScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Image(
-            painter = painterResource(R.drawable.fire),
+            painter = Fire.toPainter(), // 使用 ImageVector 的 toPainter 扩展函数
             contentDescription = app_name,
             modifier = Modifier
                 .size(100.dp)
@@ -227,7 +227,7 @@ fun LicenseCard(onLicenseClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "本程序采用 GNU 通用公共许可证第3版 (GPLv3) 发布。您可以自由地使用、修改和分发本程序，但必须遵守其条款。",
+                text = "本程序采用 GNU 通用公共许可证第3版 (GPLv3) 发布。您可以自由地使用、修改和分发本程序,但必须遵守其条款。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -260,13 +260,13 @@ fun OpenSourceCard(onGiteeClick: () -> Unit, onReleasesClick: () -> Unit) {
             ClickableTextItem(text = "下载可安装的APK包 (Releases)", onClick = onReleasesClick)
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "提示：如果您不了解如何编译代码，请点击上方\"下载可安装的APK包\"链接，下载后缀为 .apk 的文件进行安装。",
+                text = "提示:如果您不了解如何编译代码,请点击上方\"下载可安装的APK包\"链接,下载后缀为 .apk 的文件进行安装。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "本页面基于 Bilimiao 项目的代码修改而来，遵循 GPLv3 协议。",
+                text = "本页面基于 Bilimiao 项目的代码修改而来,遵循 GPLv3 协议。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
@@ -328,7 +328,7 @@ fun ClickableTextItem(text: String, onClick: () -> Unit) {
                 modifier = Modifier.weight(1f)
             )
             Icon(
-                painter = painterResource(R.drawable.ic_arrow_right),
+                imageVector = IcArrowRight,
                 contentDescription = "打开链接",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(16.dp)
@@ -401,7 +401,7 @@ fun SignatureVerificationCard(context: Context) {
 
             if (!isOfficial) {
                 Text(
-                    text = "警告:签名与官方不一致意味着应用被非官方修改了（虽然本项目是开源项目）如果你是自己编译签名的话请忽略",
+                    text = "警告:签名与官方不一致意味着应用被非官方修改了(虽然本项目是开源项目)如果你是自己编译签名的话请忽略",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 12.dp)
@@ -414,7 +414,7 @@ fun SignatureVerificationCard(context: Context) {
 @Composable
 fun AcknowledgmentsCard(uriHandler: UriHandler) {
     val acknowledgmentsMd = """
-        本项目的上游与参考项目（或者说是它们的衍生作品）:
+        本项目的上游与参考项目(或者说是它们的衍生作品):
         
         * **哔哩终端 (GPLv3)**: [Gitee](https://gitee.com/RobinNotBad/BiliClient)
         * **RikkaHub (AGPLv3)**: [GitHub](https://github.com/rikkahub/rikkahub/)
