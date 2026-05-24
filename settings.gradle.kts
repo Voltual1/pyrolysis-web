@@ -1,4 +1,36 @@
 // settings.gradle.kts
+import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsPlugin
+import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsEnvSpec
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootEnvSpec
+import org.jetbrains.kotlin.gradle.targets.wasm.nodejs.WasmNodeJsPlugin
+import org.jetbrains.kotlin.gradle.targets.wasm.nodejs.WasmNodeJsEnvSpec
+import org.jetbrains.kotlin.gradle.targets.wasm.yarn.WasmYarnPlugin
+import org.jetbrains.kotlin.gradle.targets.wasm.yarn.WasmYarnRootEnvSpec
+
+allprojects {
+    plugins.withType<NodeJsPlugin> {
+        the<NodeJsEnvSpec>().apply {
+            download = false
+            version = "22.12.0" 
+        }
+    }
+
+    plugins.withType<YarnPlugin> {
+        the<YarnRootEnvSpec>().download = false
+    }
+
+    plugins.withType<WasmNodeJsPlugin> {
+        the<WasmNodeJsEnvSpec>().apply {
+            download = false
+            version = "22.12.0"
+        }
+    }
+
+    plugins.withType<WasmYarnPlugin> {
+        the<WasmYarnRootEnvSpec>().download = false
+    }
+}
 pluginManagement {
     repositories {
         google()
@@ -27,10 +59,3 @@ include(":arsc")
 include(":SomeAXML")
 include(":web")
 //include(":DanmakuFlameMaster")
-
-rootProject.plugins.withType<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin> {
-    rootProject.extensions.getByType<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension>().apply {
-        // 强制锁死在健全的 LTS 版本，避开 24.10.0 的物理缺失坑
-        nodeVersion = "22.20.0" 
-    }
-}
