@@ -1,4 +1,3 @@
-@file:OptIn(dev.rushii.arsc.internal.ArscInternalApi::class)
 package dev.rushii.arsc
 
 import dev.rushii.arsc.internal.*

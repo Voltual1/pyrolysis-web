@@ -8,6 +8,10 @@ version = "1.0"
 kotlin {
     explicitApi()
     jvm()
+    	compilerOptions.freeCompilerArgs.addAll(
+		"-opt-in=kotlin.ExperimentalUnsignedTypes",
+		"-opt-in=dev.rushii.arsc.internal.ArscInternalApi"
+	)
     
     sourceSets {
         val commonMain by getting {
