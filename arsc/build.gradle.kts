@@ -1,10 +1,12 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    id("org.jetbrains.kotlinx.binary-compatibility-validator") version "0.14.0"
 }
 
 version = "1.0"
 
 kotlin {
+    explicitApi()
     jvm()
     
     sourceSets {
