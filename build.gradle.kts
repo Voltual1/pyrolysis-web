@@ -17,7 +17,7 @@ allprojects {
     project.plugins.withType<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsPlugin> {
         the<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsEnvSpec>().download = false
     }
-
+}
 tasks.named<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
