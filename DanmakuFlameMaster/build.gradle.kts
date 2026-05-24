@@ -27,15 +27,14 @@ android {
 
     defaultConfig {
         minSdk = 21
-        // 库模块不需要 targetSdk，已移除
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            // AGP 9.0 强制要求使用 -optimize 版本
             proguardFiles(
-                getDefaultProguardFile("proguard-android.txt"),
-                "proguard-project.txt"
+                getDefaultProguardFile("proguard-project.txt"),                
             )
         }
     }
