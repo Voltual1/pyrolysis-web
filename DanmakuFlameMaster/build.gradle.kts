@@ -27,7 +27,7 @@ android {
 
     defaultConfig {
         minSdk = 21
-        targetSdk = 34
+        // 库模块不需要 targetSdk，已移除
     }
 
     buildTypes {
