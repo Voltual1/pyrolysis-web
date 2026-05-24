@@ -23,7 +23,7 @@ kotlin {
     wasmJs {
         outputModuleName = "pyrolysis-wasm"
         browser()
-        binaries.executable()
+//        binaries.executable()
     }
 
     applyDefaultHierarchyTemplate()
