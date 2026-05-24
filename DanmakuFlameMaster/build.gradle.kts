@@ -34,7 +34,7 @@ android {
             isMinifyEnabled = false
             // AGP 9.0 强制要求使用 -optimize 版本
             proguardFiles(
-                getDefaultProguardFile("proguard-project.txt"),                
+                getDefaultProguardFile("proguard-android-optimize.txt"),                
             )
         }
     }
