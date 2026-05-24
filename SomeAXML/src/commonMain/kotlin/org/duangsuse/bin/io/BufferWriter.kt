@@ -12,16 +12,11 @@ class BufferWriter(n: Cnt = 0) : Writer(
     override fun writeFrom(buffer: ByteArray, indices: IdxRange) {
       sink.write(buffer, indices.first, indices.last + 1)
     }
+    override fun flush() { sink.flush() }
     override fun close() { sink.close() }
   }
 ) {
   private val bufferSink: Buffer get() = (asNat8Writer().sink as Buffer)
-
-  fun byteArray(): ByteArray {
-    return bufferSink.peek().readByteArray()
-  }
-
-  fun clear() {
-    bufferSink.clear()
-  }
+  fun byteArray(): ByteArray = bufferSink.peek().readByteArray()
+  fun clear() { bufferSink.clear() }
 }

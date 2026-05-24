@@ -17,20 +17,17 @@ open class Reader(private val r: Nat8Reader): org.duangsuse.bin.Reader {
 
   override fun readInt16(): Int16 {
     val res = if (shouldSwap) s.readShortLe() else s.readShort()
-    mPosition += 2
-    return res
+    mPosition += 2; return res
   }
 
   override fun readInt32(): Int32 {
     val res = if (shouldSwap) s.readIntLe() else s.readInt()
-    mPosition += 4
-    return res
+    mPosition += 4; return res
   }
 
   override fun readInt64(): Int64 {
     val res = if (shouldSwap) s.readLongLe() else s.readLong()
-    mPosition += 8
-    return res
+    mPosition += 8; return res
   }
 
   override fun readRat32(): Rat32 = Float.fromBits(readInt32())
@@ -39,14 +36,9 @@ open class Reader(private val r: Nat8Reader): org.duangsuse.bin.Reader {
   private val shouldSwap: Boolean get() = byteOrder == ByteOrder.LittleEndian
 
   override val estimate: Long get() = r.estimate
-  override fun skip(n: Long) {
-    s.skip(n)
-    mPosition += n
-  }
+  override fun skip(n: Long) { s.skip(n); mPosition += n }
 
   override fun mark() {
-    // 注意：kotlinx.io 0.8.0 的 Source 并不直接支持 mark/reset
-    // 这里假设底层 Nat8Reader 实现了某种形式的缓存或状态保存
     if (r is MarkReset) r.mark()
     mPositionStack.add(mPosition)
   }
@@ -56,7 +48,7 @@ open class Reader(private val r: Nat8Reader): org.duangsuse.bin.Reader {
     mPosition = mPositionStack.removeAt(mPositionStack.size - 1)
   }
 
-  override fun close() = r.close()
+  override fun close() { r.close() }
 
   private inner class AsNat8Reader : Nat8Reader {
     override val source: Source get() = r.source
@@ -67,7 +59,7 @@ open class Reader(private val r: Nat8Reader): org.duangsuse.bin.Reader {
       mPosition += (indices.last - indices.first + 1)
     }
     override fun skip(n: Long) = this@Reader.skip(n)
-    override fun close() = this@Reader.close()
+    override fun close() { this@Reader.close() }
   }
 
   private val nat8Reader by lazy(::AsNat8Reader)

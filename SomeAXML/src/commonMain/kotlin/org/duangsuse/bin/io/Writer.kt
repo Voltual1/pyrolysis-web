@@ -11,15 +11,8 @@ open class Writer(private val w: Nat8Writer): org.duangsuse.bin.Writer {
 
   private val s: Sink get() = w.sink
 
-  override fun writeNat8(x: Nat8) {
-    s.writeByte(x.toByte())
-    mCount++
-  }
-
-  override fun writeInt8(x: Int8) {
-    s.writeByte(x)
-    mCount++
-  }
+  override fun writeNat8(x: Nat8) { s.writeByte(x.toByte()); mCount++ }
+  override fun writeInt8(x: Int8) { s.writeByte(x); mCount++ }
 
   override fun writeInt16(x: Int16) {
     if (shouldSwap) s.writeShortLe(x) else s.writeShort(x)
@@ -41,8 +34,8 @@ open class Writer(private val w: Nat8Writer): org.duangsuse.bin.Writer {
 
   private val shouldSwap: Boolean get() = byteOrder == ByteOrder.LittleEndian
 
-  override fun close() = w.close()
-  override fun flush() = w.flush()
+  override fun close() { w.close() }
+  override fun flush() { w.flush() }
 
   private inner class AsNat8Writer : Nat8Writer {
     override val sink: Sink get() = w.sink
@@ -51,7 +44,8 @@ open class Writer(private val w: Nat8Writer): org.duangsuse.bin.Writer {
       s.write(buffer, indices.first, indices.last + 1)
       mCount += (indices.last - indices.first + 1)
     }
-    override fun close() = this@Writer.close()
+    override fun close() { this@Writer.close() }
+    override fun flush() { this@Writer.flush() }
   }
 
   private val nat8Writer by lazy(::AsNat8Writer)

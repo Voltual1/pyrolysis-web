@@ -8,34 +8,33 @@ interface Estimable {
   val estimate: Long; fun skip(n: Long)
 }
 
-// kotlinx.io 的 Source/Sink 已经包含了这些功能，这里保留接口以兼容旧代码
 interface MarkReset { fun mark(); fun reset() }
 
-// 使用 kotlinx.io 的 Closeable
-public typealias Closeable = kotlinx.io.Closeable
+// 定义基础 Closeable 接口，避免 kotlinx.io 版本差异导致的引用问题
+interface Closeable { fun close() }
+interface Flushable { fun flush() }
 
 class StreamEnd: Exception("unexpected EOF")
 
 //// Low-level IO stream defined using kotlinx.io
 interface Nat8Reader: Estimable, Closeable {
   val source: Source
-  /** NOTE: (-1) return value denotes EOF reached */
   fun read(): Nat8 = try { source.readByte().toInt() and 0xFF } catch (e: EOFException) { -1 }
   fun readTo(buffer: ByteArray, indices: IdxRange) {
     source.readTo(buffer, indices.first, indices.last + 1)
   }
 }
 
-interface Nat8Writer: Closeable {
+interface Nat8Writer: Closeable, Flushable {
   val sink: Sink
   fun write(x: Nat8) { sink.writeByte(x.toByte()) }
   fun writeFrom(buffer: ByteArray, indices: IdxRange) {
     sink.write(buffer, indices.first, indices.last + 1)
   }
-  fun flush() { sink.flush() }
+  override fun flush() { sink.flush() }
 }
 
-//// High-level data IO stream, with controls
+//// High-level data IO stream
 interface Reader: ReadControl, DataReader {
   fun asNat8Reader(): Nat8Reader
 }
@@ -43,21 +42,17 @@ interface Writer: WriteControl, DataWriter {
   fun asNat8Writer(): Nat8Writer
 }
 
-interface ReadControl: Estimable, Closeable {
+interface ReadControl: Estimable, MarkReset, Closeable {
   val position: Long
-  fun mark()
-  fun reset()
 }
-interface WriteControl: Closeable {
+interface WriteControl: Flushable, Closeable {
   val count: Long
-  fun flush()
 }
 
 //// ByteOrder and data IO interface
 enum class ByteOrder { BigEndian, LittleEndian }
 interface ByteOrdered { var byteOrder: ByteOrder }
 
-// kotlinx.io 默认不暴露 nativeOrder，通常通过平台特定的方式获取，这里暂定 BigEndian
 val nativeOrder: ByteOrder = ByteOrder.BigEndian
 val LANGUAGE_ORDER = ByteOrder.BigEndian
 

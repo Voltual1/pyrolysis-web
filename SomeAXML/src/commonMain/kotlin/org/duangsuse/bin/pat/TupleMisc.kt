@@ -1,7 +1,7 @@
 package org.duangsuse.bin.pat
 
 import org.duangsuse.bin.type.Cnt
-import org.duangsuse.bin.indices
+import org.duangsuse.bin.indices // 修复 unresolved reference
 
 typealias Allocator<T> = (Cnt) -> T
 
@@ -12,4 +12,4 @@ operator fun <E> Tuple<E>.component2() = this[1]
 operator fun <E> Tuple<E>.component3() = this[2]
 operator fun <E> Tuple<E>.component4() = this[3]
 
-fun <E> Tuple<E>.toList(): List<E> = (0 until size.toInt()).map(this::get)
+fun <E> Tuple<E>.toList(): List<E> = indices.map { this[it.toInt()] }

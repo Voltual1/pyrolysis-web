@@ -2,6 +2,7 @@ package org.duangsuse.bin.pat.atom
 
 import org.duangsuse.bin.pat.Pattern
 import org.duangsuse.bin.type.*
+import org.duangsuse.bin.pat.extra.converted // 修复 unresolved reference
 
 abstract class Int32ConvertedPattern<T>(source: Pattern<T>): ConvertedPattern<T, Int32>(source)
 
