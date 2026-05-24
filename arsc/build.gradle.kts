@@ -1,5 +1,4 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm) 
     alias(libs.plugins.kotlin.multiplatform)
     id("org.jetbrains.kotlinx.binary-compatibility-validator") version "0.14.0"
 }
@@ -13,11 +12,7 @@ kotlin {
 		"-opt-in=kotlin.ExperimentalUnsignedTypes",
 		"-opt-in=dev.rushii.arsc.internal.ArscInternalApi"
 	)
-	
-	tasks.test {
-	useJUnitPlatform()
-}
-    
+	    
     sourceSets {
         val commonMain by getting {
             dependencies {
