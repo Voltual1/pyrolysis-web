@@ -1,6 +1,6 @@
 [versions]
 pyrolysis-agp = "8.13.0"
-kotlin = "2.2.21"
+kotlin = "2.3.21"
 pyrolysis-compose-bom = "2026.01.00"
 compose-multiplatform = "1.10.0"
 
@@ -39,7 +39,7 @@ markdown = "0.7.3"
 kotlinx-datetime = "0.7.1"
 kotlinx-collections = "0.4.0"
 html-converter = "1.1.0"
-kotlinx-io = "0.8.0" # 👈 新增：与你的其他库对齐的 kotlinx.io 版本
+kotlinx-io = "0.9.0" 
 
 [libraries]
 # 基础
