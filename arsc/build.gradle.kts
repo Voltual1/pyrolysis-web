@@ -34,3 +34,8 @@ kotlin {
         }
     }
 }
+
+apiValidation {
+    ignoredPackages.add("dev.rushii.arsc.internal")
+    nonPublicMarkers.add("dev.rushii.arsc.internal.ArscInternalApi")
+}
