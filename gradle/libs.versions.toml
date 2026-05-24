@@ -1,6 +1,5 @@
 [versions]
-# 升级 AGP 到 9.0.0
-pyrolysis-agp = "9.2"
+pyrolysis-agp = "9.2.0"
 kotlin = "2.3.21"
 pyrolysis-compose-bom = "2026.01.00"
 compose-multiplatform = "1.12.0-alpha01"
