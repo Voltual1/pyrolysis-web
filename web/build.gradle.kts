@@ -29,9 +29,9 @@ kotlin {
     applyDefaultHierarchyTemplate()
 
     sourceSets {
-        // 使用更现代的 DSL 获取 sourceSet
         val commonMain by getting
         
+        // 在 Kotlin 默认层次结构中，webMain 是 js 和 wasmJs 的公共父级
         val webMain by getting {
             dependencies {
                 implementation(project(":shared"))
@@ -42,8 +42,4 @@ kotlin {
             }
         }
     }
-}
-
-compose.experimental {
-    web.application {}
 }
