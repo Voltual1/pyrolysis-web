@@ -48,8 +48,12 @@ val bool8 = object: StaticallySized<Boolean> {
   override val size: Cnt = 1L
 }
 val char16 = object: StaticallySized<Char> {
-  override fun read(s: Reader): Char = s.readInt16().toChar()
-  override fun write(s: Writer, x: Char): Unit = s.writeInt16(x.toShort())
+  // 读：转成 Int 后，抹去高位的符号位扩展，再安全转成 Char
+  override fun read(s: Reader): Char = (s.readInt16().toInt() and 0xFFFF).toChar()
+  
+  // 写：用 .code 代替旧的 .toShort() 对应 Char 的直接转换
+  override fun write(s: Writer, x: Char): Unit = s.writeInt16(x.code.toShort())
+  
   override val size: Cnt = 2L
 }
 val nat16 = object: StaticallySized<Nat16> {
