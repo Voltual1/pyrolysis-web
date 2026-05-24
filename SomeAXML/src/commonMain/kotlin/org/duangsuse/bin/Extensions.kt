@@ -1,13 +1,16 @@
 package org.duangsuse.bin
 
 import org.duangsuse.bin.type.*
-import kotlinx.io.*
 
 //// Sized & Idx
 
-inline val Sized.lastIndex: Long get() = size.dec()
-// 注意：IdxRange 仍然是 IntRange，对于超大 Buffer 的切片可能需要特殊处理，
-// 但在本项目上下文中，数组索引通常在 Int 范围内。
+inline val Sized.lastIndex: Long get() = size - 1L
+// 将 indices 定义为 LongRange 以适配 Long 类型的 size
+inline val Sized.indices: LongRange get() = 0L until size
+
+// 专门为 ByteArray 等 Int 索引准备的工具
+inline val IdxRange.size: Int get() = (last - first + 1)
+infix fun Int.untilSize(size: Int): IntRange = this until (this + size)
 
 //// MarkReset & Closeable
 
