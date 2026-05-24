@@ -12,6 +12,10 @@ kotlin {
 		"-opt-in=kotlin.ExperimentalUnsignedTypes",
 		"-opt-in=dev.rushii.arsc.internal.ArscInternalApi"
 	)
+	
+	tasks.test {
+	useJUnitPlatform()
+}
     
     sourceSets {
         val commonMain by getting {
