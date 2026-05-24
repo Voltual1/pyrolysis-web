@@ -20,6 +20,7 @@ allprojects {
     }
 }
 设置PREFER_PROJECT解决kotlinWasmBinaryenSetup找不到com.github.webassembly.binaryen的问题。
+在gradle.properties中kotlin.js.yarn=false，让org.jetbrains.kotlin.gradle.targets.wasm.yarn.WasmYarnPlugin'不要自动下载Yarn啊（我根本没有用）
 agp升级到9.0:
 The 'org.jetbrains.kotlin.android' plugin in project ':android' is no longer required for Kotlin support since AGP 9.0.
 64

@@ -18,7 +18,7 @@ android {
     }
 
     namespace = "me.voltual.pyrolysis"
-    compileSdk = 36
+    compileSdk = 37
 
     // AGP 9.0 新的基础包名设置方式
     base {
@@ -28,7 +28,7 @@ android {
     defaultConfig {
         applicationId = "me.voltual.pyrolysis"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 511
         versionName = "22.1"
         multiDexEnabled = true
