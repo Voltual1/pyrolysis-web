@@ -1,6 +1,7 @@
 package org.duangsuse.bin
 
 import org.duangsuse.bin.type.*
+import kotlinx.io.*
 
 //// Sized & Idx
 
