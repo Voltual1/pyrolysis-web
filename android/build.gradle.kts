@@ -1,4 +1,5 @@
 import java.util.Properties
+import com.android.build.api.variant.FilterConfiguration
 
 plugins {
     alias(libs.plugins.android.application)
@@ -49,15 +50,6 @@ android {
         }
     }
 
-    applicationVariants.all {
-        val variant = this
-        variant.outputs.all {
-            val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
-            val abi = output.getFilter(com.android.build.OutputFile.ABI) ?: "universal"
-            output.outputFileName = "Pyrolysis${variant.versionName}-$abi-${variant.buildType.name}.apk"
-        }
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -103,11 +95,22 @@ android {
     }
 }
 
+// AGP 9.0.0 新版 Variant API 用于重命名 APK
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            val abi = output.filters.find { it.filterType == FilterConfiguration.FilterType.ABI }?.identifier ?: "universal"
+            // 注意：variant.name 包含 buildType 和 flavor
+            val verName = output.versionName.getOrElse(android.defaultConfig.versionName ?: "unknown")
+            output.outputFileName.set("Pyrolysis$verName-$abi-${variant.buildType}.apk")
+        }
+    }
+}
+
 dependencies {
     // 基础
     coreLibraryDesugaring(libs.android.desugar)
     implementation(libs.google.material)
-//    implementation("no.synth:kmp-zip:0.11.2")
     implementation(libs.okhttp)
     implementation(libs.fragment)
     implementation(libs.biometric)
@@ -135,7 +138,7 @@ dependencies {
     implementation(libs.coil.network.ktor)
     implementation(libs.kotlinx.coroutines.android)
     
-    // FileKit 替代 imagepicker
+    // FileKit
     implementation(libs.filekit.core)
     implementation(libs.filekit.dialogs)
     implementation(libs.filekit.dialogs.compose)

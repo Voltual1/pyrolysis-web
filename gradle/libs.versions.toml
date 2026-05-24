@@ -1,5 +1,6 @@
 [versions]
-pyrolysis-agp = "8.13.0"
+# 升级 AGP 到 9.0.0
+pyrolysis-agp = "9.0.0"
 kotlin = "2.2.21"
 pyrolysis-compose-bom = "2026.01.00"
 compose-multiplatform = "1.10.0"
@@ -149,7 +150,8 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version = "2.2.21-2.0.5" }
+# 升级 KSP 到 2.3.8
+ksp = { id = "com.google.devtools.ksp", version = "2.3.8" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 protobuf = { id = "com.google.protobuf", version.ref = "protobuf-plugin" }
 shizuku-refine = { id = "dev.rikka.tools.refine", version.ref = "shizuku-refine" }
