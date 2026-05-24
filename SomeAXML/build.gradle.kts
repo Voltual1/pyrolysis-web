@@ -6,7 +6,6 @@ group = "org.duangsuse"
 version = "1.0"
 
 kotlin {
-    jvm()
     
     sourceSets {
         val commonMain by getting {
@@ -22,7 +21,7 @@ kotlin {
                 implementation(libs.kotlinx.io)
             }
         }
-        val jvmMain by getting {
+/*        val jvmMain by getting {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
             }
@@ -32,6 +31,6 @@ kotlin {
                 implementation(kotlin("test-junit"))
                 implementation(kotlin("reflect"))
             }
-        }
+        }*/
     }
 }
