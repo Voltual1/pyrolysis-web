@@ -142,6 +142,10 @@ dependencies {
     implementation(libs.filekit.core)
     implementation(libs.filekit.dialogs)
     implementation(libs.filekit.dialogs.compose)
+    
+    //kmp-zip
+  	implementation("no.synth:kmp-zip:0.11.2")
+    implementation("no.synth:kmp-zip-kotlinx:0.11.2")
 
     // 播放器与 UI
     implementation(libs.ijkplayer)
