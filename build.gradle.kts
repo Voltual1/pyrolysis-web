@@ -13,6 +13,11 @@ plugins {
     alias(libs.plugins.kotlin.serialization) apply false
 }
 
+allprojects {
+    project.plugins.withType&lt;org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsPlugin&gt; {
+        the&lt;org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsEnvSpec&gt;().download = false
+    }
+
 tasks.named<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
