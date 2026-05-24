@@ -16,14 +16,14 @@ kotlin {
             }
         }
         binaries.executable()
-        useEsModules()
+//        useEsModules()
     }
 
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         outputModuleName = "pyrolysis-wasm"
         browser()
-//        binaries.executable()
+        binaries.executable()
     }
 
     applyDefaultHierarchyTemplate()
