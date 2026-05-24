@@ -27,3 +27,10 @@ include(":arsc")
 include(":SomeAXML")
 include(":web")
 //include(":DanmakuFlameMaster")
+
+rootProject.plugins.withType<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin> {
+    rootProject.extensions.getByType<org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension>().apply {
+        // 强制锁死在健全的 LTS 版本，避开 24.10.0 的物理缺失坑
+        nodeVersion = "22.20.0" 
+    }
+}
