@@ -122,7 +122,7 @@ class PrefsVM(
 data class SheetNavigationData(
     val repositoryId: Long = 0L,
     val editMode: Boolean = false,
-) : Parcelable
+) 
 
 data class ReposPageState(
     val enabledRepos: List<Repository> = emptyList(),
