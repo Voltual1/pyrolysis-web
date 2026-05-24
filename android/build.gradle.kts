@@ -1,8 +1,8 @@
 import java.util.Properties
-import com.android.build.api.variant.FilterConfiguration
 
 plugins {
     alias(libs.plugins.android.application)
+    // 注意：此处已根据上一步报错删除了 kotlin.android 插件
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
@@ -20,6 +20,11 @@ android {
     namespace = "me.voltual.pyrolysis"
     compileSdk = 36
 
+    // AGP 9.0 新的基础包名设置方式
+    base {
+        archivesName.set("Pyrolysis")
+    }
+
     defaultConfig {
         applicationId = "me.voltual.pyrolysis"
         minSdk = 24
@@ -28,7 +33,12 @@ android {
         versionName = "22.1"
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
-        resourceConfigurations += listOf("zh")
+        // 此处删除了 resourceConfigurations
+    }
+
+    // AGP 9.0 替代 resourceConfigurations 的新写法
+    androidResources {
+        localeFilters += "zh"
     }
 
     signingConfigs {
@@ -94,17 +104,8 @@ android {
     }
 }
 
-// AGP 9.0.0 新版 Variant API 用于重命名 APK
-androidComponents {
-    onVariants { variant ->
-        variant.outputs.forEach { output ->
-            val abi = output.filters.find { it.filterType == FilterConfiguration.FilterType.ABI }?.identifier ?: "universal"
-            // 注意：variant.name 包含 buildType 和 flavor
-            val verName = output.versionName.getOrElse(android.defaultConfig.versionName ?: "unknown")
-            output.outputFileName.set("Pyrolysis$verName-$abi-${variant.buildType}.apk")
-        }
-    }
-}
+// 移除了之前报错的 androidComponents 重命名块，因为 AGP 9 不再支持该属性
+// 如果您需要更复杂的重命名（例如完全自定义格式），建议在构建完成后手动重命名或使用自定义 Copy Task。
 
 dependencies {
     // 基础
