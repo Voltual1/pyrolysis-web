@@ -108,7 +108,7 @@ dependencies {
     // 基础
     coreLibraryDesugaring(libs.android.desugar)
     implementation(libs.google.material)
-    implementation("no.synth:kmp-zip:0.11.2")
+//    implementation("no.synth:kmp-zip:0.11.2")
     implementation(libs.okhttp)
     implementation(libs.fragment)
     implementation(libs.biometric)
