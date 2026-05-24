@@ -3,7 +3,7 @@
 pyrolysis-agp = "9.0.0"
 kotlin = "2.2.21"
 pyrolysis-compose-bom = "2026.01.00"
-compose-multiplatform = "1.10.0"
+compose-multiplatform = ""1.12.0-alpha01"
 
 # 功能库
 desugar = "2.0.3"
