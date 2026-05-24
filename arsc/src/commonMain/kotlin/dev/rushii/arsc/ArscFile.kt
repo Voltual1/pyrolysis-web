@@ -30,8 +30,8 @@ public class ArscFile(public val packages: List<ArscPackage>) {
 
 		val finalBuffer = Buffer()
 		val header = ArscHeader(
-			ArscHeaderType.Table, 
-			ArscHeader.size().toUShort(), 
+			ArscHeaderType.Table, 
+			ArscHeader.size().toUShort(), 
 			(ArscHeader.size() + globalBuffer.size).toUInt()
 		)
 		ArscHeader.write(finalBuffer, header)
