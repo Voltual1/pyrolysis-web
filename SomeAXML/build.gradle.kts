@@ -7,7 +7,6 @@ version = "1.0"
 
 kotlin {
     jvm()
-    js()
     
     sourceSets {
         val commonMain by getting {
@@ -32,16 +31,6 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-junit"))
                 implementation(kotlin("reflect"))
-            }
-        }
-        val jsMain by getting {
-            dependencies {
-                implementation(kotlin("stdlib-js"))
-            }
-        }
-        val jsTest by getting {
-            dependencies {
-                implementation(kotlin("test-js"))
             }
         }
     }
