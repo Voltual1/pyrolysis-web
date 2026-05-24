@@ -1,6 +1,6 @@
 [versions]
 pyrolysis-agp = "9.2.0"
-kotlin = "2.3.21"
+kotlin = "2.2.21"
 pyrolysis-compose-bom = "2026.01.00"
 compose-multiplatform = "1.12.0-alpha01"
 
