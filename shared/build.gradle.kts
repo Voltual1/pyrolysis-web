@@ -1,10 +1,10 @@
 // shared/build.gradle.kts
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl // 修复：新的 Opt-in 路径
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl 
 
 plugins {
-	alias(libs.plugins.android.multiplatform.library)
+    alias(libs.plugins.android.multiplatform.library)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
@@ -13,20 +13,18 @@ plugins {
 }
 
 kotlin {
+    // AGP 9.0 KMP 库专用 Android 配置块
+    android {
+        namespace = "me.voltual.pyrolysis.shared"
+        compileSdk = 37
+        minSdk = 24 // 直接设置，不需要 defaultConfig
+        
+        // 开启 Android 资源支持（如果以后要放图片、字符串到 shared）
+        androidResources {
+            enable = true
+        }
 
-android {
-    namespace = "me.voltual.pyrolysis.shared"
-    compileSdk = 37
-    defaultConfig {
-        minSdk = 24
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-}
-    androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        // 替代旧的 compileOptions 和 kotlinOptions
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }
@@ -36,7 +34,7 @@ android {
         browser()
     }
 
-    @OptIn(ExperimentalWasmDsl::class) // 修复：使用正确的注解
+    @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
     }
@@ -56,7 +54,7 @@ android {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.koin.core)
-    			implementation(libs.koin.annotations)
+                implementation(libs.koin.annotations)
             }
         }
 
