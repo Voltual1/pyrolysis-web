@@ -1,4 +1,4 @@
-我解决了KMP开发的世纪难题，"
+我解决了KMP开发的世纪难题（目前只有人给出模棱两可的推测并且能挂一年多还在应该是世纪难题了），"
 * What went wrong:
 52
 Could not determine the dependencies of task ':web:kotlinWasmBinaryenSetup'.
@@ -23,4 +23,4 @@ Could not determine the dependencies of task ':web:kotlinWasmBinaryenSetup'.
 62
         Required by:
 63
-            project ':web'"，在https://stackoverflow.com/questions/79167296/could-not-resolve-com-github-webassemblybinaryen-when-attempting-to-build-kotli上挂了1年多还没有解决方案。我一晚上……最终……
+            project ':web'"，在https://stackoverflow.com/questions/79167296/could-not-resolve-com-github-webassemblybinaryen-when-attempting-to-build-kotli上挂了1年多还没有解决方案。我一晚上……最终……|

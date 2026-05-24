@@ -1,11 +1,10 @@
 // shared/build.gradle.kts
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl 
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl // 修复：新的 Opt-in 路径
 
 plugins {
-    // 关键变更：替换旧的 android.library
-    alias(libs.plugins.android.multiplatform.library)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
@@ -15,18 +14,8 @@ plugins {
 }
 
 kotlin {
-    // 关键变更：使用 android {} 而不是 androidTarget {}
-    // 并且配置直接写在这里，不再需要顶层的 android {} 块
-    android {
-        namespace = "me.voltual.pyrolysis.shared"
-        compileSdk = 36
-        minSdk = 24
-        
-        // 如果需要使用 Android 资源（R.string 等），必须显式开启
-        androidResources {
-            enable = true
-        }
-
+    androidTarget {
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }
@@ -36,7 +25,7 @@ kotlin {
         browser()
     }
 
-    @OptIn(ExperimentalWasmDsl::class)
+    @OptIn(ExperimentalWasmDsl::class) // 修复：使用正确的注解
     wasmJs {
         browser()
     }
@@ -56,13 +45,12 @@ kotlin {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.koin.core)
-                implementation(libs.koin.annotations)
+    			implementation(libs.koin.annotations)
             }
         }
 
         val androidMain by getting {
             dependencies {
-                // 原本在顶层 dependencies {} 里的 android 依赖现在移到这里
                 implementation(libs.ktor.client.okhttp)
             }
         }
@@ -75,4 +63,14 @@ kotlin {
     }
 }
 
-// 注意：原有的顶层 android {} 块已被删除，配置已移入 kotlin.android {}
+android {
+    namespace = "me.voltual.pyrolysis.shared"
+    compileSdk = 37
+    defaultConfig {
+        minSdk = 24
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
