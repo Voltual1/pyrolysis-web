@@ -9,7 +9,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.protobuf)
     alias(libs.plugins.shizuku.refine)
-    id("kotlin-parcelize")
 }
 
 android {
