@@ -1,11 +1,9 @@
-@file:OptIn(kotlinx.io.InternalIoApi::class) 
+@file:OptIn(dev.rushii.arsc.internal.ArscInternalApi::class)
 package dev.rushii.arsc
 
-import kotlinx.io.InternalIoApi
-import kotlinx.io.*
 import dev.rushii.arsc.internal.*
+import kotlinx.io.*
 
-@OptIn(InternalIoApi::class)
 public class ArscFile(public val packages: List<ArscPackage>) {
 
 	public constructor(bytes: ByteArray) : this(Buffer().apply { write(bytes) })
@@ -32,8 +30,8 @@ public class ArscFile(public val packages: List<ArscPackage>) {
 
 		val finalBuffer = Buffer()
 		val header = ArscHeader(
-			ArscHeaderType.Table, 
-			ArscHeader.size().toUShort(), 
+			ArscHeaderType.Table, 
+			ArscHeader.size().toUShort(), 
 			(ArscHeader.size() + globalBuffer.size).toUInt()
 		)
 		ArscHeader.write(finalBuffer, header)
