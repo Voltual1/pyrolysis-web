@@ -1,8 +1,12 @@
 package dev.rushii.arsc
 
-import dev.rushii.arsc.internal.*
+// 1. 导入 kotlinx.io 的内部 API 标记
+import kotlinx.io.InternalIoApi
 import kotlinx.io.*
+import dev.rushii.arsc.internal.*
 
+// 2. 告诉编译器：我知道这是内部 API，我接受风险，请让我通过
+@OptIn(InternalIoApi::class)
 public class ArscFile(public val packages: List<ArscPackage>) {
 
 	public constructor(bytes: ByteArray) : this(Buffer().apply { write(bytes) })
