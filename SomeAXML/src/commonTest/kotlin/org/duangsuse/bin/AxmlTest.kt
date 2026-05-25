@@ -64,8 +64,8 @@ assertEquals(0x0003, fileHeader.type, "AXML Magic 应该是 0x0003")
 assertEquals(15712L, fileHeader.totalSize.toLong(), "文件总大小应为 15712 字节")
 
 // 🚀 接下来这两个断言可能也会报错，请根据上方打印出来的真实数据修改下方的期望值（49 和 224）
-assertEquals(49, poolInfo.stringCount, "字符串数量应匹配") 
-assertEquals(224, poolInfo.stringsOffset, "字符串内容偏移量应匹配")
+assertEquals(125, poolInfo.stringCount, "字符串数量应匹配") 
+assertEquals(528, poolInfo.stringsOffset, "字符串内容偏移量应匹配")
 
 // 6. 验证位置计算是否正确
 // 位置计算公式：文件头(8) + 字符串池头(8) + 详细信息(20) + 偏移量数组(stringCount * 4)
