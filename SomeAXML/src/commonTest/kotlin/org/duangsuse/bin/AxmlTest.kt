@@ -43,7 +43,7 @@ class AxmlTest {
     // 4. 初始化 Reader
     val reader = Reader(nat8Reader)
     
-    // ⭐ 关键修复：显式指定 Reader 为小端序，因为 AXML 文件底层是小端存储
+    //  关键修复：显式指定 Reader 为小端序，因为 AXML 文件底层是小端存储
     reader.byteOrder = org.duangsuse.bin.ByteOrder.LittleEndian
     
     try {
