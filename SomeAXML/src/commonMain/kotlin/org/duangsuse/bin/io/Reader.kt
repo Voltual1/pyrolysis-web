@@ -45,10 +45,16 @@ override fun readInt64(): Int64 {
     mPositionStack.add(mPosition)
   }
 
-  override fun reset() {
+override fun reset() {
+  if (mPositionStack.isEmpty()) {
+    // 避免 IndexOutOfBoundsException，如果没有 mark 就 reset，回到起点
+    mPosition = 0L
     if (r is MarkReset) r.reset()
-    mPosition = mPositionStack.removeAt(mPositionStack.size - 1)
+    return
   }
+  if (r is MarkReset) r.reset()
+  mPosition = mPositionStack.removeAt(mPositionStack.size - 1)
+}
 
   override fun close() { r.close() }
 
