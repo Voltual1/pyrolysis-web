@@ -23,7 +23,7 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation(kotlin("stdlib-jdk26"))
+//                implementation(kotlin("stdlib-jdk17"))
             }
         }
         val jvmTest by getting {
