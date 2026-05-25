@@ -3,7 +3,7 @@ package dev.rushii.arsc.test
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.buffered
-import kotlinx.io.readByteArray
+********import kotlinx.io.readByteArray
 import dev.rushii.arsc.*
 import dev.rushii.arsc.internal.ArscInternalApi
 import kotlin.test.Test
