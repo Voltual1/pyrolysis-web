@@ -50,7 +50,6 @@ class AxmlTest {
       // 5. 执行解析验证
 val (fileHeader, poolInfo) = AxmlPatterns.axmlValidator.read(reader)
 
-// 临时打印出新文件的真实数据，方便你观察
 println("=== 实际 AXML 文件结构数据 ===")
 println("文件总大小 (totalSize): ${fileHeader.totalSize}")
 println("字符串数量 (stringCount): ${poolInfo.stringCount}")
@@ -59,11 +58,7 @@ println("=============================")
 
 // 验证文件头 (Hex: 03 00 08 00 ...)
 assertEquals(0x0003, fileHeader.type, "AXML Magic 应该是 0x0003")
-
-// 🚀 将原本硬编码的 3744L 改为新文件的真实大小 15712L
 assertEquals(15712L, fileHeader.totalSize.toLong(), "文件总大小应为 15712 字节")
-
-// 🚀 接下来这两个断言可能也会报错，请根据上方打印出来的真实数据修改下方的期望值（49 和 224）
 assertEquals(125, poolInfo.stringCount, "字符串数量应匹配") 
 assertEquals(528, poolInfo.stringsOffset, "字符串内容偏移量应匹配")
 
