@@ -33,6 +33,12 @@ class AxmlTest {
       override fun skip(n: Cnt) { source.skip(n) }
       override fun close() { source.close() }
     }
+    
+    val peekSource = SystemFileSystem.source(path).buffered()
+    val bytes = ByteArray(8)
+    peekSource.readTo(bytes)
+    println("DEBUG HEX: ${bytes.joinToString(" ") { String.format("%02X", it) }}")
+    peekSource.close()
 
     // 4. 初始化 Reader
     val reader = Reader(nat8Reader)
