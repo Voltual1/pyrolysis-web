@@ -17,12 +17,12 @@ jobs:
 
     steps:    
           # 1. 在最开始腾出空间
-       - name: Maximize build space
-         uses: easimon/maximize-build-space@master
-         with:
-           remove-dotnet: 'true'
-           remove-android: 'false' # 编译Android别删这个
-           remove-haskell: 'true'
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          remove-dotnet: 'true'
+          remove-android: 'false' # 编译Android别删这个
+          remove-haskell: 'true'
 
       - name: Checkout code
         uses: actions/checkout@v4
