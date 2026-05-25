@@ -7,7 +7,7 @@ version = "1.0"
 
 kotlin {
     explicitApi()
-//    jvm()
+    jvm()
     	compilerOptions.freeCompilerArgs.addAll(
 		"-opt-in=kotlin.ExperimentalUnsignedTypes",
 		"-opt-in=dev.rushii.arsc.internal.ArscInternalApi"
@@ -27,9 +27,9 @@ kotlin {
                 implementation(libs.kotlinx.io)
             }
         }
-/*        val jvmMain by getting {
+        val jvmMain by getting {
             dependencies {
-                implementation(kotlin("stdlib-jdk8"))
+//                implementation(kotlin("stdlib-jdk8"))
             }
         }
         val jvmTest by getting {
@@ -37,7 +37,7 @@ kotlin {
                 implementation(kotlin("test-junit"))
                 implementation(kotlin("reflect"))
             }
-        }*/
+        }
     }
 }
 

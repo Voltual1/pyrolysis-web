@@ -57,7 +57,7 @@ jobs:
 
       # 3. 构建时增加守护进程关闭，减少内存/空间占用
       - name: Build with Gradle
-        run: ./gradlew :SomeAXML:jvmTest --info --no-daemon
+        run: ./gradlew :arsc:jvmTest --info --no-daemon
         env:
           KEYSTORE_PATH: tag_keystore.p12  
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
