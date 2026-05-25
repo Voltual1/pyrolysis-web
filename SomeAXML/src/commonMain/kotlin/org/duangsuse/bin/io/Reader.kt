@@ -15,25 +15,27 @@ open class Reader(private val r: Nat8Reader): org.duangsuse.bin.Reader {
   override fun readNat8(): Nat8 = r.read().also { if (it != -1) ++mPosition }
   override fun readInt8(): Int8 = s.readByte().also { ++mPosition }
 
-  override fun readInt16(): Int16 {
-    val res = if (shouldSwap) s.readShortLe() else s.readShort()
-    mPosition += 2; return res
-  }
+  // 将原有的 shouldSwap 改为明确的 isLittleEndian
+private val isLittleEndian: Boolean get() = byteOrder == ByteOrder.LittleEndian
 
-  override fun readInt32(): Int32 {
-    val res = if (shouldSwap) s.readIntLe() else s.readInt()
-    mPosition += 4; return res
-  }
+override fun readInt16(): Int16 {
+  // 如果当前要求小端，就用小端方法；否则用大端方法
+  val res = if (isLittleEndian) s.readShortLe() else s.readShort()
+  mPosition += 2; return res
+}
 
-  override fun readInt64(): Int64 {
-    val res = if (shouldSwap) s.readLongLe() else s.readLong()
-    mPosition += 8; return res
-  }
+override fun readInt32(): Int32 {
+  val res = if (isLittleEndian) s.readIntLe() else s.readInt()
+  mPosition += 4; return res
+}
+
+override fun readInt64(): Int64 {
+  val res = if (isLittleEndian) s.readLongLe() else s.readLong()
+  mPosition += 8; return res
+}
 
   override fun readRat32(): Rat32 = Float.fromBits(readInt32())
   override fun readRat64(): Rat64 = Double.fromBits(readInt64())
-
-  private val shouldSwap: Boolean get() = byteOrder == ByteOrder.LittleEndian
 
   override val estimate: Long get() = r.estimate
   override fun skip(n: Long) { s.skip(n); mPosition += n }
