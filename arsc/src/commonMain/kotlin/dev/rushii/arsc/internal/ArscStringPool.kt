@@ -11,7 +11,7 @@ public data class ArscStringPool(
 ) {
     public fun size(): Int {
         var s = ArscHeader.size() + 20 + (strings.size * 4) + (styles.size * 4)
-        val useUtf8 = flags and UTF_8_FLAG != 0u
+        val useUtf8 = (flags and UTF_8_FLAG) != 0u
         for (str in strings) {
             if (useUtf8) {
                 val b = str.encodeToByteArray()
@@ -33,73 +33,70 @@ public data class ArscStringPool(
 
         public fun parse(source: Source): ArscStringPool {
             val header = ArscHeader.parse(source, 0L)
-            val stringsCount = source.readU32()
-            val stylesCount = source.readU32()
-            val flags = source.readU32()
-            val stringsOffset = source.readU32()
-            val stylesOffset = source.readU32()
+            val bodySize = header.bodySize.toLong() - 8
+            
+            // 使用 tempBuffer 限制读取范围，防止越界
+            val body = Buffer()
+            source.readTo(body, bodySize)
+            
+            val stringsCount = body.readU32()
+            val stylesCount = body.readU32()
+            val flags = body.readU32()
+            val stringsOffset = body.readU32()
+            val stylesOffset = body.readU32()
 
-            val stringOffsets = Array(stringsCount.toInt()) { source.readU32() }
-            val styleOffsets = Array(stylesCount.toInt()) { source.readU32() }
+            val stringOffsets = Array(stringsCount.toInt()) { body.readU32() }
+            val styleOffsets = Array(stylesCount.toInt()) { body.readU32() }
 
-            var readSoFar = 28L + (stringsCount.toLong() * 4) + (stylesCount.toLong() * 4)
+            val useUtf8 = (flags and UTF_8_FLAG) != 0u
+            
+            // 计算字符串内容相对于 body 开始的偏移
+            // 当前 body 位置已经在 offsets 之后了
+            val currentPosInBody = 20L + (stringsCount.toLong() * 4) + (stylesCount.toLong() * 4)
+            val toSkip = stringsOffset.toLong() - currentPosInBody
+            if (toSkip > 0) body.skip(toSkip)
 
-            if (stringsOffset.toLong() > readSoFar) {
-                source.skip(stringsOffset.toLong() - readSoFar)
-                readSoFar = stringsOffset.toLong()
-            }
-
-            val useUtf8 = flags and UTF_8_FLAG != 0u
             val strings = mutableListOf<String>()
             for (i in 0 until stringsCount.toInt()) {
-                strings += if (useUtf8) readUtf8String(source) else readUtf16String(source)
+                strings += if (useUtf8) readUtf8String(body) else readUtf16String(body)
             }
 
-            // 跳过块末尾的对齐填充逻辑由外部 Chunk 循环处理
+            // 忽略 Styles，直接返回。body 已经被 source.readTo 消耗完了。
             return ArscStringPool(strings, emptyList(), flags)
         }
 
         private fun readUtf8String(source: Source): String {
-            readLen8(source)
+            readLen8(source) // char len
             val byteLen = readLen8(source)
             val bytes = ByteArray(byteLen)
             source.readTo(bytes)
-            source.readByte()
+            source.readByte() // null
             return bytes.decodeToString()
         }
 
         private fun readLen8(source: Source): Int {
-            val first = source.readU8().toInt()
-            return if (first and 0x80 != 0) {
-                val second = source.readU8().toInt()
-                ((first and 0x7F) shl 8) or second
-            } else first
+            val l = source.readU8().toInt()
+            return if (l and 0x80 != 0) ((l and 0x7F) shl 8) or source.readU8().toInt() else l
         }
 
         private fun readUtf16String(source: Source): String {
             val charLen = readLen16(source)
-            val bytes = ByteArray(charLen * 2)
-            source.readTo(bytes)
-            source.readU16()
-            val chars = CharArray(charLen) { i ->
-                val lo = bytes[i * 2].toInt() and 0xFF
-                val hi = bytes[i * 2 + 1].toInt() and 0xFF
-                ((hi shl 8) or lo).toChar()
+            val chars = CharArray(charLen)
+            for (i in 0 until charLen) {
+                chars[i] = source.readU16().toInt().toChar()
             }
+            source.readU16() // null
             return String(chars)
         }
 
         private fun readLen16(source: Source): Int {
-            val first = source.readU16().toInt()
-            return if (first and 0x8000 != 0) {
-                val second = source.readU16().toInt()
-                ((first and 0x7FFF) shl 16) or second
-            } else first
+            val l = source.readU16().toInt()
+            return if (l and 0x8000 != 0) ((l and 0x7FFF) shl 16) or source.readU16().toInt() else l
         }
 
         public fun write(sink: Sink, pool: ArscStringPool): WrittenPool {
             val stringsBuffer = Buffer()
-            val useUtf8 = pool.flags and UTF_8_FLAG != 0u
+            val useUtf8 = (pool.flags and UTF_8_FLAG) != 0u
             val offsets = IntArray(pool.strings.size)
 
             for ((i, s) in pool.strings.withIndex()) {
@@ -117,30 +114,29 @@ public data class ArscStringPool(
                 }
             }
 
-            val baseOffset = ArscHeader.size() + 20 + (pool.strings.size * 4) + (pool.styles.size * 4)
-            val totalSize = baseOffset + stringsBuffer.size
+            val baseOffset = 8 + 20 + (pool.strings.size * 4) + (pool.styles.size * 4)
+            val totalSize = baseOffset + stringsBuffer.size.toInt()
 
-            val header = ArscHeader(ArscHeaderType.StringPool, ArscHeader.size().toUShort(), totalSize.toUInt())
+            val header = ArscHeader(ArscHeaderType.StringPool, 8u.toUShort(), totalSize.toUInt())
             ArscHeader.write(sink, header)
             sink.writeU32(pool.strings.size.toUInt())
             sink.writeU32(pool.styles.size.toUInt())
             sink.writeU32(pool.flags)
             sink.writeU32(baseOffset.toUInt())
             sink.writeU32(0u)
+
             for (off in offsets) sink.writeU32(off.toUInt())
             sink.write(stringsBuffer, stringsBuffer.size)
             
-            val padding = (4 - (totalSize.toInt() % 4)) % 4
-            if (padding > 0) sink.putNullBytes(padding)
+            val padding = (4 - (totalSize % 4)) % 4
+            if (padding > 0) for (i in 0 until padding) sink.writeByte(0)
 
             return WrittenPool(pool.strings.mapIndexed { i, s -> s to i }.toMap(), emptyMap())
         }
 
         private fun writeLen8(sink: Sink, len: Int) {
-            if (len > 0x7F) {
-                sink.writeByte(((len shr 8) or 0x80).toByte())
-                sink.writeByte((len and 0xFF).toByte())
-            } else sink.writeByte(len.toByte())
+            if (len > 0x7F) sink.writeByte(((len shr 8) or 0x80).toByte())
+            sink.writeByte((len and 0xFF).toByte())
         }
 
         private fun writeLen16(sink: Sink, len: Int) {
