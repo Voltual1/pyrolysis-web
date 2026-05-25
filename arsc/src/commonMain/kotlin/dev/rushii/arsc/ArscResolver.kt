@@ -3,11 +3,11 @@ package dev.rushii.arsc
 /**
  * 根据资源 ID 从 ArscFile 中解析实际值的辅助类
  */
-class ArscResolver(val arscFile: ArscFile) {
+public class ArscResolver(public val arscFile: ArscFile) {
     /**
      * 解析资源值，返回 ArscValue 或 null
      */
-    fun resolve(resId: Int): ArscValue? {
+    public fun resolve(resId: Int): ArscValue? {
         val pkgId = (resId shr 24) and 0xFF
         val typeId = (resId shr 16) and 0xFF
         val entryId = resId and 0xFFFF
@@ -21,7 +21,7 @@ class ArscResolver(val arscFile: ArscFile) {
         }
     }
 
-    fun resolveString(resId: Int): String? {
+    public fun resolveString(resId: Int): String? {
         val value = resolve(resId)
         return (value as? ArscValue.Plain.String)?.data
     }

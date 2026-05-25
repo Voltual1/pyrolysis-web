@@ -33,22 +33,17 @@ public data class ArscStringPool(
 
         public fun parse(source: Source): ArscStringPool {
             val header = ArscHeader.parse(source, 0L)
-            val chunkEnd = header.bodySize.toLong() - ArscHeader.size()
-
             val stringsCount = source.readU32()
             val stylesCount = source.readU32()
             val flags = source.readU32()
             val stringsOffset = source.readU32()
             val stylesOffset = source.readU32()
 
-            // 读取偏移数组
             val stringOffsets = Array(stringsCount.toInt()) { source.readU32() }
             val styleOffsets = Array(stylesCount.toInt()) { source.readU32() }
 
-            // 计算已经读取的字节数：header(8) + info(20) + offsets(4*count)
             var readSoFar = 28L + (stringsCount.toLong() * 4) + (stylesCount.toLong() * 4)
 
-            // 跳转到字符串数据区
             if (stringsOffset.toLong() > readSoFar) {
                 source.skip(stringsOffset.toLong() - readSoFar)
                 readSoFar = stringsOffset.toLong()
@@ -60,18 +55,16 @@ public data class ArscStringPool(
                 strings += if (useUtf8) readUtf8String(source) else readUtf16String(source)
             }
 
-            // 计算当前读取位置（用于对齐检查）
-            val totalRead = ArscHeader.size() + header.bodySize.toInt()
-            // 注意：有些 ARSC 文件在字符串池末尾可能没有填充，不需要额外处理，由外部解析器负责对齐
+            // 跳过块末尾的对齐填充逻辑由外部 Chunk 循环处理
             return ArscStringPool(strings, emptyList(), flags)
         }
 
         private fun readUtf8String(source: Source): String {
-            val charLen = readLen8(source)
+            readLen8(source)
             val byteLen = readLen8(source)
-            val bytes = ByteArray(byteLen.toInt())
+            val bytes = ByteArray(byteLen)
             source.readTo(bytes)
-            source.readByte() // 0x00 终止符
+            source.readByte()
             return bytes.decodeToString()
         }
 
@@ -85,12 +78,10 @@ public data class ArscStringPool(
 
         private fun readUtf16String(source: Source): String {
             val charLen = readLen16(source)
-            val bytes = ByteArray(charLen.toInt() * 2)
+            val bytes = ByteArray(charLen * 2)
             source.readTo(bytes)
-            // 读取 null 终止符 (2 字节)
             source.readU16()
-            // 将小端 UTF-16 转换为 Kotlin String
-            val chars = CharArray(charLen.toInt()) { i ->
+            val chars = CharArray(charLen) { i ->
                 val lo = bytes[i * 2].toInt() and 0xFF
                 val hi = bytes[i * 2 + 1].toInt() and 0xFF
                 ((hi shl 8) or lo).toChar()
@@ -121,9 +112,7 @@ public data class ArscStringPool(
                     stringsBuffer.writeByte(0)
                 } else {
                     writeLen16(stringsBuffer, s.length)
-                    for (char in s) {
-                        stringsBuffer.writeShortLe(char.code.toShort())
-                    }
+                    for (char in s) stringsBuffer.writeShortLe(char.code.toShort())
                     stringsBuffer.writeShortLe(0)
                 }
             }
@@ -137,35 +126,28 @@ public data class ArscStringPool(
             sink.writeU32(pool.styles.size.toUInt())
             sink.writeU32(pool.flags)
             sink.writeU32(baseOffset.toUInt())
-            sink.writeU32(0u) // stylesOffset (我们忽略样式)
+            sink.writeU32(0u)
             for (off in offsets) sink.writeU32(off.toUInt())
             sink.write(stringsBuffer, stringsBuffer.size)
-            // 对齐填充
-            val padding = (4 - (totalSize % 4)) % 4
+            
+            val padding = (4 - (totalSize.toInt() % 4)) % 4
             if (padding > 0) sink.putNullBytes(padding)
 
-            return WrittenPool(
-                pool.strings.mapIndexed { i, s -> s to i }.toMap(),
-                emptyMap()
-            )
+            return WrittenPool(pool.strings.mapIndexed { i, s -> s to i }.toMap(), emptyMap())
         }
 
         private fun writeLen8(sink: Sink, len: Int) {
             if (len > 0x7F) {
                 sink.writeByte(((len shr 8) or 0x80).toByte())
                 sink.writeByte((len and 0xFF).toByte())
-            } else {
-                sink.writeByte(len.toByte())
-            }
+            } else sink.writeByte(len.toByte())
         }
 
         private fun writeLen16(sink: Sink, len: Int) {
             if (len > 0x7FFF) {
                 sink.writeShortLe(((len shr 16) or 0x8000).toShort())
                 sink.writeShortLe(len.toShort())
-            } else {
-                sink.writeShortLe(len.toShort())
-            }
+            } else sink.writeShortLe(len.toShort())
         }
     }
 }
