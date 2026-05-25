@@ -21,9 +21,9 @@ kotlin {
                 implementation(libs.kotlinx.io)
             }
         }
-/*        val jvmMain by getting {
+        val jvmMain by getting {
             dependencies {
-                implementation(kotlin("stdlib-jdk8"))
+                implementation(kotlin("stdlib-jdk26"))
             }
         }
         val jvmTest by getting {
@@ -31,6 +31,6 @@ kotlin {
                 implementation(kotlin("test-junit"))
                 implementation(kotlin("reflect"))
             }
-        }*/
+        }
     }
 }
