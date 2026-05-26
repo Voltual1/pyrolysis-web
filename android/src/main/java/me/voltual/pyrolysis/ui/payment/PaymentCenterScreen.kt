@@ -111,8 +111,7 @@ fun PaymentCenterScreen(
                 snackbarHostState = snackbarHostState,
                 coroutineScope = coroutineScope,
                 fileName = downloadFileName,
-                viewModel = viewModel,
-                onNavigateToDownload = { navigator.navigate(Download) } 
+                viewModel = viewModel
             )
         }
         PaymentStatus.FAILED -> {
@@ -494,8 +493,7 @@ fun PaymentResultDialog(
     snackbarHostState: SnackbarHostState? = null,
     coroutineScope: CoroutineScope? = null,
     fileName: String? = null,
-    viewModel: PaymentViewModel,
-    onNavigateToDownload: (() -> Unit)? = null 
+    viewModel: PaymentViewModel
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -541,19 +539,7 @@ fun PaymentResultDialog(
                         text = { Text("下载应用") }
                     )
                     Spacer(Modifier.height(12.dp))
-                }
-
-                if (success && onNavigateToDownload != null) {
-                    BBQOutlinedButton(
-                        onClick = {
-                            onNavigateToDownload()
-                            onDismiss()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        text = { Text("管理下载") }
-                    )
-                    Spacer(Modifier.height(12.dp))
-                }
+                }                
 
                 BBQOutlinedButton(
                     onClick = onDismiss,
