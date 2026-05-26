@@ -8,6 +8,7 @@
 
 package me.voltual.pyrolysis.ui.community
 
+import android.content.ClipData
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,9 +34,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalClipboardManager // 引入 Compose 剪贴板管理器
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString // 引入富文本包装类
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
@@ -51,8 +52,8 @@ fun ImagePreviewScreen(
     @Suppress("UNUSED_PARAMETER") snackbarHostState: SnackbarHostState, 
     onClose: () -> Unit
 ) {
-    // 获取 Compose 专用的剪贴板管理器
-    val clipboardManager = LocalClipboardManager.current
+    // 使用新的 Compose 剪贴板接口
+    val clipboard = LocalClipboard.current
     val internalSnackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     
@@ -107,10 +108,9 @@ fun ImagePreviewScreen(
                         indication = null,
                         onClick = { onClose() }, // 点击图片也可以关闭
                         onLongClick = {
-                            // 使用 LocalClipboardManager 写入剪贴板
-                            clipboardManager.setText(AnnotatedString(cleanedImageUrl))
-                            
+                            // 使用新的 API: setClipEntry 替代 setText
                             scope.launch {
+                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(cleanedImageUrl, cleanedImageUrl)))
                                 internalSnackbarHostState.showSnackbar(
                                     message = "已复制图片链接"
                                 )

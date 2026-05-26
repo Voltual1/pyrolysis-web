@@ -9,6 +9,7 @@
 
 package me.voltual.pyrolysis.ui.plaza
 
+import android.content.ClipData
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,7 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler 
 import androidx.compose.ui.text.AnnotatedString
@@ -66,7 +68,8 @@ fun AppDetailScreen(
     val navigator = LocalNavigator.current
     
     val uriHandler = LocalUriHandler.current
-    val clipboardManager = LocalClipboardManager.current
+    // 使用新的 Compose 剪贴板接口
+    val clipboard = LocalClipboard.current
 
     val appDetail by viewModel.appDetail.collectAsState()
     val comments by viewModel.comments.collectAsState()
@@ -165,8 +168,9 @@ fun AppDetailScreen(
                     val raw = detail.raw as? me.voltual.pyrolysis.KtorClient.AppDetail
                     val shareUrl = raw?.posturl
                     if (!shareUrl.isNullOrBlank()) {
-                        clipboardManager.setText(AnnotatedString(shareUrl))
+                        // 使用新的 API: setClipEntry 替代 setText
                         coroutineScope.launch {
+                            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(shareUrl, shareUrl)))
                             snackbarHostState.showSnackbar("已复制分享链接: $shareUrl")
                         }
                     } else {
