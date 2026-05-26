@@ -64,9 +64,9 @@ class AppDetailComposeViewModel(
     private val _snackbarEvent = MutableSharedFlow<String>()
     val snackbarEvent: SharedFlow<String> = _snackbarEvent.asSharedFlow()
     
-    private val _navigateToDownloadEvent = MutableSharedFlow<Boolean>()
+/*    private val _navigateToDownloadEvent = MutableSharedFlow<Boolean>()
     val navigateToDownloadEvent: SharedFlow<Boolean> = _navigateToDownloadEvent.asSharedFlow()
-
+*/
     private val _openUrlEvent = MutableSharedFlow<String>()
     val openUrlEvent: SharedFlow<String> = _openUrlEvent.asSharedFlow()
 

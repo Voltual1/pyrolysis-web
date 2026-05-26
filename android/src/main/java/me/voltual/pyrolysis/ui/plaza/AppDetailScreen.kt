@@ -139,13 +139,13 @@ fun AppDetailScreen(
         }
     }
 
-    LaunchedEffect(viewModel.navigateToDownloadEvent) {
+/*    LaunchedEffect(viewModel.navigateToDownloadEvent) {
         viewModel.navigateToDownloadEvent.collectLatest { navigate ->
             if (navigate) {
                 navigator.navigate(Download)
             }
         }
-    }
+    }*/
 
     var isRefreshing by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullToRefreshState()

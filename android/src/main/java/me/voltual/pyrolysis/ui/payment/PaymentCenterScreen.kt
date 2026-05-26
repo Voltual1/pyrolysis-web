@@ -8,7 +8,6 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.payment
 
-import android.app.Activity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
@@ -28,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,14 +42,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.theme.*
-import me.voltual.pyrolysis.core.utils.DownloadManager
 
 @Composable
 fun PaymentCenterScreen(
     viewModel: PaymentViewModel,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -75,34 +73,20 @@ fun PaymentCenterScreen(
         }
     }
 
-    fun startDownload(url: String, fileName: String) {
-        val activity = context as? Activity
-        activity?.let {
-            DownloadManager.download(it, url, fileName, null)
-        }
-    }
-
     LaunchedEffect(Unit) {
         viewModel.downloadEvent.collectLatest { event ->
-            val activity = context as? Activity
-            activity?.let {
-                DownloadManager.download(
-                    activity = it,
-                    url = event.url,
-                    fileName = event.fileName
-                )
-
+            try {
+                uriHandler.openUri(event.url)
                 coroutineScope.launch {
-                    val result = snackbarHostState.showSnackbar(
-                        message = "任务已发送至 1DM: ${event.fileName}",
-                        actionLabel = "管理下载",
+                    snackbarHostState.showSnackbar(
+                        message = "已尝试打开下载链接: ${event.fileName}",
                         withDismissAction = true,
-                        duration = SnackbarDuration.Indefinite
+                        duration = SnackbarDuration.Short
                     )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        // 类型安全导航到下载管理
-                        navigator.navigate(Download)
-                    }
+                }
+            } catch (e: Exception) {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("无法打开下载链接")
                 }
             }
         }
@@ -119,7 +103,8 @@ fun PaymentCenterScreen(
                 },
                 onDownload = {
                     downloadUrl?.let { url ->
-                        downloadFileName?.let { fileName -> startDownload(url, fileName) }
+                        val name = downloadFileName ?: "app.apk"
+                        viewModel.startDownload(url, name)
                     }
                 },
                 showDownloadButton = paymentInfo?.type == PaymentType.APP_PURCHASE && !downloadUrl.isNullOrEmpty(),
@@ -127,7 +112,7 @@ fun PaymentCenterScreen(
                 coroutineScope = coroutineScope,
                 fileName = downloadFileName,
                 viewModel = viewModel,
-                onNavigateToDownload = { navigator.navigate(Download) } // 传递导航回调
+                onNavigateToDownload = { navigator.navigate(Download) } 
             )
         }
         PaymentStatus.FAILED -> {
@@ -258,65 +243,60 @@ fun PaymentContent(
                                 }
                             }
                             PaymentType.POST_REWARD -> {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            // 帖子标题
-                            Text(
-                                paymentInfo.postTitle,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            // 显示预览内容
-                            Text(
-                                text = paymentInfo.previewContent,
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 3,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            // 作者信息
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                AsyncImage(
-                                    model = paymentInfo.authorAvatar,
-                                    contentDescription = "作者头像",
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-
-                                Spacer(Modifier.width(12.dp))
-
-                                Column {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
                                     Text(
-                                        paymentInfo.authorName,
+                                        paymentInfo.postTitle,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+
+                                    Text(
+                                        text = paymentInfo.previewContent,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis
                                     )
-                                    Text(
-                                        "发布于 ${paymentInfo.postTime}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        AsyncImage(
+                                            model = paymentInfo.authorAvatar,
+                                            contentDescription = "作者头像",
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+
+                                        Spacer(Modifier.width(12.dp))
+
+                                        Column {
+                                            Text(
+                                                paymentInfo.authorName,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                "发布于 ${paymentInfo.postTime}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
                                 }
                             }
-                        }
-                    }
-//                            else -> { Text("支付信息", modifier = Modifier.padding(16.dp)) }
                         }
                     }
                 }
             }
             
-            // ==================== 支付金额区域 ====================
             if (paymentInfo?.type == PaymentType.POST_REWARD) {
                 BBQCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -332,7 +312,6 @@ fun PaymentContent(
                             fontWeight = FontWeight.Bold
                         )
 
-                        // 金额选择器
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -346,7 +325,6 @@ fun PaymentContent(
                             }
                         }
 
-                        // 自定义金额输入
                         OutlinedTextField(
                             value = amount,
                             onValueChange = {
@@ -372,7 +350,6 @@ fun PaymentContent(
                 }
             }        
 
-            // 余额区域
             BBQCard(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     Modifier.padding(16.dp),
@@ -405,65 +382,63 @@ fun PaymentContent(
                 }
             }
 
-            // ==================== 支付按钮区域 ====================
-        val payAmount = amount.toIntOrNull() ?: 0
-        BBQCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-            shape = AppShapes.medium
-        ) {
-            BBQButton(
-                onClick = {
-                    if (payAmount > 0) {
-                        if (coinsBalance != null && payAmount > coinsBalance) {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar("硬币余额不足，请充值")
+            val payAmount = amount.toIntOrNull() ?: 0
+            BBQCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                shape = AppShapes.medium
+            ) {
+                BBQButton(
+                    onClick = {
+                        if (payAmount > 0) {
+                            if (coinsBalance != null && payAmount > coinsBalance) {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("硬币余额不足，请充值")
+                                }
+                            } else {
+                                onPay(payAmount)
                             }
                         } else {
-                            onPay(payAmount)
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("请输入有效的支付金额")
+                            }
                         }
-                    } else {
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("请输入有效的支付金额")
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = payAmount > 0 && (coinsBalance == null || payAmount <= coinsBalance) && !isPaymentProcessing,
+                    contentPadding = PaddingValues(vertical = 16.dp),
+                    text = {
+                        if (isPaymentProcessing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text(
+                                text = when {
+                                    paymentInfo?.type == PaymentType.APP_PURCHASE ->
+                                        "确认支付 ${paymentInfo.price} 硬币购买应用"
+
+                                    paymentInfo?.type == PaymentType.POST_REWARD ->
+                                        "打赏 $payAmount 硬币"
+
+                                    else -> "确认支付 $payAmount 硬币"
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = payAmount > 0 && (coinsBalance == null || payAmount <= coinsBalance) && !isPaymentProcessing, // 禁用条件
-                contentPadding = PaddingValues(vertical = 16.dp),
-                text = {
-                    if (isPaymentProcessing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text(
-                            text = when {
-                                paymentInfo?.type == PaymentType.APP_PURCHASE ->
-                                    "确认支付 ${paymentInfo.price} 硬币购买应用"
-
-                                paymentInfo?.type == PaymentType.POST_REWARD ->
-                                    "打赏 $payAmount 硬币"
-
-                                else -> "确认支付 $payAmount 硬币"
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-            )
+                )
+            }
         }
-    }
-    BBQSnackbarHost(
+        BBQSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
-        }        
+    }        
     
-
     errorMessage?.let { msg ->
         LaunchedEffect(msg) { snackbarHostState.showSnackbar(msg) }
     }
@@ -520,7 +495,7 @@ fun PaymentResultDialog(
     coroutineScope: CoroutineScope? = null,
     fileName: String? = null,
     viewModel: PaymentViewModel,
-    onNavigateToDownload: (() -> Unit)? = null // 新增回调，用于导航到下载管理
+    onNavigateToDownload: (() -> Unit)? = null 
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -560,12 +535,7 @@ fun PaymentResultDialog(
                 if (success && showDownloadButton) {
                     BBQButton(
                         onClick = {
-                            val url = viewModel.getDownloadUrl()
-                            val name = viewModel.getDownloadFileName()
-                            if (url != null) {
-                                viewModel.startDownload(url, name)
-                            }
-                            onDismiss()
+                            onDownload?.invoke()
                         },
                         modifier = Modifier.fillMaxWidth(),
                         text = { Text("下载应用") }
@@ -573,7 +543,6 @@ fun PaymentResultDialog(
                     Spacer(Modifier.height(12.dp))
                 }
 
-                // 如果提供了“管理下载”导航回调，显示按钮
                 if (success && onNavigateToDownload != null) {
                     BBQOutlinedButton(
                         onClick = {

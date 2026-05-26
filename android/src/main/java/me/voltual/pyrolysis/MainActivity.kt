@@ -538,7 +538,6 @@ fun getTitleForDestination(route: NavKey?): String {
         is AppDetail -> "应用详情"
         is AppPage -> "应用页"
         UpdateSettings -> "更新设置"
-        Download -> "下载管理"
         Update -> "应用更新"
         MyComments -> "我的评论"
         MyReviews -> "我的评价"
