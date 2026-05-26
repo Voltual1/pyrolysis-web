@@ -4,10 +4,14 @@ import dev.rushii.arsc.internal.*
 import kotlinx.io.*
 
 public data class ArscPackage(
-    var id: UInt,
-    var name: String,
-    var types: MutableMap<ArscTypeName, ArscType>,
+    public var id: UInt,
+    public var name: String,
+    public var types: MutableMap<ArscTypeName, ArscType>,
 ) {
+    public fun highestTypeId(): UInt {
+        return types.values.maxByOrNull { it.id }?.id ?: 1U
+    }
+
     @ArscInternalApi
     public companion object {
         public fun parse(source: Source, globalStringPool: ArscStringPool): ArscPackage {
@@ -19,7 +23,6 @@ public data class ArscPackage(
             val packageId = body.readU32()
             val packageName = body.readStringUtf16(128)
 
-            // 跳过 5 个 U32
             repeat(5) { body.readU32() }
 
             val typeNames = ArscStringPool.parse(body)
@@ -29,14 +32,8 @@ public data class ArscPackage(
                 ArscType(id = (idx + 1).toUInt(), name = name, configs = mutableListOf(), specs = null)
             }
 
-            // 在 Package 块的剩余部分解析子块
             while (!body.exhausted()) {
-                val chunkHeader = try {
-                    ArscHeader.parse(body, 0L)
-                } catch (e: Exception) {
-                    break
-                }
-
+                val chunkHeader = try { ArscHeader.parse(body, 0L) } catch (e: Exception) { break }
                 val chunkBodySize = chunkHeader.bodySize.toLong() - 8
                 if (chunkBodySize < 0) break
 
@@ -53,23 +50,17 @@ public data class ArscPackage(
                     }
                     else -> body.skip(chunkBodySize)
                 }
-                
-                // 处理子块后的对齐
                 val padding = (4 - (chunkHeader.bodySize.toLong() % 4)) % 4
                 if (padding > 0L && body.size >= padding) body.skip(padding)
             }
 
-            return ArscPackage(
-                id = packageId,
-                name = packageName,
-                types = typesList.associateBy { it.name }.toMutableMap(),
-            )
+            return ArscPackage(id = packageId, name = packageName, types = typesList.associateBy { it.name }.toMutableMap())
         }
 
         public fun write(sink: Sink, pkg: ArscPackage, writtenGlobalPool: ArscStringPool.WrittenPool): Int {
             val pkgBuffer = Buffer()
             pkgBuffer.writeU32(pkg.id)
-            pkgBuffer.putStringUtf16(pkg.name, 128) // 128 chars = 256 bytes
+            pkgBuffer.putStringUtf16(pkg.name, 128)
 
             val typeNames = pkg.types.keys.toList()
             val keyNames = pkg.types.values.flatMap { it.configs.flatMap { c -> c.resources.map { r -> r.name } } }.distinct()
@@ -77,11 +68,10 @@ public data class ArscPackage(
             val typePool = ArscStringPool(typeNames, emptyList(), 0u)
             val keyPool = ArscStringPool(keyNames, emptyList(), ArscStringPool.UTF_8_FLAG)
 
-            // 占位
-            for (i in 0 until 5) pkgBuffer.writeU32(0u)
+            repeat(5) { pkgBuffer.writeU32(0u) }
 
             ArscStringPool.write(pkgBuffer, typePool)
-            ArscStringPool.write(pkgBuffer, keyPool)
+            val writtenKeyPool = ArscStringPool.write(pkgBuffer, keyPool)
 
             for (type in pkg.types.values) {
                 val specs = type.specs ?: continue
@@ -96,7 +86,7 @@ public data class ArscPackage(
                 pkgBuffer.write(specBuffer, specBuffer.size)
 
                 for (config in type.configs) {
-                    ArscConfig.write(pkgBuffer, config, writtenGlobalPool, ArscStringPool.WrittenPool(keyNames.mapIndexed { i, s -> s to i }.toMap(), emptyMap()))
+                    ArscConfig.write(pkgBuffer, config, writtenGlobalPool, writtenKeyPool)
                 }
             }
 
