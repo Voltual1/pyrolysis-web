@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
 }
 
-group = me.voltual.apkparser"
+group = "me.voltual.apkparser"
 version = "1.0"
 
 kotlin {
