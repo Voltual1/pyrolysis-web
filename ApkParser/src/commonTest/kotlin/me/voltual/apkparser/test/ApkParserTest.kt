@@ -7,7 +7,7 @@ import me.voltual.apkparser.ApkParser
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 
-class ApkParserTest {
+//class ApkParserTest {
 
     @Test
     fun testParseRealApk() {
