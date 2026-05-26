@@ -4,9 +4,7 @@ import dev.rushii.arsc.internal.*
 import kotlinx.io.*
 
 public class ArscFile(public val packages: List<ArscPackage>) {
-
     public constructor(bytes: ByteArray) : this(Buffer().apply { write(bytes) })
-
     public constructor(source: Source) : this(parseContent(source))
 
     public fun finalize(): ByteArray {
@@ -39,18 +37,18 @@ public class ArscFile(public val packages: List<ArscPackage>) {
         return finalBuffer.readByteArray()
     }
 
-    override fun toString(): String = "Arsc[packages=$packages]"
-
     private companion object {
         private fun parseContent(source: Source): List<ArscPackage> {
             val header = ArscHeader.parse(source, 0L)
-            if (header.type != ArscHeaderType.Table) {
-                throw ArscError(0, header.type, "Not a valid ARSC table")
-            }
-            val packageCount = source.readU32()
-            val globalStringPool = ArscStringPool.parse(source)
+            val bodySize = header.bodySize.toLong() - 8
+            val body = Buffer()
+            source.readTo(body, bodySize)
+
+            val packageCount = body.readU32()
+            val globalStringPool = ArscStringPool.parse(body)
+            
             return List(packageCount.toInt()) {
-                ArscPackage.parse(source, globalStringPool)
+                ArscPackage.parse(body, globalStringPool)
             }
         }
     }

@@ -8,69 +8,55 @@ public data class ArscPackage(
     var name: String,
     var types: MutableMap<ArscTypeName, ArscType>,
 ) {
-    public fun highestTypeId(): UInt = types.values.maxByOrNull { it.id }?.id ?: 1U
-
     @ArscInternalApi
     public companion object {
         public fun parse(source: Source, globalStringPool: ArscStringPool): ArscPackage {
             val header = ArscHeader.parse(source, 0L)
-            val pkgEndPos = header.bodySize.toLong()
-            var bytesRead = 8L
+            val bodySize = header.bodySize.toLong() - 8
+            val body = Buffer()
+            source.readTo(body, bodySize)
 
-            val packageId = source.readU32(); bytesRead += 4
-            val packageName = source.readStringUtf16(128); bytesRead += 256
+            val packageId = body.readU32()
+            val packageName = body.readStringUtf16(128)
 
-            // 跳过 5 个 U32 偏移量字段
-            for (i in 0 until 5) { source.readU32(); bytesRead += 4 }
+            // 跳过 5 个 U32
+            repeat(5) { body.readU32() }
 
-            val typeNames = ArscStringPool.parse(source)
-            // 注意：我们不能直接用 typeNames.size()，因为解析时可能已经处理了对齐
-            // 我们需要根据 StringPool 的实际 Chunk Header 来增加 bytesRead
-            // 这里为了简化，我们假设 StringPool 之后紧跟内容，并让循环自行处理
-            
-            // 重新计算 bytesRead 是不安全的，我们改用 while(bytesRead < pkgEndPos)
-            // 但因为 Source 不支持获取 Position，我们必须在子解析器中返回消耗的字节数
-            // 或者使用一个包装 Source。这里通过 bodySize 强制同步。
-            
-            // 临时方案：假设 typeNames 和 keyNames 之后 bytesRead 已经正确增加
-            // 实际上，parse 内部已经消耗了对应的字节。
-            // 我们需要一个更稳健的循环：
-            
-            val keyNames = ArscStringPool.parse(source)
+            val typeNames = ArscStringPool.parse(body)
+            val keyNames = ArscStringPool.parse(body)
 
             val typesList = typeNames.strings.mapIndexed { idx, name ->
                 ArscType(id = (idx + 1).toUInt(), name = name, configs = mutableListOf(), specs = null)
             }
 
-            // 关键：这里不再手动维护 bytesRead，而是依赖块解析
-            // 由于 ARSC 是流式的，我们尝试读取直到 EOF 或捕获异常
-            while (true) {
+            // 在 Package 块的剩余部分解析子块
+            while (!body.exhausted()) {
                 val chunkHeader = try {
-                    ArscHeader.parse(source, 0L)
+                    ArscHeader.parse(body, 0L)
                 } catch (e: Exception) {
-                    break // 到达 Package 结尾
+                    break
                 }
 
-                val bodySize = chunkHeader.bodySize.toLong() - 8
-                if (bodySize < 0) break // 错误的块大小，防止死循环
+                val chunkBodySize = chunkHeader.bodySize.toLong() - 8
+                if (chunkBodySize < 0) break
 
                 when (chunkHeader.type) {
                     ArscHeaderType.TableTypeSpec -> {
-                        val specs = ArscSpecs.parse(source)
+                        val specs = ArscSpecs.parse(body)
                         val idx = specs.typeId.toInt() - 1
                         if (idx in typesList.indices) typesList[idx].specs = specs
                     }
                     ArscHeaderType.TableType -> {
-                        val config = ArscConfig.parse(source, globalStringPool, keyNames)
+                        val config = ArscConfig.parse(body, globalStringPool, keyNames)
                         val idx = config.typeId.toInt() - 1
                         if (idx in typesList.indices) typesList[idx].configs += config
                     }
-                    else -> source.skip(bodySize)
+                    else -> body.skip(chunkBodySize)
                 }
                 
-                // 4 字节对齐处理
+                // 处理子块后的对齐
                 val padding = (4 - (chunkHeader.bodySize.toLong() % 4)) % 4
-                if (padding > 0L) source.skip(padding)
+                if (padding > 0L && body.size >= padding) body.skip(padding)
             }
 
             return ArscPackage(
