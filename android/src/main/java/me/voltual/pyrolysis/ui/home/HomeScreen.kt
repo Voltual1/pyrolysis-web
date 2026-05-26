@@ -63,7 +63,6 @@ fun HomeScreen(
     onRecalculateDays: () -> Unit,
     onAboutClick: () -> Unit,
     onAccountProfileClick: () -> Unit,
-    onNavigateToUpdate: () -> Unit,
     onNavigateToMyComments: () -> Unit,
     onNavigateToMyReviews: () -> Unit,
     onNavigateToCreateAppRelease: () -> Unit,

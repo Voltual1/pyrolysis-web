@@ -130,7 +130,6 @@ fun HomeDestination(
             onAboutClick = { navigator.navigate(About) },
             onAccountProfileClick = { navigator.navigate(AccountProfile(AppStore.XIAOQU_SPACE)) },
             onRecalculateDays = { viewModel.recalculateDaysDiff() },
-            onNavigateToUpdate = { navigator.navigate(Update) },
             onNavigateToMyReviews = { navigator.navigate(MyReviews) },
             onNavigateToMyComments = { navigator.navigate(MyComments) },
             onNavigateToCreateAppRelease = { navigator.navigate(CreateAppRelease) },
