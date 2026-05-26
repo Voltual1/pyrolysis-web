@@ -7,52 +7,56 @@ import org.duangsuse.bin.Nat8Reader
 import org.duangsuse.bin.axml.AxmlExtractor
 import dev.rushii.arsc.ArscFile
 import dev.rushii.arsc.ArscResolver
+import dev.rushii.arsc.internal.ArscStringPool
 import dev.rushii.arsc.internal.ArscInternalApi
 
 @OptIn(ArscInternalApi::class)
 public class ApkParser(private val apkSource: Source) {
 
-    /**
-     * 解析 APK 并提取元数据
-     */
     public fun parse(): ApkMetadata {
         var manifestBytes: ByteArray? = null
         var arscBytes: ByteArray? = null
 
-        // 1. 使用 kmp-zip 遍历 APK 查找必要文件
         val zis = ZipInputStream(apkSource)
         while (true) {
             val entry = zis.nextEntry ?: break
             when (entry.name) {
-                "AndroidManifest.xml" -> {
-                    manifestBytes = zis.readBytes()
-                }
-                "resources.arsc" -> {
-                    arscBytes = zis.readBytes()
-                }
+                "AndroidManifest.xml" -> manifestBytes = zis.readBytes()
+                "resources.arsc" -> arscBytes = zis.readBytes()
             }
             if (manifestBytes != null && arscBytes != null) break
         }
 
-        if (manifestBytes == null) error("APK 中未找到 AndroidManifest.xml")
-        if (arscBytes == null) error("APK 中未找到 resources.arsc")
+        if (manifestBytes == null) error("AndroidManifest.xml not found")
+        
+        // 1. 先解析 AXML 的字符串池
+        val manifestBuffer = Buffer().apply { write(manifestBytes) }
+        val axmlStringPool = parseAxmlStringPool(manifestBuffer.peek())
 
-        // 2. 解析 AndroidManifest.xml 提取资源 ID
+        // 2. 解析 AXML 内容
         val manifestReader = createAxmlReader(manifestBytes)
         val extractor = AxmlExtractor(manifestReader)
+        extractor.setAxmlStrings(axmlStringPool)
         val resInfo = extractor.extract()
 
-        // 3. 解析 resources.arsc 还原资源值
-        val arscFile = ArscFile(arscBytes)
-        val resolver = ArscResolver(arscFile)
+        // 3. 处理资源解析
+        var label = resInfo.labelRaw
+        var iconPath = resInfo.iconRaw
 
-        val label = resInfo.labelRes?.let { resolver.resolveString(it) }
-        val iconPath = resInfo.iconRes?.let { resolver.resolveString(it) }
+        if ((resInfo.labelRes != null || resInfo.iconRes != null) && arscBytes != null) {
+            val arscFile = ArscFile(arscBytes)
+            val resolver = ArscResolver(arscFile)
+            
+            if (label == null && resInfo.labelRes != null) {
+                label = resolver.resolveString(resInfo.labelRes!!)
+            }
+            if (iconPath == null && resInfo.iconRes != null) {
+                iconPath = resolver.resolveString(resInfo.iconRes!!)
+            }
+        }
 
-        // 注意：如果需要包名，我们可以进一步扩展 AxmlExtractor 来提取 manifest 标签的属性
-        // 目前先根据您的需求返回 label 和 iconPath
         return ApkMetadata(
-            packageName = null, // 待扩展
+            packageName = resInfo.packageName,
             label = label,
             iconPath = iconPath,
             versionCode = null,
@@ -61,18 +65,22 @@ public class ApkParser(private val apkSource: Source) {
     }
 
     /**
-     * 辅助函数：将 ByteArray 包装为 SomeAXML 所需的 Reader
+     * 专门从 AXML 头部提取 StringPool 的工具函数
      */
+    private fun parseAxmlStringPool(source: Source): List<String> {
+        // 跳过 AXML Header (8 bytes)
+        source.skip(8)
+        // 解析 StringPool
+        return ArscStringPool.parse(source).strings
+    }
+
     private fun createAxmlReader(bytes: ByteArray): Reader {
         val buffer = Buffer().apply { write(bytes) }
-        val nat8Reader = object : Nat8Reader {
+        return Reader(object : Nat8Reader {
             override val source: Source = buffer
             override val estimate: Long = bytes.size.toLong()
             override fun skip(n: Long) { source.skip(n) }
-            override fun close() { /* Buffer 不需要关闭 */ }
-        }
-        return Reader(nat8Reader).apply {
-            byteOrder = org.duangsuse.bin.ByteOrder.LittleEndian
-        }
+            override fun close() {}
+        }).apply { byteOrder = org.duangsuse.bin.ByteOrder.LittleEndian }
     }
 }
