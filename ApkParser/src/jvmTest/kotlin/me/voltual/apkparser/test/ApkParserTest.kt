@@ -12,7 +12,7 @@ class ApkParserTest {
     @Test
     fun testParseRealApk() {
         // 假设您的测试资源里有一个测试用的 apk
-        val path = Path("src/commonTest/resources/test.apk")
+        val path = Path("src/jvmTest/resources/test.apk")
         if (!SystemFileSystem.exists(path)) return
 
         val source = SystemFileSystem.source(path).buffered()
