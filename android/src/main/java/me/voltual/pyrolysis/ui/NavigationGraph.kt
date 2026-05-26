@@ -49,8 +49,6 @@ import me.voltual.pyrolysis.ui.settings.storage.StoreManagerScreen
 import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsScreen
 import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsViewModel
 import me.voltual.pyrolysis.core.ui.theme.ThemeCustomizeScreen
-import me.voltual.pyrolysis.ui.update.UpdateScreen
-import me.voltual.pyrolysis.ui.update.UpdateViewModel
 import me.voltual.pyrolysis.ui.user.*
 import me.voltual.pyrolysis.ui.user.compose.UserListScreen
 import androidx.compose.foundation.*
@@ -485,16 +483,7 @@ fun BBQNavDisplay(
                         viewModel = viewModel,
                         onBack = { navigator.goBack() }
                     )
-                }
-
-                is Update -> NavEntry(key) {
-                    val viewModel: UpdateViewModel = koinViewModel()
-                    UpdateScreen(
-                        viewModel = viewModel,
-                        snackbarHostState = snackbarHostState,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+                }                
                 
                 is Explore -> NavEntry(key) {
                     ExplorePage()                    

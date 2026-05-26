@@ -33,9 +33,6 @@ data object StoreManager : AppDestination
 @Serializable
 data object UpdateSettings : AppDestination
 
-@Serializable
-data object Update : AppDestination
-
 // --- 社区与帖子 ---
 @Serializable
 data object Community : AppDestination
