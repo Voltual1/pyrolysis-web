@@ -37,6 +37,17 @@ import kotlinx.io.Source
 import kotlin.time.Clock
 import kotlin.math.roundToInt
 
+data class AppCategory(
+    val categoryId: Int?,
+    val subCategoryId: Int?,
+    val categoryName: String
+)
+
+enum class ApkUploadService(val displayName: String) {
+    KEYUN("氪云"),
+    WANYUEYUN("挽悦云")
+}
+
 @KoinViewModel
 class AppReleaseViewModel(
     private val xiaoQuRepo: XiaoQuRepository
