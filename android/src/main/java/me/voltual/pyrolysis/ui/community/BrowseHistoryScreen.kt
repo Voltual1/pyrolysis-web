@@ -26,7 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboardManager // 引入 Compose 的剪贴板管理器
+import androidx.compose.ui.platform.LocalClipboard // 引入 Compose 的剪贴板管理器
 import androidx.compose.ui.text.AnnotatedString // 引入富文本类型，复制时需要传入该类型
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -44,12 +44,12 @@ fun BrowseHistoryScreen(
     val selectedCount = viewModel.selectedItems.collectAsState().value.size
 
     // 获取 Compose 上下文中的剪贴板管理器
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
     
     // 监听复制事件
     LaunchedEffect(Unit) {
         viewModel.copyEvent.collect { (textToCopy) ->
-            // 使用 LocalClipboardManager 进行文本复制
+            // 使用 LocalClipboard 进行文本复制
             clipboardManager.setText(AnnotatedString(textToCopy))
         }
     }
