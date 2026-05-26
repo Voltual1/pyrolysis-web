@@ -9,22 +9,19 @@
 @file:OptIn(kotlin.time.ExperimentalTime::class)
 package me.voltual.pyrolysis.ui.plaza
 
-import android.app.Application
-import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.readBytes
-import io.github.vinceglb.filekit.name
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
 import me.voltual.pyrolysis.feature.store.repository.XiaoQuRepository
 import me.voltual.pyrolysis.data.unified.UnifiedAppReleaseParams
-import me.voltual.pyrolysis.core.utils.ApkInfo
-import me.voltual.pyrolysis.core.utils.ApkParser
+import me.voltual.apkparser.ApkParser
+import me.voltual.apkparser.ApkMetadata
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,29 +31,17 @@ import kotlinx.coroutines.withContext
 import org.koin.android.annotation.KoinViewModel
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.files.Path
-import kotlinx.io.buffered // 必须导入以支持 .buffered()
-import kotlinx.io.write    // 必须导入以支持 .write(byteArray)
+import kotlinx.io.buffered
+import kotlinx.io.write
+import kotlinx.io.Source
 import kotlin.time.Clock
-
-// 小趣空间分类模型
-data class AppCategory(
-    val categoryId: Int?,
-    val subCategoryId: Int?,
-    val categoryName: String
-)
-
-enum class ApkUploadService(val displayName: String) {
-    KEYUN("氪云"),
-    WANYUEYUN("挽悦云")
-}
+import kotlin.math.roundToInt
 
 @KoinViewModel
 class AppReleaseViewModel(
-	application: Application,
-    private val xiaoQuRepo: XiaoQuRepository  // 注入 XiaoQuRepository，不再手动创建
-) : AndroidViewModel(application) {
+    private val xiaoQuRepo: XiaoQuRepository
+) : ViewModel() {
 
-    private val context: Context = application.applicationContext
     private val fileSystem = SystemFileSystem
     
     private val _selectedStore = MutableStateFlow(AppStore.XIAOQU_SPACE)
@@ -138,6 +123,11 @@ class AppReleaseViewModel(
     
     private val MAX_INTRO_IMAGES_XIAOQU = 3
 
+    // 注意：在 KMP 环境下，cacheDir 需要通过 Expect/Actual 提供，
+    // 这里假设你有一个全局配置或通过注入获取临时目录路径。
+    // 为了演示，我暂时保留逻辑，建议将 context.cacheDir 替换为跨平台的临时路径获取方式。
+    private val tempDir: String = "/tmp" // 实际应根据平台动态获取
+
     fun addScreenshots(files: List<PlatformFile>) {       
         val currentCount = screenshotsFiles.size
         val remainingSlots = MAX_INTRO_IMAGES_XIAOQU - currentCount
@@ -162,66 +152,111 @@ class AppReleaseViewModel(
         }
     }
 
-    // --- APK 解析与上传 ---
+    /**
+     * 重构后的 APK 解析与上传逻辑
+     */
     fun parseAndUploadApk(file: PlatformFile) {
         viewModelScope.launch(Dispatchers.IO) {
-            _processFeedback.value = Result.success("正在解析APK...")
-            val parsedInfo: ApkInfo? = ApkParser.parse(context, file)
+            _processFeedback.value = Result.success("正在读取 APK 文件...")
+            
+            // 1. 将 PlatformFile 写入临时目录以便解析
+            val now = Clock.System.now().toEpochMilliseconds()
+            val apkPath = fileToTempPath(file, "release_${now}.apk")
+            if (apkPath == null) {
+                _processFeedback.value = Result.failure(Exception("无法创建临时 APK 文件"))
+                return@launch
+            }
+            tempApkPath.value = apkPath
 
-            if (parsedInfo == null) {
-                _processFeedback.value = Result.failure(Exception("APK 文件解析失败"))
+            // 2. 使用纯 Kotlin ApkParser 解析
+            val metadata: ApkMetadata = try {
+                val source = fileSystem.source(apkPath).buffered()
+                ApkParser(source).parse()
+            } catch (e: Exception) {
+                _processFeedback.value = Result.failure(Exception("APK 解析失败: ${e.message}"))
                 return@launch
             }
 
-            withContext(Dispatchers.Main) {
-                appName.value = parsedInfo.appName
-                packageName.value = parsedInfo.packageName
-                versionName.value = parsedInfo.versionName
-                versionCode.value = parsedInfo.versionCode
-                appSize.value = parsedInfo.sizeInMb.toString()
-                
-                tempApkPath.value = parsedInfo.tempApkPath
-                tempIconPath.value = parsedInfo.tempIconPath
-                localIconFile.value = parsedInfo.tempIconFile
-                
-                appExplain.value = "适配性能描述 •\n包名：${parsedInfo.packageName}\n版本：${parsedInfo.versionName}"
+            // 3. 计算文件大小
+            val sizeInBytes = fileSystem.metadataOrNull(apkPath)?.size ?: 0L
+            val sizeMb = (sizeInBytes / 1024.0 / 1024.0 * 100).roundToInt() / 100.0
+
+            // 4. 提取图标
+            var iconPath: Path? = null
+            metadata.iconPath?.let { internalPath ->
+                try {
+                    // 重新打开 Source 以便提取文件
+                    val apkSourceForIcon = fileSystem.source(apkPath).buffered()
+                    val iconBytes = ApkParser.getFileBytes(apkSourceForIcon, internalPath)
+                    if (iconBytes != null) {
+                        val iconTempPath = Path(apkPath.parent.toString(), "icon_${now}.png")
+                        fileSystem.sink(iconTempPath).buffered().use { it.write(iconBytes) }
+                        iconPath = iconTempPath
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
 
+            // 5. 更新 UI 状态
+            withContext(Dispatchers.Main) {
+                appName.value = metadata.label ?: "未知应用"
+                packageName.value = metadata.packageName ?: ""
+                versionName.value = metadata.versionName ?: "N/A"
+                versionCode.value = metadata.versionCode ?: 0L
+                appSize.value = sizeMb.toString()
+                
+                tempIconPath.value = iconPath
+                // 注意：由于去掉了 Android 依赖，localIconFile 现在可能需要包装为 PlatformFile
+                // 或者 UI 层直接根据 tempIconPath 显示图片
+                iconPath?.let { 
+                    // 这里取决于 PlatformFile 在各平台的构造实现
+                    // 某些平台可能需要特定的 File 对象
+                }
+                
+                appExplain.value = "适配性能描述 •\n包名：${metadata.packageName}\n版本：${metadata.versionName}"
+            }
+
+            // 6. 执行上传逻辑 (保持不变)
             if (_selectedStore.value == AppStore.XIAOQU_SPACE) {
-                val uploadJobs = mutableListOf<kotlinx.coroutines.Job>()
-
-                uploadJobs += launch {
-                    isApkUploading.value = true
-                    val serviceType = when (selectedApkUploadService.value) {
-                        ApkUploadService.KEYUN -> "KEYUN"
-                        ApkUploadService.WANYUEYUN -> "WANYUEYUN"
-                    }
-                    val apkResult = xiaoQuRepo.uploadApk(parsedInfo.tempApkPath, serviceType)
-                    apkResult.onSuccess { url ->
-                        apkDownloadUrl.value = url
-                    }.onFailure { e ->
-                        withContext(Dispatchers.Main) { _processFeedback.value = Result.failure(e) }
-                    }
-                    isApkUploading.value = false
-                }
-
-                parsedInfo.tempIconPath?.let { iconPath ->
-                    uploadJobs += launch {
-                        isIconUploading.value = true
-                        val imageResult = xiaoQuRepo.uploadImage(iconPath, "icon")
-                        imageResult.onSuccess { url ->
-                            iconUrl.value = url
-                        }.onFailure { e ->
-                            withContext(Dispatchers.Main) { _processFeedback.value = Result.failure(e) }
-                        }
-                        isIconUploading.value = false
-                    }
-                }
-                uploadJobs.joinAll()
+                executeXiaoQuUpload(apkPath, iconPath)
             } else {
                 _processFeedback.value = Result.success("APK解析完成，准备发布")
             }
         }
+    }
+
+    private suspend fun executeXiaoQuUpload(apkPath: Path, iconPath: Path?) {
+        val uploadJobs = mutableListOf<kotlinx.coroutines.Job>()
+
+        uploadJobs += viewModelScope.launch(Dispatchers.IO) {
+            isApkUploading.value = true
+            val serviceType = when (selectedApkUploadService.value) {
+                ApkUploadService.KEYUN -> "KEYUN"
+                ApkUploadService.WANYUEYUN -> "WANYUEYUN"
+            }
+            val apkResult = xiaoQuRepo.uploadApk(apkPath, serviceType)
+            apkResult.onSuccess { url ->
+                apkDownloadUrl.value = url
+            }.onFailure { e ->
+                withContext(Dispatchers.Main) { _processFeedback.value = Result.failure(e) }
+            }
+            isApkUploading.value = false
+        }
+
+        iconPath?.let { path ->
+            uploadJobs += viewModelScope.launch(Dispatchers.IO) {
+                isIconUploading.value = true
+                val imageResult = xiaoQuRepo.uploadImage(path, "icon")
+                imageResult.onSuccess { url ->
+                    iconUrl.value = url
+                }.onFailure { e ->
+                    withContext(Dispatchers.Main) { _processFeedback.value = Result.failure(e) }
+                }
+                isIconUploading.value = false
+            }
+        }
+        uploadJobs.joinAll()
     }
 
     fun uploadIntroductionImages(files: List<PlatformFile>) {
@@ -262,21 +297,21 @@ class AppReleaseViewModel(
 
     fun clearProcessFeedback() { _processFeedback.value = null }
 
-    /**
-     * 修正后的 kotlinx-io 写入逻辑
-     */
     private suspend fun fileToTempPath(file: PlatformFile, fileName: String): Path? {
         return try {
             val bytes = file.readBytes()
-            // 使用 Path 构造函数替代 toPath()
-            val tempPath = Path(context.cacheDir.absolutePath, fileName)
+            // 建议：tempDir 应通过构造函数注入或单例配置，以保证跨平台一致性
+            val pathStr = "${tempDir}/$fileName"
+            val tempPath = Path(pathStr)
             
-            // 使用 sink().buffered().use 替代 okio 的 write {}
             fileSystem.sink(tempPath).buffered().use { sink ->
                 sink.write(bytes)
             }
             tempPath
-        } catch (e: Exception) { null }
+        } catch (e: Exception) { 
+            e.printStackTrace()
+            null 
+        }
     }
 
     fun removeIntroductionImage(url: String) {

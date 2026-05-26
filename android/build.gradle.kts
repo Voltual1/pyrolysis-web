@@ -150,6 +150,7 @@ dependencies {
     // 播放器与 UI
     implementation(libs.ijkplayer)
     implementation(project(":DanmakuFlameMaster"))
+    implementation(project(":ApkParser"))
     implementation(libs.markdown)
 
     // 存储
