@@ -31,22 +31,12 @@ import kotlinx.coroutines.withContext
 import org.koin.android.annotation.KoinViewModel
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.files.Path
+import kotlinx.io.files.SystemTemporaryDirectory
 import kotlinx.io.buffered
 import kotlinx.io.write
 import kotlinx.io.Source
 import kotlin.time.Clock
 import kotlin.math.roundToInt
-
-data class AppCategory(
-    val categoryId: Int?,
-    val subCategoryId: Int?,
-    val categoryName: String
-)
-
-enum class ApkUploadService(val displayName: String) {
-    KEYUN("氪云"),
-    WANYUEYUN("挽悦云")
-}
 
 @KoinViewModel
 class AppReleaseViewModel(
@@ -134,11 +124,6 @@ class AppReleaseViewModel(
     
     private val MAX_INTRO_IMAGES_XIAOQU = 3
 
-    // 注意：在 KMP 环境下，cacheDir 需要通过 Expect/Actual 提供，
-    // 这里假设你有一个全局配置或通过注入获取临时目录路径。
-    // 为了演示，我暂时保留逻辑，建议将 context.cacheDir 替换为跨平台的临时路径获取方式。
-    private val tempDir: String = "/tmp" // 实际应根据平台动态获取
-
     fun addScreenshots(files: List<PlatformFile>) {       
         val currentCount = screenshotsFiles.size
         val remainingSlots = MAX_INTRO_IMAGES_XIAOQU - currentCount
@@ -164,13 +149,13 @@ class AppReleaseViewModel(
     }
 
     /**
-     * 重构后的 APK 解析与上传逻辑
+     * 重构后的 APK 解析与上传逻辑，使用 SystemTemporaryDirectory
      */
     fun parseAndUploadApk(file: PlatformFile) {
         viewModelScope.launch(Dispatchers.IO) {
             _processFeedback.value = Result.success("正在读取 APK 文件...")
             
-            // 1. 将 PlatformFile 写入临时目录以便解析
+            // 1. 将 PlatformFile 写入系统临时目录
             val now = Clock.System.now().toEpochMilliseconds()
             val apkPath = fileToTempPath(file, "release_${now}.apk")
             if (apkPath == null) {
@@ -181,6 +166,7 @@ class AppReleaseViewModel(
 
             // 2. 使用纯 Kotlin ApkParser 解析
             val metadata: ApkMetadata = try {
+                // 必须在每次使用前重新打开 Source，因为 ApkParser 会消耗它
                 val source = fileSystem.source(apkPath).buffered()
                 ApkParser(source).parse()
             } catch (e: Exception) {
@@ -196,11 +182,12 @@ class AppReleaseViewModel(
             var iconPath: Path? = null
             metadata.iconPath?.let { internalPath ->
                 try {
-                    // 重新打开 Source 以便提取文件
+                    // 再次打开 Source 提取图标字节
                     val apkSourceForIcon = fileSystem.source(apkPath).buffered()
                     val iconBytes = ApkParser.getFileBytes(apkSourceForIcon, internalPath)
                     if (iconBytes != null) {
-                        val iconTempPath = Path(apkPath.parent.toString(), "icon_${now}.png")
+                        // 同样写入系统临时目录
+                        val iconTempPath = Path(SystemTemporaryDirectory, "icon_${now}.png")
                         fileSystem.sink(iconTempPath).buffered().use { it.write(iconBytes) }
                         iconPath = iconTempPath
                     }
@@ -218,17 +205,10 @@ class AppReleaseViewModel(
                 appSize.value = sizeMb.toString()
                 
                 tempIconPath.value = iconPath
-                // 注意：由于去掉了 Android 依赖，localIconFile 现在可能需要包装为 PlatformFile
-                // 或者 UI 层直接根据 tempIconPath 显示图片
-                iconPath?.let { 
-                    // 这里取决于 PlatformFile 在各平台的构造实现
-                    // 某些平台可能需要特定的 File 对象
-                }
-                
                 appExplain.value = "适配性能描述 •\n包名：${metadata.packageName}\n版本：${metadata.versionName}"
             }
 
-            // 6. 执行上传逻辑 (保持不变)
+            // 6. 执行上传逻辑
             if (_selectedStore.value == AppStore.XIAOQU_SPACE) {
                 executeXiaoQuUpload(apkPath, iconPath)
             } else {
@@ -308,12 +288,14 @@ class AppReleaseViewModel(
 
     fun clearProcessFeedback() { _processFeedback.value = null }
 
+    /**
+     * 写入系统临时路径
+     */
     private suspend fun fileToTempPath(file: PlatformFile, fileName: String): Path? {
         return try {
             val bytes = file.readBytes()
-            // 建议：tempDir 应通过构造函数注入或单例配置，以保证跨平台一致性
-            val pathStr = "${tempDir}/$fileName"
-            val tempPath = Path(pathStr)
+            // 使用 kotlinx.io 提供的 SystemTemporaryDirectory
+            val tempPath = Path(SystemTemporaryDirectory, fileName)
             
             fileSystem.sink(tempPath).buffered().use { sink ->
                 sink.write(bytes)
