@@ -17,9 +17,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import me.voltual.pyrolysis.KtorClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import android.content.Context
-import android.content.Intent
-import me.voltual.pyrolysis.core.utils.DownloadManager
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,51 +61,33 @@ class AppDetailComposeViewModel(
     private val _showDownloadDrawer = MutableStateFlow(false)
     val showDownloadDrawer: StateFlow<Boolean> = _showDownloadDrawer.asStateFlow()
 
-    // Snackbar 事件
     private val _snackbarEvent = MutableSharedFlow<String>()
     val snackbarEvent: SharedFlow<String> = _snackbarEvent.asSharedFlow()
     
-    // 导航事件
     private val _navigateToDownloadEvent = MutableSharedFlow<Boolean>()
     val navigateToDownloadEvent: SharedFlow<Boolean> = _navigateToDownloadEvent.asSharedFlow()
 
-    // 用于发送一次性事件（如打开浏览器）
     private val _openUrlEvent = MutableSharedFlow<String>()
     val openUrlEvent: SharedFlow<String> = _openUrlEvent.asSharedFlow()
 
-    private val _currentTab = MutableStateFlow(0) // 0: 详情, 1: 版本列表
+    private val _currentTab = MutableStateFlow(0)
     val currentTab: StateFlow<Int> = _currentTab.asStateFlow()
     
-    // 分享链接
     private val _shareLink = MutableStateFlow<String?>(null)
     val shareLink: StateFlow<String?> = _shareLink.asStateFlow()
 
     private val repository: IAppStoreRepository
         get() = repositories[currentStore] ?: throw IllegalStateException("Repository not found")
         
-    // 退币事件
     private val _refundEvent = MutableSharedFlow<RefundInfo>()
     val refundEvent: SharedFlow<RefundInfo> = _refundEvent.asSharedFlow()
 
-    // 更新事件
     private val _updateEvent = MutableSharedFlow<String>()
     val updateEvent: SharedFlow<String> = _updateEvent.asSharedFlow()
     
-    // 支付相关状态和方法
     private val _navigateToPaymentEvent = MutableSharedFlow<PaymentInfo>()
     val navigateToPaymentEvent: SharedFlow<PaymentInfo> = _navigateToPaymentEvent.asSharedFlow()
-    
-    // 下载事件
-    data class DownloadEvent(
-        val url: String,
-        val fileName: String,
-        val headers: Map<String, String>? = null
-    )
 
-    private val _downloadEvent = MutableSharedFlow<DownloadEvent>()
-    val downloadEvent: SharedFlow<DownloadEvent> = _downloadEvent.asSharedFlow()
-
-    // 支付信息数据类
     data class PaymentInfo(
         val appId: Long,
         val appName: String,
@@ -118,17 +97,12 @@ class AppDetailComposeViewModel(
         val previewContent: String
     )
 
-    // 退款信息数据类
     data class RefundInfo(
         val appId: String,
         val versionId: Long,
         val appName: String,
         val payMoney: Int
     )    
-
-    // 新增：获取设备SDK版本
-//    val deviceSdkVersion: Int
-//        get() = Build.VERSION.SDK_INT
 
     fun initializeData(appId: String, versionId: Long, storeName: String) {
         val store = try {
@@ -148,7 +122,6 @@ class AppDetailComposeViewModel(
         loadData()
     }
     
-    // 请求退款功能（仅小趣空间）
     fun requestRefund() {
         viewModelScope.launch {
             val detail = _appDetail.value ?: return@launch
@@ -171,7 +144,6 @@ class AppDetailComposeViewModel(
         }
     }
 
-    // 请求更新功能（仅小趣空间）
     fun requestUpdate() {
         viewModelScope.launch {
             val detail = _appDetail.value ?: return@launch
@@ -179,7 +151,6 @@ class AppDetailComposeViewModel(
             if (detail.store == AppStore.XIAOQU_SPACE) {
                 val raw = detail.raw as? me.voltual.pyrolysis.KtorClient.AppDetail
                 if (raw != null) {
-                    // 使用 KtorClient 的 JsonConverter 将 AppDetail 转换为 JSON 字符串
                     val appDetailJson = KtorClient.JsonConverter.toJson(raw)
                     _updateEvent.emit(appDetailJson)
                 }
@@ -193,11 +164,9 @@ class AppDetailComposeViewModel(
         loadData()
     }
 
-    // 检查是否需要购买
     fun checkPurchaseNeeded(): PaymentInfo? {
         val detail = _appDetail.value ?: return null
         
-        // 仅小趣空间应用需要检查购买状态
         if (detail.store == AppStore.XIAOQU_SPACE) {
             val raw = detail.raw as? me.voltual.pyrolysis.KtorClient.AppDetail
             if (raw != null && raw.is_pay == 1 && raw.pay_money > 0 && raw.is_user_pay != true) {
@@ -214,123 +183,104 @@ class AppDetailComposeViewModel(
         return null
     }
     
-/**
- * 切换收藏状态
- */
-fun toggleFavorite() {
-    val currentDetail = _appDetail.value ?: return
-    val targetState = currentDetail.isFavorite 
+    fun toggleFavorite() {
+        val currentDetail = _appDetail.value ?: return
+        val targetState = currentDetail.isFavorite 
 
-    viewModelScope.launch {
-        // 调用仓库执行 收藏/取消收藏 操作
-        val result = repository.toggleFavorite(currentAppId, currentDetail.isFavorite)
-
-        if (result.isSuccess) {
-            // 获取操作后的实际状态
-            val finalFavoriteState = result.getOrNull() ?: targetState
-            
-            // 计算新的收藏数
-val newFavoriteCount = if (finalFavoriteState) {
-    (currentDetail.favoriteCount ?: 0) + 1
-} else {
-    maxOf(0, (currentDetail.favoriteCount ?: 1) - 1)
-}
-
-            // 更新本地 StateFlow 以立即刷新 UI
-            _appDetail.value = currentDetail.copy(
-                isFavorite = finalFavoriteState,
-                favoriteCount = newFavoriteCount
-            )
-            
-            // 发送 Snackbar 提示
-            val message = if (finalFavoriteState) "已添加到收藏" else "已取消收藏"
-            _snackbarEvent.emit(message)
-        } else {
-            val error = result.exceptionOrNull()?.message ?: "操作失败"
-            _snackbarEvent.emit("收藏失败: $error")
-        }
-    }
-}
-
-    fun handleDownloadClick() {
-    viewModelScope.launch {
-        val paymentInfo = checkPurchaseNeeded()
-        if (paymentInfo != null) {
-            // 需要购买，触发支付事件
-            _navigateToPaymentEvent.emit(paymentInfo)
-        } else {
-            // 不需要购买，继续原有下载逻辑
-            _isLoading.value = true
-            
-            // 使用原有逻辑获取下载源
-            val result = repository.getAppDownloadSources(currentAppId, currentVersionId)
-            _isLoading.value = false
+        viewModelScope.launch {
+            val result = repository.toggleFavorite(currentAppId, currentDetail.isFavorite)
 
             if (result.isSuccess) {
-                val sources = result.getOrThrow()
-                if (sources.isEmpty()) {
-                    _errorMessage.value = "未找到下载源"
-                } else if (sources.size == 1) {
-                    // 只有一个源，直接触发下载
-                    startDownload(sources.first().url)
+                val finalFavoriteState = result.getOrNull() ?: targetState
+                
+                val newFavoriteCount = if (finalFavoriteState) {
+                    (currentDetail.favoriteCount ?: 0) + 1
                 } else {
-                    // 多个源，显示抽屉
-                    _downloadSources.value = sources
-                    _showDownloadDrawer.value = true
+                    maxOf(0, (currentDetail.favoriteCount ?: 1) - 1)
                 }
+
+                _appDetail.value = currentDetail.copy(
+                    isFavorite = finalFavoriteState,
+                    favoriteCount = newFavoriteCount
+                )
+                
+                val message = if (finalFavoriteState) "已添加到收藏" else "已取消收藏"
+                _snackbarEvent.emit(message)
             } else {
-                _errorMessage.value = "获取下载链接失败: ${result.exceptionOrNull()?.message}"
+                val error = result.exceptionOrNull()?.message ?: "操作失败"
+                _snackbarEvent.emit("收藏失败: $error")
             }
         }
     }
-}
+
+    fun handleDownloadClick() {
+        viewModelScope.launch {
+            val paymentInfo = checkPurchaseNeeded()
+            if (paymentInfo != null) {
+                _navigateToPaymentEvent.emit(paymentInfo)
+            } else {
+                _isLoading.value = true
+                
+                val result = repository.getAppDownloadSources(currentAppId, currentVersionId)
+                _isLoading.value = false
+
+                if (result.isSuccess) {
+                    val sources = result.getOrThrow()
+                    if (sources.isEmpty()) {
+                        _errorMessage.value = "未找到下载源"
+                    } else if (sources.size == 1) {
+                        startDownload(sources.first().url)
+                    } else {
+                        _downloadSources.value = sources
+                        _showDownloadDrawer.value = true
+                    }
+                } else {
+                    _errorMessage.value = "获取下载链接失败: ${result.exceptionOrNull()?.message}"
+                }
+            }
+        }
+    }
 
     fun closeDownloadDrawer() {
         _showDownloadDrawer.value = false
     }
 
     private fun loadData() {
-    _isLoading.value = true
-    _errorMessage.value = ""
+        _isLoading.value = true
+        _errorMessage.value = ""
 
-    viewModelScope.launch {
-        try {
-            // 使用 coroutineScope 确保内部的 async 能正常工作
-            coroutineScope {
-                // 并行发起请求
-                val detailDeferred = async { repository.getAppDetail(currentAppId, currentVersionId) }
-                val favoriteDeferred = async { repository.getFavoriteState(currentAppId) }
+        viewModelScope.launch {
+            try {
+                coroutineScope {
+                    val detailDeferred = async { repository.getAppDetail(currentAppId, currentVersionId) }
+                    val favoriteDeferred = async { repository.getFavoriteState(currentAppId) }
 
-                // 等待结果
-                val detailResult = detailDeferred.await()
-                val favoriteResult = favoriteDeferred.await()
+                    val detailResult = detailDeferred.await()
+                    val favoriteResult = favoriteDeferred.await()
 
-                if (detailResult.isSuccess) {
-                    // 明确指定类型，避免编译器的类型推断错误
-                    var detail: UnifiedAppDetail = detailResult.getOrThrow()
-                    
-                    // 获取收藏状态并更新
-                    favoriteResult.onSuccess { state ->
-                        detail = detail.copy(isFavorite = state.isFavorite)
+                    if (detailResult.isSuccess) {
+                        var detail: UnifiedAppDetail = detailResult.getOrThrow()
+                        
+                        favoriteResult.onSuccess { state ->
+                            detail = detail.copy(isFavorite = state.isFavorite)
+                        }
+
+                        _appDetail.value = detail
+                        loadComments()
+                    } else {
+                        _errorMessage.value = "加载详情失败: ${detailResult.exceptionOrNull()?.message}"
                     }
-
-                    _appDetail.value = detail
-                    loadComments()
-                } else {
-                    _errorMessage.value = "加载详情失败: ${detailResult.exceptionOrNull()?.message}"
                 }
+            } catch (e: Exception) {
+                _errorMessage.value = "网络错误: ${e.message}"
+            } finally {
+                _isLoading.value = false
             }
-        } catch (e: Exception) {
-            _errorMessage.value = "网络错误: ${e.message}"
-        } finally {
-            _isLoading.value = false
         }
     }
-}
 
     private fun loadComments() {
         viewModelScope.launch {
-            // 传入 currentVersionId
             val result = repository.getAppComments(currentAppId, currentVersionId, 1)
             if (result.isSuccess) {
                 _comments.value = result.getOrThrow().first
@@ -358,35 +308,33 @@ val newFavoriteCount = if (finalFavoriteState) {
     }
 
     fun submitComment(content: String) {
-    viewModelScope.launch {
-        val parentId = _currentReplyComment.value?.id
-        val result = repository.postComment(currentAppId, currentVersionId, content, parentId, null)
+        viewModelScope.launch {
+            val parentId = _currentReplyComment.value?.id
+            val result = repository.postComment(currentAppId, currentVersionId, content, parentId, null)
 
-        if (result.isSuccess) {
-            loadComments()
-            if (parentId == null) closeCommentDialog() else closeReplyDialog()
-        } else {
-            _errorMessage.value = "提交失败: ${result.exceptionOrNull()?.message}"
+            if (result.isSuccess) {
+                loadComments()
+                if (parentId == null) closeCommentDialog() else closeReplyDialog()
+            } else {
+                _errorMessage.value = "提交失败: ${result.exceptionOrNull()?.message}"
+            }
         }
     }
-}
 
     fun deleteComment(commentId: String) {
-    viewModelScope.launch {
-        val result = repository.deleteComment(commentId)
-        
-        if (result.isSuccess) {
-            loadComments()
-        } else {
-            _errorMessage.value = "删除失败: ${result.exceptionOrNull()?.message}"
+        viewModelScope.launch {
+            val result = repository.deleteComment(commentId)
+            
+            if (result.isSuccess) {
+                loadComments()
+            } else {
+                _errorMessage.value = "删除失败: ${result.exceptionOrNull()?.message}"
+            }
         }
     }
-}
 
-    // 删除应用（无需鉴权，服务器会处理）
     fun deleteApp(onSuccess: () -> Unit) {
         viewModelScope.launch {
-            // 直接调用仓库的删除方法，服务器会自行鉴权
             val result = repository.deleteApp(currentAppId, currentVersionId)
             if (result.isSuccess) {
                 onSuccess()
@@ -397,16 +345,11 @@ val newFavoriteCount = if (finalFavoriteState) {
         }
     }
         
-    // 启动下载
- fun startDownload(downloadUrl: String) {
+    fun startDownload(downloadUrl: String) {
         viewModelScope.launch {
             try {
-                // 获取应用名称用于文件名
-                val appName = "${_appDetail.value?.name ?: "未命名应用"}.apk"
-                
-                // 发送下载事件，包含 URL 和文件名
-                _downloadEvent.emit(DownloadEvent(downloadUrl, appName))                
-                
+                _openUrlEvent.emit(downloadUrl)                
+                _snackbarEvent.emit("正在尝试打开下载链接...")
             } catch (e: Exception) {
                 _errorMessage.value = "启动下载失败: ${e.message}"
             }

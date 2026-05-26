@@ -89,7 +89,6 @@ fun NavigationDrawerItems(
             DrawerItem("release_app", "发布应用", IconSource.Vector(Bg), CreateAppRelease),
             DrawerItem("bot_logs", "日志", IconSource.Vector(WorkLog), LogViewer),
             DrawerItem("store_manager", "存储管理", IconSource.Vector(Appbackuprestore), StoreManager),
-            DrawerItem("download", "下载管理", IconSource.Vector(Dsdownload), Download),
             DrawerItem("update_settings", "更新设置", IconSource.Vector(Asusupdate), UpdateSettings),
             DrawerItem("settings", "主题设置", IconSource.Vector(IcMenuSettings), ThemeCustomize),
             DrawerItem("signin_settings", "签到设置", IconSource.Vector(SignIn), SignInSettings),

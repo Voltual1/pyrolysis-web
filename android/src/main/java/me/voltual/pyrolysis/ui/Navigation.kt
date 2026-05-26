@@ -52,9 +52,6 @@ data object FollowingPosts : AppDestination
 @Serializable
 data object BrowseHistory : AppDestination
 
-@Serializable
-data object Download : AppDestination
-
 /** 帖子详情 */
 @Serializable
 data class PostDetail(val postId: Long) : AppDestination

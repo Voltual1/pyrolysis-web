@@ -8,8 +8,6 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui
 
-import android.app.Activity
-import android.content.Intent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
@@ -223,12 +221,7 @@ fun BBQNavDisplay(
                         snackbarHostState = snackbarHostState,
                         onClose = { navigator.goBack() }
                     )
-                }
-
-                is Download -> NavEntry(key) {
-                    val navigator = LocalNavigator.current
-                    DownloadHandler(onBack = { navigator.goBack() })
-                }
+                }                
 
                 is MyComments -> NavEntry(key) {
                     MyCommentsScreen(modifier = Modifier.fillMaxSize())
@@ -521,37 +514,4 @@ fun BBQNavDisplay(
             }
         }
     )
-}
-@Composable
- fun DownloadHandler(onBack: () -> Unit) {
-    val context = LocalContext.current
-    var showInstallDialog by remember { mutableStateOf(false) }
-
-    val idmPackages = listOf(
-        "idm.internet.download.manager.plus",
-        "idm.internet.download.manager",
-        "idm.internet.download.manager.adm.lite"
-    )
-
-    LaunchedEffect(Unit) {
-        val pm = context.packageManager
-        var targetIntent: Intent? = null
-
-        for (pkg in idmPackages) {
-            targetIntent = pm.getLaunchIntentForPackage(pkg)
-            if (targetIntent != null) break
-        }
-
-        if (targetIntent != null) {
-            targetIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            try { context.startActivity(targetIntent) } catch (_: Exception) {}
-            onBack()
-        } else {
-            showInstallDialog = true
-        }
-    }
-
-    if (showInstallDialog) {
-        IDMTransferDialog(onDismiss = onBack)
-    }
 }

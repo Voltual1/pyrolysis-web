@@ -9,7 +9,6 @@
 
 package me.voltual.pyrolysis.ui.plaza
 
-import android.app.Activity
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,10 +32,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager // 引入 Compose 跨平台剪贴板管理器
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler 
-import androidx.compose.ui.text.AnnotatedString // 引入富文本包装类
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -52,7 +51,6 @@ import me.voltual.pyrolysis.ui.community.compose.CommentDialog
 import me.voltual.pyrolysis.ui.community.compose.CommentItem
 import me.voltual.pyrolysis.core.ui.components.LinkifyText
 import me.voltual.pyrolysis.core.ui.theme.*
-import me.voltual.pyrolysis.core.utils.DownloadManager
 import me.voltual.pyrolysis.core.utils.formatTimestamp
 import org.koin.androidx.compose.koinViewModel
 
@@ -67,7 +65,6 @@ fun AppDetailScreen(
     val context = LocalContext.current
     val navigator = LocalNavigator.current
     
-    // 获取 Compose 跨平台的 UriHandler 和 ClipboardManager
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
 
@@ -86,37 +83,6 @@ fun AppDetailScreen(
     var showDeleteAppDialog by remember { mutableStateOf(false) }
     var showDeleteCommentDialog by remember { mutableStateOf(false) }
     var commentToDeleteId by remember { mutableStateOf<String?>(null) }
-    var showMoreMenu by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        viewModel.downloadEvent.collectLatest { downloadEvent ->
-            val activity = context as? Activity
-            if (activity != null) {
-                DownloadManager.download(
-                    activity = activity,
-                    url = downloadEvent.url,
-                    fileName = downloadEvent.fileName,
-                    headers = downloadEvent.headers
-                )
-
-                coroutineScope.launch {
-                    val result = snackbarHostState.showSnackbar(
-                        message = "任务已发送至 1DM: ${downloadEvent.fileName}",
-                        actionLabel = "管理下载",
-                        withDismissAction = true,
-                        duration = SnackbarDuration.Indefinite
-                    )
-
-                    when (result) {
-                        SnackbarResult.ActionPerformed -> {
-                            navigator.navigate(Download)
-                        }
-                        SnackbarResult.Dismissed -> { /* 忽略 */ }
-                    }
-                }
-            }
-        }
-    }
 
     LaunchedEffect(appId, versionId, storeName) {
         viewModel.initializeData(appId, versionId, storeName)
@@ -192,7 +158,6 @@ fun AppDetailScreen(
         }
     }
 
-    // 重构后的分享（复制）逻辑
     fun handleShare() {
         appDetail?.let { detail ->
             when (detail.store) {
@@ -200,7 +165,6 @@ fun AppDetailScreen(
                     val raw = detail.raw as? me.voltual.pyrolysis.KtorClient.AppDetail
                     val shareUrl = raw?.posturl
                     if (!shareUrl.isNullOrBlank()) {
-                        // 使用 Compose 专用的剪贴板管理器写入数据
                         clipboardManager.setText(AnnotatedString(shareUrl))
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar("已复制分享链接: $shareUrl")
@@ -393,9 +357,6 @@ fun AppDetailScreen(
     }
 }
 
-/**
- * 应用详情内容组件 - 内部使用 LocalNavigator 进行导航，无需传递 NavController
- */
 @Composable
 fun AppDetailContent(
     appDetail: UnifiedAppDetail,
@@ -411,7 +372,6 @@ fun AppDetailContent(
     onUpdateClick: () -> Unit,
     onFavoriteToggle: () -> Unit
 ) {
-    // 获取 Navigation 3 导航器（子组件内部使用）
     val navigator = LocalNavigator.current
 
     LazyColumn(
@@ -420,7 +380,6 @@ fun AppDetailContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- 应用头部信息 ---
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -452,30 +411,26 @@ fun AppDetailContent(
             }
         }
 
-        // --- 更新日志 ---
         val updateLog = when (appDetail.store) {
             AppStore.LOCAL -> appDetail.updateLog
             else -> null
         }
-        //暂时用LOCAL占位
         if (!updateLog.isNullOrEmpty()) {
             item {
                 UpdateLogSection(
                     appDetail = appDetail,
-                    navigator = navigator  // 传递 navigator
+                    navigator = navigator
                 )
             }
         }
 
-        // --- 适配说明（小趣空间） ---
         item {
             XiaoquSpaceExplainSection(
                 appDetail = appDetail,
-                navigator = navigator  // 传递 navigator
+                navigator = navigator
             )
         }
 
-        // --- 应用信息卡片 ---
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -501,15 +456,13 @@ fun AppDetailContent(
             }
         }
 
-        // --- 应用介绍 ---
         item {
             AppDescriptionSection(
                 appDetail = appDetail,
-                navigator = navigator  // 传递 navigator
+                navigator = navigator
             )
         }
 
-        // --- 应用截图 ---
         item {
             AppPreviewsSection(
                 appDetail = appDetail,
@@ -517,7 +470,6 @@ fun AppDetailContent(
             )
         }
 
-        // --- 作者信息 ---
         item {
             AppAuthorSection(
                 appDetail = appDetail,
@@ -525,7 +477,6 @@ fun AppDetailContent(
             )
         }
 
-        // --- 评论列表 ---
         item {
             CommentsHeader(appDetail = appDetail)
         }
