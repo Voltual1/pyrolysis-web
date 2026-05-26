@@ -1,0 +1,27 @@
+.
+├── LICENSE
+├── build.gradle.kts
+├── src
+│   ├── commonMain
+│   │   └── kotlin
+│   │       └── me
+│   │           └── voltual
+│   │               └── apkparser
+│   │                   ├── ApkMetadata.kt
+│   │                   ├── ApkParser.kt
+│   │                   ├── AxmlExtractor.kt
+│   │                   ├── AxmlModel.kt
+│   │                   └── AxmlPatterns.kt
+│   └── jvmTest
+│       ├── kotlin
+│       │   └── me
+│       │       └── voltual
+│       │           └── apkparser
+│       │               └── ApkParserTest.kt
+│       └── resources
+│           ├── AndroidManifest.xml
+│           ├── resources.arsc
+│           └── test.apk
+└── tree.txt
+
+13 directories, 12 files
