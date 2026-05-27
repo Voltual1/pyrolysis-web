@@ -129,7 +129,7 @@ fun KeyDialogUI(
                  -> stringResource(id = R.string.confirmation)
 
             else -> ""
-        }
+        },
         messageText = when (key) {
             is DialogKey.ReleaseIssue        -> stringResource(id = key.resId)
             is DialogKey.Link                -> stringResource(
@@ -202,7 +202,7 @@ fun KeyDialogUI(
             }
 
             else                             -> ""
-        }
+        },
         onDismiss = { openDialog.value = false },
         primaryText = when (key) {
             is DialogKey.ReleaseIssue,
