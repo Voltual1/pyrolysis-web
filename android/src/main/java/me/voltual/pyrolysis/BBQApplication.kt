@@ -24,19 +24,16 @@ import org.koin.androix.startup.KoinStartup
 import org.koin.core.annotation.KoinApplication
 import me.voltual.pyrolysis.manager.installer.*
 import org.koin.dsl.koinConfiguration
-import org.koin.java.KoinJavaComponent.inject
 import java.lang.ref.WeakReference
 
-/**
- * Copyright (C) 2025 Voltual
- * GNU General Public License v3.0 or later.
- */
 @KoinApplication
 class BBQApplication : Application(), KoinStartup {
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    // 正常的延迟注入（只要在调用它们时不早于 Koin 初始化即可）
     val wm: WorkerManager by inject()
     val db: FdroidDatabase by inject()
+    val installer: AppInstaller by inject() // 移动到实例作用域
 
     // 数据库单例
     lateinit var database: AppDatabase
@@ -49,7 +46,7 @@ class BBQApplication : Application(), KoinStartup {
         super.onCreate()
         instance = this
 
-        // 核心：自动追踪当前活跃的 Activity，解决 InstallWorker 的引用需求
+        // 核心：自动追踪当前活跃的 Activity
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             override fun onActivityResumed(activity: Activity) {
                 if (activity is AppCompatActivity) {
@@ -68,14 +65,18 @@ class BBQApplication : Application(), KoinStartup {
             override fun onActivityDestroyed(activity: Activity) {}
         })
 
-        // 其他初始化
-        //优先初始化存储，因为它被其他初始化依赖
+        // 优先初始化存储
         Preferences.init(this)
+        
+        // 确保 wm 安全调用（KoinStartup 保证了此时 Koin 已就绪）
         wm.prune()    
+        
         ThemeManager.initialize(this)
         ThemeManager.customColorSet = ThemeColorStore.loadColors(this)
     }
-
+    
+    
+	@Suppress("DSL_MARKER_APPLIED_TO_WRONG_TARGET")
     override fun onKoinStartup() = koinConfiguration {
         androidContext(this@BBQApplication)
         modules(
@@ -89,18 +90,22 @@ class BBQApplication : Application(), KoinStartup {
     }
 
     companion object {
+        // 使用 lateinit 确保安全，并在 onCreate 中赋值
         lateinit var instance: BBQApplication
             private set
 
         // 适配 InstallWorker 调用 BBQApplication.mainActivity
         var mainActivity: AppCompatActivity?
-            get() = instance.activityRef.get()
-            set(_) {} // 禁止手动设置，由 Lifecycle 自动维护
-        //暴露给全局类作用域
+            get() = if (::instance.isInitialized) instance.activityRef.get() else null
+            set(_) {} 
+
+        // 将全局静态桥梁全部改为 运行时读属性（Getter）
+        // 这样可以确保外部调用时，Koin 和 Application 已经完全初始化好了
         val wm: WorkerManager get() = instance.wm
         val db: FdroidDatabase get() = instance.db
         val context: Context get() = instance
+        val installer: AppInstaller get() = instance.installer // 通过 instance 间接获取
+        
         val latestSyncs: MutableMap<Long, Long> = mutableMapOf()
-        val installer: AppInstaller by inject(AppInstaller::class.java)
     }
 }
