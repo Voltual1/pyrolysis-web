@@ -211,7 +211,7 @@ fun <T> ActionSelectionDialogUI(
                 ) {
                     ActionButton(
                         modifier = Modifier.fillMaxWidth(),
-                        text = it.value ?: stringResource(id = R.string.unknown),
+                        text = it.value
                     ) {
                         onAction(it.key)
                     }

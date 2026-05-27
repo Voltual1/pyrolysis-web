@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.parcelize.Parcelize
 import org.koin.android.annotation.KoinViewModel
 
 @KoinViewModel
@@ -119,10 +120,12 @@ class PrefsVM(
     }
 }
 
+@Parcelize
 data class SheetNavigationData(
     val repositoryId: Long = 0L,
     val editMode: Boolean = false,
-) 
+) : Parcelable
+
 
 data class ReposPageState(
     val enabledRepos: List<Repository> = emptyList(),
