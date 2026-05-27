@@ -34,6 +34,8 @@ class BBQApplication : Application(), KoinStartup {
     val wm: WorkerManager by inject()
     val db: FdroidDatabase by inject()
     val installer: AppInstaller by inject() // 移动到实例作用域
+    
+    val themeStore: ThemeColorDataStore by inject() 
 
     // 数据库单例
     lateinit var database: AppDatabase
@@ -71,8 +73,11 @@ class BBQApplication : Application(), KoinStartup {
         // 确保 wm 安全调用（KoinStartup 保证了此时 Koin 已就绪）
         wm.prune()    
         
-        ThemeManager.initialize(this)
-        ThemeManager.customColorSet = ThemeColorStore.loadColors(this)
+        ThemeManager.syncThemeState(this)
+        // 使用 runBlocking 加载持久化的颜色集到内存管理器
+        runBlocking {
+            ThemeManager.updateCustomColors(themeStore.colorsFlow.first())
+        }
     }
     
     

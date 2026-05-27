@@ -2,12 +2,11 @@ package me.voltual.pyrolysis.core.ui.theme
 
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
-import coil3.compose.rememberAsyncImagePainter
 import android.content.res.Configuration
 import android.util.DisplayMetrics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.Image
@@ -22,22 +21,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.path // 导入 path 扩展属性
+import coil3.compose.rememberAsyncImagePainter
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
-import me.voltual.pyrolysis.restartMainActivity 
+import me.voltual.pyrolysis.restartMainActivity
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,58 +45,61 @@ fun ThemeCustomizeScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val themeStore: ThemeColorDataStore = koinInject()
 
-    val initialColors = remember { ThemeColorStore.loadColors(context) }
-    var lightColors by remember { mutableStateOf(initialColors.lightSet) }
-    var darkColors by remember { mutableStateOf(initialColors.darkSet) }
+    // 加载初始状态
+    var lightColors by remember { mutableStateOf(ThemeColorDataStore.DEFAULT_COLORS.lightSet) }
+    var darkColors by remember { mutableStateOf(ThemeColorDataStore.DEFAULT_COLORS.darkSet) }
+    var dpi by remember { mutableStateOf(1.0f) }
+    var fontSize by remember { mutableStateOf(1.0f) }
+    var customDpiEnabled by remember { mutableStateOf(false) }
+    
+    // 圆屏适配状态
+    var roundScreenEnabled by remember { mutableStateOf(false) }
+    var roundLeft by remember { mutableStateOf(0f) }
+    var roundTop by remember { mutableStateOf(0f) }
+    var roundRight by remember { mutableStateOf(0f) }
+    var roundBottom by remember { mutableStateOf(0f) }
+
+    // 异步初始化数据
+    LaunchedEffect(Unit) {
+        val colors = themeStore.colorsFlow.first()
+        lightColors = colors.lightSet
+        darkColors = colors.darkSet
+        dpi = themeStore.dpiFlow.first()
+        fontSize = themeStore.fontSizeFlow.first()
+        customDpiEnabled = themeStore.customDpiEnabledFlow.first()
+        
+        val paddings = themeStore.roundScreenPaddingFlow.first()
+        roundScreenEnabled = paddings.enabled
+        roundLeft = paddings.left
+        roundTop = paddings.top
+        roundRight = paddings.right
+        roundBottom = paddings.bottom
+    }
 
     var showSavedMessage by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
-
-    var dpi by remember { mutableStateOf(ThemeColorStore.loadDpi(context)) }
-    var fontSize by remember { mutableStateOf(ThemeColorStore.loadFontSize(context)) }
-    var customDpiEnabled by remember { mutableStateOf(ThemeColorStore.loadCustomDpiEnabled(context)) }
-    
-    val roundScreenPaddings = remember { ThemeColorStore.loadRoundScreenPaddings(context) }
-    var roundScreenEnabled by remember { mutableStateOf(roundScreenPaddings.enabled) }
-    var roundLeft by remember { mutableStateOf(roundScreenPaddings.left) }
-    var roundTop by remember { mutableStateOf(roundScreenPaddings.top) }
-    var roundRight by remember { mutableStateOf(roundScreenPaddings.right) }
-    var roundBottom by remember { mutableStateOf(roundScreenPaddings.bottom) }
-
     var translate by remember { mutableStateOf(false) }
 
-    // 使用 FileKit 选择图片，直接保存缓存路径，无需申请持久化 Uri 权限
     val globalBackgroundPickerLauncher = rememberFilePickerLauncher(
         type = FileKitType.Image,
-        onResult = { file ->
-            file?.let {
-                scope.launch { ThemeColorStore.saveGlobalBackgroundUri(context, it.path) }
-            }
-        }
+        onResult = { file -> file?.let { scope.launch { themeStore.saveGlobalBackgroundUri(it.path) } } }
     )
 
     val lightDrawerBgPickerLauncher = rememberFilePickerLauncher(
         type = FileKitType.Image,
-        onResult = { file ->
-            file?.let {
-                scope.launch { ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, it.path) }
-            }
-        }
+        onResult = { file -> file?.let { scope.launch { themeStore.saveDrawerHeaderLightBackgroundUri(it.path) } } }
     )
 
     val darkDrawerBgPickerLauncher = rememberFilePickerLauncher(
         type = FileKitType.Image,
-        onResult = { file ->
-            file?.let {
-                scope.launch { ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, it.path) }
-            }
-        }
+        onResult = { file -> file?.let { scope.launch { themeStore.saveDrawerHeaderDarkBackgroundUri(it.path) } } }
     )
 
-    val globalBackgroundUri by ThemeColorStore.getGlobalBackgroundUriFlow(context).collectAsState(initial = null)
-    val lightDrawerBgUri by ThemeColorStore.getDrawerHeaderLightBackgroundUriFlow(context).collectAsState(initial = null)
-    val darkDrawerBgUri by ThemeColorStore.getDrawerHeaderDarkBackgroundUriFlow(context).collectAsState(initial = null)
+    val globalBackgroundUri by themeStore.globalBackgroundUriFlow.collectAsState(initial = null)
+    val lightDrawerBgUri by themeStore.drawerHeaderLightBackgroundUriFlow.collectAsState(initial = null)
+    val darkDrawerBgUri by themeStore.drawerHeaderDarkBackgroundUriFlow.collectAsState(initial = null)
 
     var selectedTab by remember { mutableStateOf(0) }
 
@@ -117,14 +119,15 @@ fun ThemeCustomizeScreen(
                 Button(
                     onClick = {
                         scope.launch {
-                            lightColors = ThemeColorStore.DEFAULT_COLORS.lightSet
-                            darkColors = ThemeColorStore.DEFAULT_COLORS.darkSet
+                            lightColors = ThemeColorDataStore.DEFAULT_COLORS.lightSet
+                            darkColors = ThemeColorDataStore.DEFAULT_COLORS.darkSet
                             dpi = 1.0f
                             fontSize = 1.0f
                             customDpiEnabled = false
-                            ThemeColorStore.saveGlobalBackgroundUri(context, null)
-                            ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, null)
-                            ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, null)
+                            themeStore.saveGlobalBackgroundUri(null)
+                            themeStore.saveDrawerHeaderLightBackgroundUri(null)
+                            themeStore.saveDrawerHeaderDarkBackgroundUri(null)
+                            themeStore.saveRoundScreenPaddings(false, 0f, 0f, 0f, 0f)
                         }
                         showResetDialog = false
                     }
@@ -156,7 +159,7 @@ fun ThemeCustomizeScreen(
                         title = "主页背景图片",
                         backgroundUri = globalBackgroundUri,
                         onSelectImage = { globalBackgroundPickerLauncher.launch() },
-                        onReset = { scope.launch { ThemeColorStore.saveGlobalBackgroundUri(context, null) } }
+                        onReset = { scope.launch { themeStore.saveGlobalBackgroundUri(null) } }
                     )
                 }
 
@@ -190,7 +193,7 @@ fun ThemeCustomizeScreen(
                                 description = "仅修改侧边栏头部背景图片",
                                 backgroundUri = lightDrawerBgUri,
                                 onSelectImage = { lightDrawerBgPickerLauncher.launch() },
-                                onReset = { scope.launch { ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, null) } }
+                                onReset = { scope.launch { themeStore.saveDrawerHeaderLightBackgroundUri(null) } }
                             )
                         }
                         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) }
@@ -208,7 +211,7 @@ fun ThemeCustomizeScreen(
                                 description = "仅修改侧边栏头部背景图片",
                                 backgroundUri = darkDrawerBgUri,
                                 onSelectImage = { darkDrawerBgPickerLauncher.launch() },
-                                onReset = { scope.launch { ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, null) } }
+                                onReset = { scope.launch { themeStore.saveDrawerHeaderDarkBackgroundUri(null) } }
                             )
                         }
                         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) }
@@ -227,6 +230,7 @@ fun ThemeCustomizeScreen(
             onClick = {
                 saveThemeAndRestart(
                     context = context,
+                    themeStore = themeStore,
                     colors = CustomColorSet(lightColors, darkColors),
                     dpi = dpi,
                     fontScale = fontSize,
@@ -249,6 +253,7 @@ fun ThemeCustomizeScreen(
 @Suppress("DEPRECATION")
 private fun saveThemeAndRestart(
     context: Context,
+    themeStore: ThemeColorDataStore,
     colors: CustomColorSet,
     dpi: Float,
     fontScale: Float,
@@ -261,18 +266,18 @@ private fun saveThemeAndRestart(
 ) {
     val scope = (context as? androidx.lifecycle.LifecycleOwner)?.lifecycleScope ?: kotlinx.coroutines.MainScope()
     scope.launch {
-        val oldDpi = ThemeColorStore.loadDpi(context)
-        val oldFontScale = ThemeColorStore.loadFontSize(context)
-        val oldCustomDpiEnabled = ThemeColorStore.loadCustomDpiEnabled(context)
+        val oldDpi = themeStore.dpiFlow.first()
+        val oldFontScale = themeStore.fontSizeFlow.first()
+        val oldCustomDpiEnabled = themeStore.customDpiEnabledFlow.first()
 
-        ThemeColorStore.saveColors(context, colors)
-        ThemeColorStore.saveDpi(context, dpi)
-        ThemeColorStore.saveFontSize(context, fontScale)
-        ThemeColorStore.saveCustomDpiEnabled(context, customDpiEnabled)
-        ThemeColorStore.saveRoundScreenPaddings(context, roundScreenEnabled, roundLeft, roundTop, roundRight, roundBottom)
+        themeStore.saveColors(colors)
+        themeStore.saveDpi(dpi)
+        themeStore.saveFontSize(fontScale)
+        themeStore.saveCustomDpiEnabled(customDpiEnabled)
+        themeStore.saveRoundScreenPaddings(roundScreenEnabled, roundLeft, roundTop, roundRight, roundBottom)
 
         withContext(Dispatchers.Main) {
-            ThemeManager.applyCustomColors(context)
+            ThemeManager.updateCustomColors(colors)
 
             if (oldDpi != dpi || oldFontScale != fontScale || oldCustomDpiEnabled != customDpiEnabled) {
                 (context as? Activity)?.let {
@@ -288,7 +293,7 @@ private fun saveThemeAndRestart(
                     }
                 }
                 delay(300)
-                 restartMainActivity(context)
+                restartMainActivity(context)
             }
         }
     }
@@ -303,52 +308,23 @@ private fun DrawerBackgroundEditor(
     onReset: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-        )
+        Text(text = title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 16.dp))
+        Text(text = description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().height(180.dp).padding(horizontal = 16.dp, vertical = 8.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            DrawerHeaderPreview(
-                modifier = Modifier.fillMaxSize(),
-                backgroundUri = backgroundUri
-            )
+            DrawerHeaderPreview(modifier = Modifier.fillMaxSize(), backgroundUri = backgroundUri)
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(onClick = onSelectImage, modifier = Modifier.weight(1f)) {
-                Text("选择图片")
-            }
-            OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) {
-                Text("恢复默认")
-            }
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onSelectImage, modifier = Modifier.weight(1f)) { Text("选择图片") }
+            OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) { Text("恢复默认") }
         }
     }
 }
 
 @Composable
-fun ColorEditItem(
-    colorName: String,
-    currentColor: Color,
-    onColorChange: (Color) -> Unit,
-    translate: Boolean
-) {
+fun ColorEditItem(colorName: String, currentColor: Color, onColorChange: (Color) -> Unit, translate: Boolean) {
     var hexValue by remember(currentColor) { mutableStateOf(currentColor.toHex()) }
     var showColorPicker by remember { mutableStateOf(false) }
 
@@ -364,26 +340,9 @@ fun ColorEditItem(
         )
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .background(currentColor)
-                .border(1.dp, MaterialTheme.colorScheme.outline)
-        )
-        Text(
-            text = if (translate) colorNameTranslations[colorName] ?: colorName else colorName,
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 16.dp),
-            style = MaterialTheme.typography.bodyLarge
-        )
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.size(48.dp).background(currentColor).border(1.dp, MaterialTheme.colorScheme.outline))
+        Text(text = if (translate) colorNameTranslations[colorName] ?: colorName else colorName, modifier = Modifier.weight(1f).padding(horizontal = 16.dp), style = MaterialTheme.typography.bodyLarge)
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = hexValue,
@@ -400,179 +359,76 @@ fun ColorEditItem(
                 singleLine = true
             )
             Spacer(modifier = Modifier.width(8.dp))
-            IconButton(onClick = { showColorPicker = true }) {
-                Icon(
-                    imageVector = Icons.Filled.ColorLens,
-                    contentDescription = "选择颜色"
-                )
-            }
+            IconButton(onClick = { showColorPicker = true }) { Icon(imageVector = Icons.Filled.ColorLens, contentDescription = "选择颜色") }
         }
     }
 }
 
 @Composable
-fun HsvColorPickerDialog(
-    initialColor: Color,
-    onColorSelected: (Color) -> Unit,
-    onDismiss: () -> Unit
-) {
+fun HsvColorPickerDialog(initialColor: Color, onColorSelected: (Color) -> Unit, onDismiss: () -> Unit) {
     val hsvArray = FloatArray(3)
     android.graphics.Color.colorToHSV(initialColor.toArgb(), hsvArray)
-
     var hue by remember { mutableStateOf(hsvArray[0]) }
     var saturation by remember { mutableStateOf(hsvArray[1]) }
     var value by remember { mutableStateOf(hsvArray[2]) }
-
-    val currentColor = remember(hue, saturation, value) {
-        Color.hsv(hue, saturation, value)
-    }
+    val currentColor = remember(hue, saturation, value) { Color.hsv(hue, saturation, value) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("选择颜色") },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .background(currentColor)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
-                    )
+                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(64.dp).background(currentColor).border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp)))
                     Column {
                         Text("HEX: ${currentColor.toHex()}")
                         Text("RGB: ${currentColor.red.to255()}, ${currentColor.green.to255()}, ${currentColor.blue.to255()}")
                     }
                 }
-
                 Text("色相 (0-360°)", style = MaterialTheme.typography.labelMedium)
-                Slider(
-                    value = hue,
-                    onValueChange = { hue = it },
-                    valueRange = 0f..360f,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
+                Slider(value = hue, onValueChange = { hue = it }, valueRange = 0f..360f, modifier = Modifier.fillMaxWidth())
                 Text("饱和度 (0-100%)", style = MaterialTheme.typography.labelMedium)
-                Slider(
-                    value = saturation,
-                    onValueChange = { saturation = it },
-                    valueRange = 0f..1f,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
+                Slider(value = saturation, onValueChange = { saturation = it }, valueRange = 0f..1f, modifier = Modifier.fillMaxWidth())
                 Text("亮度 (0-100%)", style = MaterialTheme.typography.labelMedium)
-                Slider(
-                    value = value,
-                    onValueChange = { value = it },
-                    valueRange = 0f..1f,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Slider(value = value, onValueChange = { value = it }, valueRange = 0f..1f, modifier = Modifier.fillMaxWidth())
             }
         },
-        confirmButton = {
-            Button(
-                onClick = { onColorSelected(currentColor) },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                Text("确认")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        },
+        confirmButton = { Button(onClick = { onColorSelected(currentColor) }) { Text("确认") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
         shape = AppShapes.medium
     )
 }
 
 @Composable
-private fun GlobalBackgroundEditor(
-    title: String,
-    backgroundUri: String?,
-    onSelectImage: () -> Unit,
-    onReset: () -> Unit
-) {
+private fun GlobalBackgroundEditor(title: String, backgroundUri: String?, onSelectImage: () -> Unit, onReset: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
+        Text(text = title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 16.dp))
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().height(180.dp).padding(horizontal = 16.dp, vertical = 8.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             if (backgroundUri != null) {
-                Image(
-                    painter = rememberAsyncImagePainter(model = backgroundUri),
-                    contentDescription = "Global Background Preview",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+                Image(painter = rememberAsyncImagePainter(model = backgroundUri), contentDescription = "Global Background Preview", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Text(
-                        text = "未选择图片",
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant)) {
+                    Text(text = "未选择图片", modifier = Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(onClick = onSelectImage, modifier = Modifier.weight(1f)) {
-                Text("选择图片")
-            }
-            OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) {
-                Text("恢复默认")
-            }
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onSelectImage, modifier = Modifier.weight(1f)) { Text("选择图片") }
+            OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) { Text("恢复默认") }
         }
     }
 }
 
 @Composable
 private fun DrawerHeaderPreview(modifier: Modifier = Modifier, backgroundUri: String?) {
-    Box(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.primaryContainer)
-    ) {
+    Box(modifier = modifier.background(MaterialTheme.colorScheme.primaryContainer)) {
         if (backgroundUri != null) {
-            androidx.compose.foundation.Image(
-                painter = rememberAsyncImagePainter(model = backgroundUri),
-                contentDescription = "Drawer Header Background Preview",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
+            Image(painter = rememberAsyncImagePainter(model = backgroundUri), contentDescription = "Drawer Header Background Preview", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.primary)
-            )
+            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary))
         }
     }
 }

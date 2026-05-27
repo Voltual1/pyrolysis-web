@@ -18,30 +18,27 @@ object ThemeManager {
     var isAppDarkTheme by mutableStateOf(false)
     var customColorSet by mutableStateOf<CustomColorSet?>(null)
     
-    fun applyCustomColors(context: Context) {
-        customColorSet = ThemeColorStore.loadColors(context)
+    fun updateCustomColors(colors: CustomColorSet) {
+        customColorSet = colors
     }
     
     fun toggleTheme() {
         val newMode = when (AppCompatDelegate.getDefaultNightMode()) {
             AppCompatDelegate.MODE_NIGHT_YES -> AppCompatDelegate.MODE_NIGHT_NO
             AppCompatDelegate.MODE_NIGHT_NO -> AppCompatDelegate.MODE_NIGHT_YES
-            else -> AppCompatDelegate.MODE_NIGHT_YES // 处理未设置的情况
+            else -> AppCompatDelegate.MODE_NIGHT_YES 
         }
         
         AppCompatDelegate.setDefaultNightMode(newMode)
         isAppDarkTheme = newMode == AppCompatDelegate.MODE_NIGHT_YES
     }
     
-    fun initialize(context: Context) {
+    fun syncThemeState(context: Context) {
         isAppDarkTheme = when (AppCompatDelegate.getDefaultNightMode()) {
             AppCompatDelegate.MODE_NIGHT_YES -> true
             AppCompatDelegate.MODE_NIGHT_NO -> false
             else -> isSystemInDarkTheme(context)
         }
-        
-        // 确保加载自定义颜色
-        applyCustomColors(context)
     }
     
     private fun isSystemInDarkTheme(context: Context): Boolean {

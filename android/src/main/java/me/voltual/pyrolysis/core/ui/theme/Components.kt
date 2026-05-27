@@ -145,9 +145,8 @@ fun BBQBackgroundCard(
     backgroundAlpha: Float = 0.9f,
     content: @Composable () -> Unit
 ) {
-    val context = LocalContext.current
-    val globalBackgroundUriState = ThemeColorStore.getGlobalBackgroundUriFlow(context).collectAsState(initial = null)
-    val globalBackgroundUri by globalBackgroundUriState
+    val themeStore: ThemeColorDataStore = koinInject()
+    val globalBackgroundUri by themeStore.globalBackgroundUriFlow.collectAsState(initial = null)
 
     if (globalBackgroundUri == null) {
         BBQCard(

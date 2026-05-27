@@ -57,6 +57,7 @@ import java.io.IOException
 class MainActivity : AppCompatActivity() {
     private val agreementDataStore: UserAgreementDataStore by inject()
     private val authRepository: AuthRepository by inject()    
+    private val themeStore: ThemeColorDataStore by inject()
     
     companion object {
         private const val TAG = "NeoActivity"
@@ -74,8 +75,10 @@ class MainActivity : AppCompatActivity() {
         setTheme(R.style.Theme_BBQ_Main)
         super.onCreate(savedInstanceState)
 
-        if (ThemeColorStore.loadCustomDpiEnabled(this)) {
-            applyDpiAndFontScale(this)
+        runBlocking {
+            if (themeStore.customDpiEnabledFlow.first()) {
+                applyDpiAndFontScale(this@MainActivity)
+            }
         }
 
         setContent {
@@ -169,8 +172,8 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("DEPRECATION")
     private fun applyDpiAndFontScale(context: Context) {
-        val dpi = ThemeColorStore.loadDpi(context)
-        val fontScale = ThemeColorStore.loadFontSize(context)
+        val dpi = runBlocking { themeStore.dpiFlow.first() }
+        val fontScale = runBlocking { themeStore.fontSizeFlow.first() }
         val resources = context.resources
         val configuration = Configuration(resources.configuration)
         val metrics = DisplayMetrics()
@@ -212,8 +215,8 @@ fun MainScreenContent(
     val isPlayerScreen = remember(currentRoute) { currentRoute is Player }
 
     val useDarkTheme = ThemeManager.isAppDarkTheme
-    val lightBgUri by ThemeColorStore.getDrawerHeaderLightBackgroundUriFlow(context).collectAsState(initial = null)
-    val darkBgUri by ThemeColorStore.getDrawerHeaderDarkBackgroundUriFlow(context).collectAsState(initial = null)
+    val lightBgUri by themeStore.drawerHeaderLightBackgroundUriFlow.collectAsState(initial = null)
+    val darkBgUri by themeStore.drawerHeaderDarkBackgroundUriFlow.collectAsState(initial = null)
     val drawerHeaderBackgroundUri = if (useDarkTheme) darkBgUri else lightBgUri
 
     val isLoggedIn = remember { mutableStateOf(false) }

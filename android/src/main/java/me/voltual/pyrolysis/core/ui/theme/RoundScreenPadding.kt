@@ -14,15 +14,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import org.koin.compose.koinInject
 
 @Composable
 fun Modifier.roundScreenPadding(): Modifier {
-    val context = LocalContext.current
-    val roundScreenPaddings by ThemeColorStore.getRoundScreenPaddingFlow(context).collectAsState(
-        initial = ThemeColorStore.RoundScreenPaddings(false, 0f, 0f, 0f, 0f)
+    val themeStore: ThemeColorDataStore = koinInject()
+    val roundScreenPaddings by themeStore.roundScreenPaddingFlow.collectAsState(
+        initial = ThemeColorDataStore.RoundScreenPaddings(false, 0f, 0f, 0f, 0f)
     )
 
     return if (roundScreenPaddings.enabled) {
@@ -37,6 +37,6 @@ fun Modifier.roundScreenPadding(): Modifier {
             )
         )
     } else {
-        this // 不启用时返回原始 Modifier
+        this
     }
 }

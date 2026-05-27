@@ -21,6 +21,7 @@ import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import me.voltual.pyrolysis.core.database.*
 import me.voltual.pyrolysis.core.database.dao.*
+import me.voltual.pyrolysis.core.ui.theme.ThemeColorDataStore
 import me.voltual.pyrolysis.core.proto.UserCredentials
 import me.voltual.pyrolysis.core.proto.UserCredentialsSerializer
 import me.voltual.pyrolysis.data.*
@@ -63,6 +64,7 @@ private val SEARCH_HISTORY_STORE_QUALIFIER = named("search_history_store")
 private val PLAYER_SETTINGS_STORE_QUALIFIER = named("player_settings_store")
 private val DRAWER_MENU_STORE_QUALIFIER = named("drawer_menu_store")
 private val DEVICE_INFO_STORE_QUALIFIER = named("device_info_store")
+private val THEME_SETTINGS_STORE_QUALIFIER = named("theme_settings_store")
 
 val appModule = module {
 
@@ -132,7 +134,8 @@ single<Aead> {
         SEARCH_HISTORY_STORE_QUALIFIER to "search_history.preferences_pb",
         PLAYER_SETTINGS_STORE_QUALIFIER to "player_settings.preferences_pb",
         DRAWER_MENU_STORE_QUALIFIER to "settings.preferences_pb",
-        DEVICE_INFO_STORE_QUALIFIER to "device_info.preferences_pb"
+        DEVICE_INFO_STORE_QUALIFIER to "device_info.preferences_pb",
+        THEME_SETTINGS_STORE_QUALIFIER to "theme_settings.preferences_pb" // 新增
     )
 
     storeFiles.forEach { (qualifier, fileName) ->
@@ -147,6 +150,7 @@ single<Aead> {
     // 3. 业务 DataStore 包装类 (Business Logic Wrappers)
     // =========================================================================
     
+    single { ThemeColorDataStore(get(THEME_SETTINGS_STORE_QUALIFIER)) }
     single { DeviceNameDataStore(get(DEVICE_INFO_STORE_QUALIFIER)) }
     single { UserFilterDataStore(get(USER_FILTER_STORE_QUALIFIER)) }    
     single { UserAgreementDataStore(get(USER_AGREEMENT_STORE_QUALIFIER)) }    

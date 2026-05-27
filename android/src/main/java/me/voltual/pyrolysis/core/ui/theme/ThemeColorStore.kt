@@ -8,18 +8,13 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.core.ui.theme
 
-import android.content.Context
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
-
-private val Context.themeSettingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "theme_settings")
 
 data class CustomColorSet(
     val lightSet: ColorSet = ColorSet.defaultLight(),
@@ -142,47 +137,53 @@ data class ColorSet(
     }
 }
 
-object ThemeColorStore {
-    val DEFAULT_COLORS = CustomColorSet(
-        lightSet = ColorSet.defaultLight(),
-        darkSet = ColorSet.defaultDark()
-    )    
+class ThemeColorDataStore(private val dataStore: DataStore<Preferences>) {
+    companion object {
+        val DEFAULT_COLORS = CustomColorSet(
+            lightSet = ColorSet.defaultLight(),
+            darkSet = ColorSet.defaultDark()
+        )
 
-    private val LIGHT_COLOR_KEYS = listOf(
-        "light_primary", "light_onPrimary", "light_primaryContainer", "light_onPrimaryContainer", "light_secondary",
-        "light_onSecondary", "light_secondaryContainer", "light_onSecondaryContainer", "light_surface", "light_onSurface",
-        "light_surfaceVariant", "light_onSurfaceVariant", "light_outline", "light_error", "light_onError", "light_background",
-        "light_onBackground", "light_messageLikeBg", "light_messageCommentBg", "light_messageDefaultBg", "light_billingIncome",
-        "light_billingExpense"
-    )
+        private val LIGHT_COLOR_KEYS = listOf(
+            "light_primary", "light_onPrimary", "light_primaryContainer", "light_onPrimaryContainer", "light_secondary",
+            "light_onSecondary", "light_secondaryContainer", "light_onSecondaryContainer", "light_surface", "light_onSurface",
+            "light_surfaceVariant", "light_onSurfaceVariant", "light_outline", "light_error", "light_onError", "light_background",
+            "light_onBackground", "light_messageLikeBg", "light_messageCommentBg", "light_messageDefaultBg", "light_billingIncome",
+            "light_billingExpense"
+        )
 
-    private val DARK_COLOR_KEYS = listOf(
-        "dark_primary", "dark_onPrimary", "dark_primaryContainer", "dark_onPrimaryContainer", "dark_secondary",
-        "dark_onSecondary", "dark_secondaryContainer", "dark_onSecondaryContainer", "dark_surface", "dark_onSurface",
-        "dark_surfaceVariant", "dark_onSurfaceVariant", "dark_outline", "dark_error", "dark_onError", "dark_background",
-        "dark_onBackground", "dark_messageLikeBg", "dark_messageCommentBg", "dark_messageDefaultBg", "dark_billingIncome",
-        "dark_billingExpense"
-    )
+        private val DARK_COLOR_KEYS = listOf(
+            "dark_primary", "dark_onPrimary", "dark_primaryContainer", "dark_onPrimaryContainer", "dark_secondary",
+            "dark_onSecondary", "dark_secondaryContainer", "dark_onSecondaryContainer", "dark_surface", "dark_onSurface",
+            "dark_surfaceVariant", "dark_onSurfaceVariant", "dark_outline", "dark_error", "dark_onError", "dark_background",
+            "dark_onBackground", "dark_messageLikeBg", "dark_messageCommentBg", "dark_messageDefaultBg", "dark_billingIncome",
+            "dark_billingExpense"
+        )
 
-    private val DPI_KEY = floatPreferencesKey("dpi")
-    private val FONT_SIZE_KEY = floatPreferencesKey("font_size")
-    private val DRAWER_HEADER_LIGHT_BG_URI_KEY = stringPreferencesKey("drawer_header_light_bg_uri")
-    private val DRAWER_HEADER_DARK_BG_URI_KEY = stringPreferencesKey("drawer_header_dark_bg_uri")
-    private val GLOBAL_BACKGROUND_URI_KEY = stringPreferencesKey("global_background_uri")
+        private val DPI_KEY = floatPreferencesKey("dpi")
+        private val FONT_SIZE_KEY = floatPreferencesKey("font_size")
+        private val DRAWER_HEADER_LIGHT_BG_URI_KEY = stringPreferencesKey("drawer_header_light_bg_uri")
+        private val DRAWER_HEADER_DARK_BG_URI_KEY = stringPreferencesKey("drawer_header_dark_bg_uri")
+        private val GLOBAL_BACKGROUND_URI_KEY = stringPreferencesKey("global_background_uri")
+        private val CUSTOM_DPI_ENABLED_KEY = booleanPreferencesKey("custom_dpi_enabled")
+        private val ROUND_SCREEN_ENABLED_KEY = booleanPreferencesKey("round_screen_enabled")
+        private val ROUND_SCREEN_LEFT_PADDING_KEY = floatPreferencesKey("round_screen_left_padding")
+        private val ROUND_SCREEN_TOP_PADDING_KEY = floatPreferencesKey("round_screen_top_padding")
+        private val ROUND_SCREEN_RIGHT_PADDING_KEY = floatPreferencesKey("round_screen_right_padding")
+        private val ROUND_SCREEN_BOTTOM_PADDING_KEY = floatPreferencesKey("round_screen_bottom_padding")
+    }
 
-    suspend fun saveGlobalBackgroundUri(context: Context, uri: String?) {
-        context.themeSettingsDataStore.edit { preferences ->
+    suspend fun saveGlobalBackgroundUri(uri: String?) {
+        dataStore.edit { preferences ->
             if (uri != null) preferences[GLOBAL_BACKGROUND_URI_KEY] = uri
             else preferences.remove(GLOBAL_BACKGROUND_URI_KEY)
         }
     }
 
-    fun getGlobalBackgroundUriFlow(context: Context): Flow<String?> {
-        return context.themeSettingsDataStore.data.map { it[GLOBAL_BACKGROUND_URI_KEY] }
-    }
+    val globalBackgroundUriFlow: Flow<String?> = dataStore.data.map { it[GLOBAL_BACKGROUND_URI_KEY] }
 
-    suspend fun saveColors(context: Context, colors: CustomColorSet) {
-        context.themeSettingsDataStore.edit { preferences ->
+    suspend fun saveColors(colors: CustomColorSet) {
+        dataStore.edit { preferences ->
             colors.lightSet.toList().forEachIndexed { index, (_, color) ->
                 preferences[intPreferencesKey(LIGHT_COLOR_KEYS[index])] = color.toArgb()
             }
@@ -192,16 +193,13 @@ object ThemeColorStore {
         }
     }
 
-    fun loadColors(context: Context): CustomColorSet {
-        return runBlocking {
-            val preferences = context.themeSettingsDataStore.data.first()
-            val lightSet = loadColorSet(preferences, LIGHT_COLOR_KEYS, DEFAULT_COLORS.lightSet)
-            val darkSet = loadColorSet(preferences, DARK_COLOR_KEYS, DEFAULT_COLORS.darkSet)
-            CustomColorSet(lightSet, darkSet)
-        }
+    val colorsFlow: Flow<CustomColorSet> = dataStore.data.map { preferences ->
+        val lightSet = loadColorSetFromPrefs(preferences, LIGHT_COLOR_KEYS, DEFAULT_COLORS.lightSet)
+        val darkSet = loadColorSetFromPrefs(preferences, DARK_COLOR_KEYS, DEFAULT_COLORS.darkSet)
+        CustomColorSet(lightSet, darkSet)
     }
 
-    private fun loadColorSet(preferences: Preferences, keys: List<String>, defaultSet: ColorSet): ColorSet {
+    private fun loadColorSetFromPrefs(preferences: Preferences, keys: List<String>, defaultSet: ColorSet): ColorSet {
         return try {
             if (keys.any { !preferences.contains(intPreferencesKey(it)) }) return defaultSet
             ColorSet(
@@ -233,53 +231,38 @@ object ThemeColorStore {
         }
     }
 
-    suspend fun saveDpi(context: Context, dpi: Float) {
-        context.themeSettingsDataStore.edit { it[DPI_KEY] = dpi }
+    suspend fun saveDpi(dpi: Float) {
+        dataStore.edit { it[DPI_KEY] = dpi }
     }
 
-    fun loadDpi(context: Context): Float {
-        return runBlocking { context.themeSettingsDataStore.data.first()[DPI_KEY] ?: 1.0f }
+    val dpiFlow: Flow<Float> = dataStore.data.map { it[DPI_KEY] ?: 1.0f }
+
+    suspend fun saveFontSize(fontSize: Float) {
+        dataStore.edit { it[FONT_SIZE_KEY] = fontSize }
     }
 
-    suspend fun saveFontSize(context: Context, fontSize: Float) {
-        context.themeSettingsDataStore.edit { it[FONT_SIZE_KEY] = fontSize }
-    }
+    val fontSizeFlow: Flow<Float> = dataStore.data.map { it[FONT_SIZE_KEY] ?: 1.0f }
 
-    fun loadFontSize(context: Context): Float {
-        return runBlocking { context.themeSettingsDataStore.data.first()[FONT_SIZE_KEY] ?: 1.0f }
-    }
-
-    suspend fun saveDrawerHeaderLightBackgroundUri(context: Context, uri: String?) {
-        context.themeSettingsDataStore.edit { preferences ->
+    suspend fun saveDrawerHeaderLightBackgroundUri(uri: String?) {
+        dataStore.edit { preferences ->
             if (uri != null) preferences[DRAWER_HEADER_LIGHT_BG_URI_KEY] = uri
             else preferences.remove(DRAWER_HEADER_LIGHT_BG_URI_KEY)
         }
     }
 
-    fun getDrawerHeaderLightBackgroundUriFlow(context: Context): Flow<String?> {
-        return context.themeSettingsDataStore.data.map { it[DRAWER_HEADER_LIGHT_BG_URI_KEY] }
-    }
+    val drawerHeaderLightBackgroundUriFlow: Flow<String?> = dataStore.data.map { it[DRAWER_HEADER_LIGHT_BG_URI_KEY] }
 
-    suspend fun saveDrawerHeaderDarkBackgroundUri(context: Context, uri: String?) {
-        context.themeSettingsDataStore.edit { preferences ->
+    suspend fun saveDrawerHeaderDarkBackgroundUri(uri: String?) {
+        dataStore.edit { preferences ->
             if (uri != null) preferences[DRAWER_HEADER_DARK_BG_URI_KEY] = uri
             else preferences.remove(DRAWER_HEADER_DARK_BG_URI_KEY)
         }
     }
 
-    fun getDrawerHeaderDarkBackgroundUriFlow(context: Context): Flow<String?> {
-        return context.themeSettingsDataStore.data.map { it[DRAWER_HEADER_DARK_BG_URI_KEY] }
-    }
+    val drawerHeaderDarkBackgroundUriFlow: Flow<String?> = dataStore.data.map { it[DRAWER_HEADER_DARK_BG_URI_KEY] }
 
-    private val CUSTOM_DPI_ENABLED_KEY = booleanPreferencesKey("custom_dpi_enabled")
-    private val ROUND_SCREEN_ENABLED_KEY = booleanPreferencesKey("round_screen_enabled")
-    private val ROUND_SCREEN_LEFT_PADDING_KEY = floatPreferencesKey("round_screen_left_padding")
-    private val ROUND_SCREEN_TOP_PADDING_KEY = floatPreferencesKey("round_screen_top_padding")
-    private val ROUND_SCREEN_RIGHT_PADDING_KEY = floatPreferencesKey("round_screen_right_padding")
-    private val ROUND_SCREEN_BOTTOM_PADDING_KEY = floatPreferencesKey("round_screen_bottom_padding")
-
-    suspend fun saveRoundScreenPaddings(context: Context, enabled: Boolean, left: Float, top: Float, right: Float, bottom: Float) {
-        context.themeSettingsDataStore.edit { prefs ->
+    suspend fun saveRoundScreenPaddings(enabled: Boolean, left: Float, top: Float, right: Float, bottom: Float) {
+        dataStore.edit { prefs ->
             prefs[ROUND_SCREEN_ENABLED_KEY] = enabled
             prefs[ROUND_SCREEN_LEFT_PADDING_KEY] = left
             prefs[ROUND_SCREEN_TOP_PADDING_KEY] = top
@@ -290,36 +273,19 @@ object ThemeColorStore {
 
     data class RoundScreenPaddings(val enabled: Boolean, val left: Float, val top: Float, val right: Float, val bottom: Float)
 
-    fun loadRoundScreenPaddings(context: Context): RoundScreenPaddings {
-        return runBlocking {
-            val prefs = context.themeSettingsDataStore.data.first()
-            RoundScreenPaddings(
-                enabled = prefs[ROUND_SCREEN_ENABLED_KEY] ?: false,
-                left = prefs[ROUND_SCREEN_LEFT_PADDING_KEY] ?: 0f,
-                top = prefs[ROUND_SCREEN_TOP_PADDING_KEY] ?: 0f,
-                right = prefs[ROUND_SCREEN_RIGHT_PADDING_KEY] ?: 0f,
-                bottom = prefs[ROUND_SCREEN_BOTTOM_PADDING_KEY] ?: 0f
-            )
-        }
+    val roundScreenPaddingFlow: Flow<RoundScreenPaddings> = dataStore.data.map { prefs ->
+        RoundScreenPaddings(
+            enabled = prefs[ROUND_SCREEN_ENABLED_KEY] ?: false,
+            left = prefs[ROUND_SCREEN_LEFT_PADDING_KEY] ?: 0f,
+            top = prefs[ROUND_SCREEN_TOP_PADDING_KEY] ?: 0f,
+            right = prefs[ROUND_SCREEN_RIGHT_PADDING_KEY] ?: 0f,
+            bottom = prefs[ROUND_SCREEN_BOTTOM_PADDING_KEY] ?: 0f
+        )
     }
 
-    fun getRoundScreenPaddingFlow(context: Context): Flow<RoundScreenPaddings> {
-        return context.themeSettingsDataStore.data.map { prefs ->
-            RoundScreenPaddings(
-                enabled = prefs[ROUND_SCREEN_ENABLED_KEY] ?: false,
-                left = prefs[ROUND_SCREEN_LEFT_PADDING_KEY] ?: 0f,
-                top = prefs[ROUND_SCREEN_TOP_PADDING_KEY] ?: 0f,
-                right = prefs[ROUND_SCREEN_RIGHT_PADDING_KEY] ?: 0f,
-                bottom = prefs[ROUND_SCREEN_BOTTOM_PADDING_KEY] ?: 0f
-            )
-        }
+    suspend fun saveCustomDpiEnabled(enabled: Boolean) {
+        dataStore.edit { it[CUSTOM_DPI_ENABLED_KEY] = enabled }
     }
 
-    suspend fun saveCustomDpiEnabled(context: Context, enabled: Boolean) {
-        context.themeSettingsDataStore.edit { it[CUSTOM_DPI_ENABLED_KEY] = enabled }
-    }
-
-    fun loadCustomDpiEnabled(context: Context): Boolean {
-        return runBlocking { context.themeSettingsDataStore.data.first()[CUSTOM_DPI_ENABLED_KEY] ?: false }
-    }
+    val customDpiEnabledFlow: Flow<Boolean> = dataStore.data.map { it[CUSTOM_DPI_ENABLED_KEY] ?: false }
 }
