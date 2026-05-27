@@ -8,26 +8,18 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.ui.home
 
-import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer 
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.font.FontWeight
@@ -35,63 +27,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.ktor.http.Url
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.BuildConfig
+import me.voltual.pyrolysis.BuildConfig 
 import me.voltual.pyrolysis.core.ui.components.MarkDownText
-import me.voltual.pyrolysis.core.ui.icons.drawable.* // 导入 ImageVector 图标
-import java.security.MessageDigest
-import kotlinx.datetime.TimeZone
+import me.voltual.pyrolysis.core.ui.icons.drawable.* import kotlinx.datetime.TimeZone
 import kotlin.time.Clock
 import kotlinx.datetime.toLocalDateTime
 
-/**
- * 获取当前应用签名的 SHA-256 指纹
- */
-fun getAppSignatureSha256(context: Context): String {
-    return try {
-        val packageManager = context.packageManager
-        val packageName = context.packageName
-
-        val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val packageInfo = packageManager.getPackageInfo(
-                packageName,
-                PackageManager.GET_SIGNING_CERTIFICATES
-            )
-            val signingInfo = packageInfo.signingInfo
-            if (signingInfo != null) {
-                if (signingInfo.hasMultipleSigners()) {
-                    signingInfo.apkContentsSigners
-                } else {
-                    signingInfo.signingCertificateHistory
-                }
-            } else {
-                null
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            val packageInfo = packageManager.getPackageInfo(
-                packageName,
-                PackageManager.GET_SIGNATURES
-            )
-            @Suppress("DEPRECATION")
-            packageInfo.signatures
-        }
-
-        if (!signatures.isNullOrEmpty()) {
-            val cert = signatures[0].toByteArray()
-            val md = MessageDigest.getInstance("SHA-256")
-            val digest = md.digest(cert)
-            digest.joinToString(":") { "%02X".format(it) }
-        } else {
-            "无法获取签名"
-        }
-    } catch (e: Exception) {
-        "提取失败: ${e.message}"
-    }
-}
-
-/**
- * 辅助方法：使用 Ktor 校验和规范化 URL，然后通过 Compose 的 UriHandler 打开
- */
 private fun openKtorUrlWithHandler(uriHandler: UriHandler, urlString: String) {
     val ktorUrl = Url(urlString)
     uriHandler.openUri(ktorUrl.toString())
@@ -102,9 +43,10 @@ fun AboutScreen(
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState 
 ) {
-    val context = LocalContext.current
     val app_name = "Pyrolysis"
     val uriHandler = LocalUriHandler.current 
+    
+    // 直接使用 BuildKonfig 的变量
     val versionName = BuildConfig.VERSION_NAME
     val versionCode = BuildConfig.VERSION_CODE
     val scope = rememberCoroutineScope() 
@@ -123,7 +65,6 @@ fun AboutScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 使用转换后的 Fire 图标替换 R.drawable.fire
         Image(
             imageVector = Fire,
             contentDescription = app_name,
@@ -145,12 +86,9 @@ fun AboutScreen(
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             modifier = Modifier.padding(top = 4.dp)
         )
-        Text(
-            text = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-            modifier = Modifier.padding(top = 2.dp)
-        )
+
+        // 💡 烦人的 Android SDK 版本文本直接咔嚓掉了，省心！
+
         Spacer(modifier = Modifier.height(32.dp))
         
         LicenseCard(
@@ -158,9 +96,7 @@ fun AboutScreen(
                 runCatching {
                     openKtorUrlWithHandler(uriHandler, "https://gitee.com/Voltula/bbq/blob/master/LICENSE")
                 }.onFailure {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(message = "无法打开浏览器")
-                    }
+                    scope.launch { snackbarHostState.showSnackbar(message = "无法打开浏览器") }
                 }
             }
         )
@@ -183,10 +119,6 @@ fun AboutScreen(
                 }
             }
         )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        SignatureVerificationCard(context)
         
         Spacer(modifier = Modifier.height(24.dp))
         
@@ -330,80 +262,6 @@ fun ClickableTextItem(text: String, onClick: () -> Unit) {
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(16.dp)
             )
-        }
-    }
-}
-
-@Composable
-fun SignatureVerificationCard(context: Context) {
-    val OFFICIAL_SHA256 = "81:91:BD:71:15:7E:A7:04:1C:55:1D:1A:BA:C6:B7:DF:24:78:44:96:A7:3E:F3:46:0A:19:5F:1F:4B:B4:07:8C" 
-    
-    val currentSignature = remember(context) { getAppSignatureSha256(context) }
-    val isOfficial = currentSignature.equals(OFFICIAL_SHA256, ignoreCase = true)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isOfficial) {
-                MaterialTheme.colorScheme.secondaryContainer 
-            } else {
-                MaterialTheme.colorScheme.errorContainer
-            }
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = if (isOfficial) Icons.Default.CheckCircle 
-                                  else Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = if (isOfficial) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (isOfficial) "官方签名认证" else "非官方签名提醒",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isOfficial) MaterialTheme.colorScheme.onSecondaryContainer 
-                            else MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Text(
-                text = "当前签名 SHA-256:",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            
-            SelectionContainer {
-                Text(
-                    text = currentSignature,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                            RoundedCornerShape(4.dp)
-                        )
-                        .padding(8.dp)
-                )
-            }
-
-            if (!isOfficial) {
-                Text(
-                    text = "警告:签名与官方不一致意味着应用被非官方修改了（虽然本项目是开源项目）如果你是自己编译签名的话请忽略",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 12.dp)
-                )
-            }
         }
     }
 }
