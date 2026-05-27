@@ -68,7 +68,7 @@ val Map<PermissionGroup, List<PermissionInfo>>.privacyPoints
             in MEDIUM_RISK_PERMISSIONS -> 7
             in LOW_RISK_PERMISSIONS    -> 3
             else                       -> 2
-        }.toInt()
+        }
     }
 
 val List<Tracker>.privacyPoints

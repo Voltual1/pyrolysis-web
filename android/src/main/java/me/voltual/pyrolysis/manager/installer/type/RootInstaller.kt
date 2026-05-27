@@ -118,7 +118,7 @@ class RootInstaller(context: Context) : BaseInstaller(context) {
         installQueue.emitProgress(InstallState.Installing(0.15f), packageName)
 
         if (found) {
-            val sessionId = sessionIdMatcher.group(1).toInt()
+			val sessionId = sessionIdMatcher.group(1)?.toInt() ?: -1
             val writeResult = Shell.cmd(apkFile.sessionInstallWrite(sessionId)).exec()
             installQueue.emitProgress(
                 InstallState.Installing(0.75f),

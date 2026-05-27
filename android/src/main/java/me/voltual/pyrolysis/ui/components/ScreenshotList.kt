@@ -77,7 +77,7 @@ fun ScreenshotList(
                 }
             }
         }
-        itemsIndexed(screenShots, key = { _, it -> it.screenShot.toString() }) { index, it ->
+        itemsIndexed(screenShots, key = { _, it -> it.screenShot }) { index, it ->
             val image by remember(it) {
                 mutableStateOf(
                     createScreenshotUri(
