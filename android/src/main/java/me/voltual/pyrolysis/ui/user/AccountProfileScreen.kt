@@ -60,7 +60,7 @@ fun AccountProfileScreen(
 
     LaunchedEffect(state.userDetail, state.currentDevice) {
         state.userDetail?.let {
-            nickname = it.displayName ?: ""
+            nickname = it.displayName
             description = it.description ?: ""
             qqNumber = it.bindQq?.toString() ?: "" 
         }

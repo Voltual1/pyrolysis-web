@@ -194,9 +194,9 @@ class AppDetailComposeViewModel(
                 val finalFavoriteState = result.getOrNull() ?: targetState
                 
                 val newFavoriteCount = if (finalFavoriteState) {
-                    (currentDetail.favoriteCount ?: 0) + 1
+                    (currentDetail.favoriteCount) + 1
                 } else {
-                    maxOf(0, (currentDetail.favoriteCount ?: 1) - 1)
+                    maxOf(0, (currentDetail.favoriteCount) - 1)
                 }
 
                 _appDetail.value = currentDetail.copy(

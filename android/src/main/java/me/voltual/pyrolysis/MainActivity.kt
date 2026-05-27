@@ -383,7 +383,7 @@ fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
                     }
                     is UpdateCheckResult.Error -> {
                         coroutineScope.launch {
-                            snackbarHostState.showSnackbar(result.message ?: "检查更新失败")
+                            snackbarHostState.showSnackbar(result.message)
                         }
                     }
                 }

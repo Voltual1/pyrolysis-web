@@ -156,7 +156,7 @@ fun PaymentContent(
     val coroutineScope = rememberCoroutineScope()
     var amount by remember(paymentInfo) { mutableStateOf(paymentInfo?.price?.toString() ?: "") }
     var postIdInput by remember { mutableStateOf("") }
-    val isAdvancedMode = paymentInfo?.type == PaymentType.POST_REWARD && (paymentInfo.postId ?: 0L) == 0L
+	val isAdvancedMode = paymentInfo?.type == PaymentType.POST_REWARD && paymentInfo.postId == 0L
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
