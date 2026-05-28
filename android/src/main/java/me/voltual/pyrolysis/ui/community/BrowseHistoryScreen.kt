@@ -11,7 +11,6 @@
 
 package me.voltual.pyrolysis.ui.community
 
-import android.content.ClipData
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -27,12 +26,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalClipboardManager // 引入 Compose 的剪贴板管理器
+import androidx.compose.ui.text.AnnotatedString // 引入富文本类型，复制时需要传入该类型
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 
+@Suppress("DEPRECATION")
 @Composable
 fun BrowseHistoryScreen(
     viewModel: BrowseHistoryViewModel = viewModel(),
@@ -44,14 +44,14 @@ fun BrowseHistoryScreen(
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val selectedCount = viewModel.selectedItems.collectAsState().value.size
 
-    // 获取新的 Compose 剪贴板接口
-    val clipboard = LocalClipboard.current
+    // 获取 Compose 上下文中的剪贴板管理器
+    val clipboardManager = LocalClipboardManager.current
     
     // 监听复制事件
     LaunchedEffect(Unit) {
         viewModel.copyEvent.collect { (textToCopy) ->
-            // 使用 setClipEntry 替代 setText，这是挂起函数
-            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(textToCopy, textToCopy)))
+            // 使用 LocalClipboardManager 进行文本复制
+            clipboardManager.setText(AnnotatedString(textToCopy))
         }
     }
 

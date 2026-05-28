@@ -11,7 +11,6 @@
 
 package me.voltual.pyrolysis.ui.log
 
-import android.content.ClipData
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -28,10 +27,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalClipboardManager // 引入 Compose 剪贴板管理器
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.AnnotatedString // 引入富文本类型
 import androidx.compose.ui.unit.dp
 import me.voltual.pyrolysis.core.database.LogEntry
 import me.voltual.pyrolysis.core.ui.components.ListItem
@@ -42,6 +40,7 @@ import me.voltual.pyrolysis.core.ui.theme.billing_income
 import me.voltual.pyrolysis.core.ui.theme.billing_income_dark
 import kotlinx.coroutines.launch
 
+@Suppress("DEPRECATION")
 @Composable
 fun LogScreen(
     viewModel: LogViewModel,
@@ -58,14 +57,14 @@ fun LogScreen(
     var showClearAllDialog by remember { mutableStateOf(false) }
     var showSelectionOptions by remember { mutableStateOf(false) }
 
-    // 获取新的 Compose 剪贴板接口
-    val clipboard = LocalClipboard.current
+    // 获取 Compose 的剪贴板管理器
+    val clipboardManager = LocalClipboardManager.current
 
     // 监听复制事件
     LaunchedEffect(Unit) {
         viewModel.copyEvent.collect { (textToCopy, count) ->
-            // 使用新的 API: setClipEntry 替代 setText
-            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(textToCopy, textToCopy)))
+            // 使用 LocalClipboardManager 设置剪贴板文本
+            clipboardManager.setText(AnnotatedString(textToCopy))
             
             coroutineScope.launch {
                 snackbarHostState.showSnackbar(
