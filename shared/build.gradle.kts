@@ -52,6 +52,7 @@ kotlin {
                 implementation(libs.ktor.serialization.json)
                 implementation(libs.ktor.client.logging)
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.koin.android.compose)
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.koin.core)
