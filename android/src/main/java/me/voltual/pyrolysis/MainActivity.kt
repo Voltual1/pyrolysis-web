@@ -38,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import me.voltual.pyrolysis.data.UpdateInfo
 import me.voltual.pyrolysis.data.UpdateSettingsDataStore
@@ -122,10 +123,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 心跳服务初始化
         lifecycleScope.launch {
             delay(10000)
-            // 使用注入的 authRepository 获取 token
             val userCredentials = authRepository.credentials.first()
             if (userCredentials.token.isNotEmpty()) {
                 startHeartbeatService(this@MainActivity, userCredentials.token)
@@ -201,7 +200,8 @@ fun MainScreenContent(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val authRepository: AuthRepository = koinInject() // 在 Composable 中注入
+    val authRepository: AuthRepository = koinInject() 
+    val themeStore: ThemeColorDataStore = koinInject()
 
     val currentRoute = navigationState.currentRoute
     val currentTopLevelRoute = navigationState.topLevelRoute
@@ -427,13 +427,12 @@ fun startHeartbeatService(context: Context, token: String) {
 private fun tryAutoLogin(
     username: String,
     password: String,
-    authRepository: AuthRepository, // 传入注入的 Repository
+    authRepository: AuthRepository, 
     navigator: Navigator,
     snackbarHostState: SnackbarHostState
 ) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            // 使用 authRepository 获取设备 ID
             val deviceId = authRepository.deviceId.first()
             val result = KtorClient.ApiServiceImpl.login(
                 username = username,
@@ -448,7 +447,6 @@ private fun tryAutoLogin(
                         if (loginResponse != null && loginResponse.code == 1) {
                             val loginData = loginResponse.data
                             if (loginData != null) {
-                                // 使用 authRepository 保存凭证
                                 authRepository.saveCredentials(
                                     username,
                                     password,

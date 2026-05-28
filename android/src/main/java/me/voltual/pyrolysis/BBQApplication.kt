@@ -10,8 +10,10 @@ import androidx.appcompat.app.AppCompatActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import me.voltual.pyrolysis.core.database.*
-import me.voltual.pyrolysis.core.ui.theme.ThemeColorStore
+import me.voltual.pyrolysis.core.ui.theme.ThemeColorDataStore
 import me.voltual.pyrolysis.core.ui.theme.ThemeManager
 import me.voltual.pyrolysis.data.content.Preferences
 import me.voltual.pyrolysis.feature.store.repository.privacyModule
@@ -30,25 +32,21 @@ import java.lang.ref.WeakReference
 class BBQApplication : Application(), KoinStartup {
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    // 正常的延迟注入（只要在调用它们时不早于 Koin 初始化即可）
     val wm: WorkerManager by inject()
     val db: FdroidDatabase by inject()
-    val installer: AppInstaller by inject() // 移动到实例作用域
+    val installer: AppInstaller by inject() 
     
     val themeStore: ThemeColorDataStore by inject() 
 
-    // 数据库单例
     lateinit var database: AppDatabase
         private set
 
-    // 用于适配 InstallWorker 的 Activity 引用
     private var activityRef: WeakReference<AppCompatActivity> = WeakReference(null)
 
     override fun onCreate() {
         super.onCreate()
         instance = this
 
-        // 核心：自动追踪当前活跃的 Activity
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             override fun onActivityResumed(activity: Activity) {
                 if (activity is AppCompatActivity) {
@@ -67,19 +65,15 @@ class BBQApplication : Application(), KoinStartup {
             override fun onActivityDestroyed(activity: Activity) {}
         })
 
-        // 优先初始化存储
         Preferences.init(this)
-        
-        // 确保 wm 安全调用（KoinStartup 保证了此时 Koin 已就绪）
         wm.prune()    
         
         ThemeManager.syncThemeState(this)
-        // 使用 runBlocking 加载持久化的颜色集到内存管理器
+        
         runBlocking {
             ThemeManager.updateCustomColors(themeStore.colorsFlow.first())
         }
     }
-    
     
 	@Suppress("DSL_MARKER_APPLIED_TO_WRONG_TARGET")
     override fun onKoinStartup() = koinConfiguration {
@@ -95,21 +89,17 @@ class BBQApplication : Application(), KoinStartup {
     }
 
     companion object {
-        // 使用 lateinit 确保安全，并在 onCreate 中赋值
         lateinit var instance: BBQApplication
             private set
 
-        // 适配 InstallWorker 调用 BBQApplication.mainActivity
         var mainActivity: AppCompatActivity?
             get() = if (::instance.isInitialized) instance.activityRef.get() else null
             set(_) {} 
 
-        // 将全局静态桥梁全部改为 运行时读属性（Getter）
-        // 这样可以确保外部调用时，Koin 和 Application 已经完全初始化好了
         val wm: WorkerManager get() = instance.wm
         val db: FdroidDatabase get() = instance.db
         val context: Context get() = instance
-        val installer: AppInstaller get() = instance.installer // 通过 instance 间接获取
+        val installer: AppInstaller get() = instance.installer 
         
         val latestSyncs: MutableMap<Long, Long> = mutableMapOf()
     }
