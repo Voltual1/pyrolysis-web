@@ -62,7 +62,6 @@ kotlin {
     implementation(libs.filekit.dialogs.compose)
         implementation(libs.coil.compose)
     implementation(libs.coil.network.ktor)
-        implementation(libs.datastore.core)
             implementation(libs.datastore.preferences)
             }
         }
