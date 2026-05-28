@@ -63,9 +63,9 @@ kotlin {
         implementation(libs.coil.compose)
     implementation(libs.coil.network.ktor)
            // DataStore library
-  implementation("androidx.datastore:datastore-core:1.2.1")
+  implementation("androidx.datastore:datastore-core:1.3.0-alpha09")
   // The Preferences DataStore library
-  implementation("androidx.datastore:datastore-preferences-core:1.2.1")
+  implementation("androidx.datastore:datastore-preferences-core:1.3.0-alpha09")
             }
         }
 
