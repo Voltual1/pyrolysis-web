@@ -32,9 +32,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.ClipData // 导入 Compose 统一的 ClipData
-import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalClipboardManager // 迎回老朋友
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
@@ -42,6 +42,8 @@ import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.core.ui.theme.BBQSnackbarHost
 import me.voltual.pyrolysis.core.utils.cleanUrl
 
+// 在函数头上直接压制弃用警告，眼不见心不烦
+@Suppress("DEPRECATION")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImagePreviewScreen(
@@ -49,8 +51,8 @@ fun ImagePreviewScreen(
     @Suppress("UNUSED_PARAMETER") snackbarHostState: SnackbarHostState, 
     onClose: () -> Unit
 ) {
-    // 1. 使用 Compose 多平台统一的 LocalClipboard
-    val clipboard = LocalClipboard.current
+    // 愉快地继续使用旧版 API，直接传 AnnotatedString 极其省心
+    val clipboardManager = LocalClipboardManager.current
     val internalSnackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     
@@ -69,7 +71,6 @@ fun ImagePreviewScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(Color.Black)
-                // 点击背景关闭预览
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -79,7 +80,7 @@ fun ImagePreviewScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    // 2. 缩放与平移手势
+                    // 1. 缩放与平移手势
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
                             scale = (scale * zoom).coerceIn(1f, 8f)
@@ -90,12 +91,11 @@ fun ImagePreviewScreen(
                             }
                         }
                     }
-                    // 3. 点击、双击与长按手势（替代 combinedClickable 避免与 transform 冲突）
+                    // 2. 完美的手势融合：单击关闭、双击放大、长按复制
                     .pointerInput(Unit) {
                         detectTapGestures(
-                            onTap = { onClose() }, // 单击关闭
+                            onTap = { onClose() },
                             onDoubleTap = {
-                                // 双击切换放大状态：如果在放大状态则还原，在原图状态则放大到 3 倍
                                 if (scale > 1f) {
                                     scale = 1f
                                     offset = Offset.Zero
@@ -105,9 +105,8 @@ fun ImagePreviewScreen(
                             },
                             onLongPress = {
                                 scope.launch {
-                                    // 4. 方案二：使用多平台统一的 ClipData.withPlainText
-                                    val clipData = ClipData.withPlainText(cleanedImageUrl)
-                                    clipboard.setClipData(clipData)
+                                    // 老 API 直接塞字符串，一行搞定
+                                    clipboardManager.setText(AnnotatedString(cleanedImageUrl))
                                     
                                     internalSnackbarHostState.showSnackbar(
                                         message = "已复制图片链接"
@@ -116,7 +115,7 @@ fun ImagePreviewScreen(
                             }
                         )
                     }
-                    // 5. 应用图形变换
+                    // 3. 应用图形变换
                     .graphicsLayer(
                         scaleX = scale,
                         scaleY = scale,
