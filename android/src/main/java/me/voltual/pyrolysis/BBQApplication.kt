@@ -66,9 +66,7 @@ class BBQApplication : Application(), KoinStartup {
         })
 
         Preferences.init(this)
-        wm.prune()    
-        
-        ThemeManager.syncThemeState(this)
+        wm.prune()           
         
         runBlocking {
             ThemeManager.updateCustomColors(themeStore.colorsFlow.first())
