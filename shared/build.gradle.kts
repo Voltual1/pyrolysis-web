@@ -52,9 +52,18 @@ kotlin {
                 implementation(libs.ktor.serialization.json)
                 implementation(libs.ktor.client.logging)
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.koin.core)
                 implementation(libs.koin.annotations)
+                    // FileKit
+    implementation(libs.filekit.core)
+    implementation(libs.filekit.dialogs)
+    implementation(libs.filekit.dialogs.compose)
+        implementation(libs.coil.compose)
+    implementation(libs.coil.network.ktor)
+        implementation(libs.datastore.core)
+            implementation(libs.datastore.preferences)
             }
         }
 

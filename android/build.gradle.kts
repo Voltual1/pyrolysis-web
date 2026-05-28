@@ -160,6 +160,7 @@ dependencies {
     implementation(libs.ijkplayer)
     implementation(project(":DanmakuFlameMaster"))
     implementation(project(":ApkParser"))
+    implementation(project(":shared"))
     implementation(libs.markdown)
 
     // 存储
