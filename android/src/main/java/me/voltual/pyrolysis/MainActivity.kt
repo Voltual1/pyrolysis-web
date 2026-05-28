@@ -80,9 +80,9 @@ class MainActivity : AppCompatActivity() {
             )
             val view = LocalView.current 
             val topAppBarController = remember { TopAppBarController() }
-            val navigator = remember(navigationState, view) {
-                Navigator(navigationState, view, topAppBarController)
-            }
+            val navigator = remember(focusManager, topAppBarController, navigationState) {
+        Navigator(navigationState, focusManager, topAppBarController)
+    }
 
             CompositionLocalProvider(
                 LocalNavigator provides navigator,
