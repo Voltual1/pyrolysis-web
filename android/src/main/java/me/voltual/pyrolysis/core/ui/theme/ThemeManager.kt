@@ -8,42 +8,37 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>。
 package me.voltual.pyrolysis.core.ui.theme
 
-import android.content.Context
-import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 object ThemeManager {
-    var isAppDarkTheme by mutableStateOf(false)
+    // 使用 null 表示“跟随系统”，运行时切换后变为具体的 true 或 false
+    private var _isDarkThemeSetting by mutableStateOf<Boolean?>(null)
+
     var customColorSet by mutableStateOf<CustomColorSet?>(null)
     
     fun updateCustomColors(colors: CustomColorSet) {
         customColorSet = colors
     }
-    
-    fun toggleTheme() {
-        val newMode = when (AppCompatDelegate.getDefaultNightMode()) {
-            AppCompatDelegate.MODE_NIGHT_YES -> AppCompatDelegate.MODE_NIGHT_NO
-            AppCompatDelegate.MODE_NIGHT_NO -> AppCompatDelegate.MODE_NIGHT_YES
-            else -> AppCompatDelegate.MODE_NIGHT_YES 
-        }
-        
-        AppCompatDelegate.setDefaultNightMode(newMode)
-        isAppDarkTheme = newMode == AppCompatDelegate.MODE_NIGHT_YES
+
+    /**
+     * 获取当前最终的深色模式状态（在 @Composable 中调用）
+     */
+    @Composable
+    fun isAppDarkTheme(): Boolean {
+        // 如果用户没手动切过（null），就拿 Compose 自带的系统深色状态，否则用用户的设置
+        return _isDarkThemeSetting ?: isSystemInDarkTheme()
     }
-    
-    fun syncThemeState(context: Context) {
-        isAppDarkTheme = when (AppCompatDelegate.getDefaultNightMode()) {
-            AppCompatDelegate.MODE_NIGHT_YES -> true
-            AppCompatDelegate.MODE_NIGHT_NO -> false
-            else -> isSystemInDarkTheme(context)
-        }
-    }
-    
-    private fun isSystemInDarkTheme(context: Context): Boolean {
-        val currentNightMode = context.resources.configuration.uiMode and 
-                             android.content.res.Configuration.UI_MODE_NIGHT_MASK
-        return currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+    /**
+     * 切换主题
+     * @param isSystemDark 当前系统的深色模式状态（因为是非 Composable 环境，需要外面传进来，或者通过当前状态反转）
+     */
+    fun toggleTheme(isSystemDark: Boolean) {
+        val currentMode = _isDarkThemeSetting ?: isSystemDark
+        _isDarkThemeSetting = !currentMode
     }
 }
