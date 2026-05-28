@@ -19,9 +19,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.graphics.Color // 新增导入
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import android.content.Context
-import android.content.res.Configuration
-import androidx.compose.ui.platform.LocalContext
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -404,10 +401,7 @@ fun BBQTheme(
     } else {
         customColors?.lightSet?.toLightColorScheme() ?: lightScheme
     }
-    
-    // 应用 DPI 和字体大小 - 注意：这部分代码需要在 Activity 中执行
-    // 这里只是传递 Context，实际应用在 Activity 中
-    
+        
     MaterialTheme(
         colorScheme = colorScheme,
 //        typography = AppTypography,

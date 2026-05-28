@@ -13,7 +13,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 data class CustomColorSet(
@@ -160,12 +159,9 @@ class ThemeColorDataStore(private val dataStore: DataStore<Preferences>) {
             "dark_billingExpense"
         )
 
-        private val DPI_KEY = floatPreferencesKey("dpi")
-        private val FONT_SIZE_KEY = floatPreferencesKey("font_size")
         private val DRAWER_HEADER_LIGHT_BG_URI_KEY = stringPreferencesKey("drawer_header_light_bg_uri")
         private val DRAWER_HEADER_DARK_BG_URI_KEY = stringPreferencesKey("drawer_header_dark_bg_uri")
         private val GLOBAL_BACKGROUND_URI_KEY = stringPreferencesKey("global_background_uri")
-        private val CUSTOM_DPI_ENABLED_KEY = booleanPreferencesKey("custom_dpi_enabled")
         private val ROUND_SCREEN_ENABLED_KEY = booleanPreferencesKey("round_screen_enabled")
         private val ROUND_SCREEN_LEFT_PADDING_KEY = floatPreferencesKey("round_screen_left_padding")
         private val ROUND_SCREEN_TOP_PADDING_KEY = floatPreferencesKey("round_screen_top_padding")
@@ -231,18 +227,6 @@ class ThemeColorDataStore(private val dataStore: DataStore<Preferences>) {
         }
     }
 
-    suspend fun saveDpi(dpi: Float) {
-        dataStore.edit { it[DPI_KEY] = dpi }
-    }
-
-    val dpiFlow: Flow<Float> = dataStore.data.map { it[DPI_KEY] ?: 1.0f }
-
-    suspend fun saveFontSize(fontSize: Float) {
-        dataStore.edit { it[FONT_SIZE_KEY] = fontSize }
-    }
-
-    val fontSizeFlow: Flow<Float> = dataStore.data.map { it[FONT_SIZE_KEY] ?: 1.0f }
-
     suspend fun saveDrawerHeaderLightBackgroundUri(uri: String?) {
         dataStore.edit { preferences ->
             if (uri != null) preferences[DRAWER_HEADER_LIGHT_BG_URI_KEY] = uri
@@ -282,10 +266,4 @@ class ThemeColorDataStore(private val dataStore: DataStore<Preferences>) {
             bottom = prefs[ROUND_SCREEN_BOTTOM_PADDING_KEY] ?: 0f
         )
     }
-
-    suspend fun saveCustomDpiEnabled(enabled: Boolean) {
-        dataStore.edit { it[CUSTOM_DPI_ENABLED_KEY] = enabled }
-    }
-
-    val customDpiEnabledFlow: Flow<Boolean> = dataStore.data.map { it[CUSTOM_DPI_ENABLED_KEY] ?: false }
 }

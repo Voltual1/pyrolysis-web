@@ -1,12 +1,7 @@
 package me.voltual.pyrolysis.core.ui.theme
 
-import android.app.Activity
-import android.content.Context
-import android.content.res.Configuration
-import android.util.DisplayMetrics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.Image
@@ -24,20 +19,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
 import coil3.compose.rememberAsyncImagePainter
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.path
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import me.voltual.pyrolysis.restartMainActivity
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 
@@ -46,16 +35,12 @@ import kotlin.math.roundToInt
 fun ThemeCustomizeScreen(
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val themeStore: ThemeColorDataStore = koinInject()
 
     // 加载初始状态
     var lightColors by remember { mutableStateOf(ThemeColorDataStore.DEFAULT_COLORS.lightSet) }
     var darkColors by remember { mutableStateOf(ThemeColorDataStore.DEFAULT_COLORS.darkSet) }
-    var dpi by remember { mutableStateOf(1.0f) }
-    var fontSize by remember { mutableStateOf(1.0f) }
-    var customDpiEnabled by remember { mutableStateOf(false) }
     
     // 圆屏适配状态
     var roundScreenEnabled by remember { mutableStateOf(false) }
@@ -69,9 +54,6 @@ fun ThemeCustomizeScreen(
         val colors = themeStore.colorsFlow.first()
         lightColors = colors.lightSet
         darkColors = colors.darkSet
-        dpi = themeStore.dpiFlow.first()
-        fontSize = themeStore.fontSizeFlow.first()
-        customDpiEnabled = themeStore.customDpiEnabledFlow.first()
         
         val paddings = themeStore.roundScreenPaddingFlow.first()
         roundScreenEnabled = paddings.enabled
@@ -124,13 +106,11 @@ fun ThemeCustomizeScreen(
                         scope.launch {
                             lightColors = ThemeColorDataStore.DEFAULT_COLORS.lightSet
                             darkColors = ThemeColorDataStore.DEFAULT_COLORS.darkSet
-                            dpi = 1.0f
-                            fontSize = 1.0f
-                            customDpiEnabled = false
                             themeStore.saveGlobalBackgroundUri(null)
                             themeStore.saveDrawerHeaderLightBackgroundUri(null)
                             themeStore.saveDrawerHeaderDarkBackgroundUri(null)
                             themeStore.saveRoundScreenPaddings(false, 0f, 0f, 0f, 0f)
+                            ThemeManager.updateCustomColors(ThemeColorDataStore.DEFAULT_COLORS)
                         }
                         showResetDialog = false
                     }
@@ -144,7 +124,7 @@ fun ThemeCustomizeScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             if (showSavedMessage) {
                 Text(
-                    text = "主题已保存！正在应用...",
+                    text = "主题已保存！",
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     textAlign = TextAlign.Center
@@ -174,10 +154,6 @@ fun ThemeCustomizeScreen(
                 item { OutlinedTextField(value = roundTop.toString(), onValueChange = { roundTop = it.toFloatOrNull() ?: roundTop }, label = { Text("上内边距 (dp)") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), enabled = roundScreenEnabled) }
                 item { OutlinedTextField(value = roundRight.toString(), onValueChange = { roundRight = it.toFloatOrNull() ?: roundRight }, label = { Text("右内边距 (dp)") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), enabled = roundScreenEnabled) }
                 item { OutlinedTextField(value = roundBottom.toString(), onValueChange = { roundBottom = it.toFloatOrNull() ?: roundBottom }, label = { Text("下内边距 (dp)") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), enabled = roundScreenEnabled) }
-                
-                item { SwitchWithText(text = "启用自定义屏幕密度和字体大小", checked = customDpiEnabled, onCheckedChange = { customDpiEnabled = it }, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
-                item { OutlinedTextField(value = dpi.toString(), onValueChange = { dpi = it.toFloatOrNull() ?: dpi }, label = { Text("屏幕密度 (DPI 缩放)") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), enabled = customDpiEnabled) }
-                item { OutlinedTextField(value = fontSize.toString(), onValueChange = { fontSize = it.toFloatOrNull() ?: fontSize }, label = { Text("字体大小 (倍数)") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), enabled = customDpiEnabled) }
                 
                 item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
 
@@ -231,74 +207,18 @@ fun ThemeCustomizeScreen(
 
         ExtendedFloatingActionButton(
             onClick = {
-                saveThemeAndRestart(
-                    context = context,
-                    themeStore = themeStore,
-                    colors = CustomColorSet(lightColors, darkColors),
-                    dpi = dpi,
-                    fontScale = fontSize,
-                    customDpiEnabled = customDpiEnabled,
-                    roundScreenEnabled = roundScreenEnabled,  
-                    roundLeft = roundLeft,                  
-                    roundTop = roundTop,                    
-                    roundRight = roundRight,
-                    roundBottom = roundBottom                             
-                )
+                val newColors = CustomColorSet(lightColors, darkColors)
+                scope.launch {
+                    themeStore.saveColors(newColors)
+                    themeStore.saveRoundScreenPaddings(roundScreenEnabled, roundLeft, roundTop, roundRight, roundBottom)
+                    ThemeManager.updateCustomColors(newColors)
+                }
                 showSavedMessage = true
             },
             icon = { Icon(Icons.Filled.Save, "保存") },
             text = { Text("保存并应用") },
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp)
         )
-    }
-}
-
-@Suppress("DEPRECATION")
-private fun saveThemeAndRestart(
-    context: Context,
-    themeStore: ThemeColorDataStore,
-    colors: CustomColorSet,
-    dpi: Float,
-    fontScale: Float,
-    customDpiEnabled: Boolean,
-    roundScreenEnabled: Boolean,  
-    roundLeft: Float,            
-    roundTop: Float,             
-    roundRight: Float,           
-    roundBottom: Float           
-) {
-    val scope = (context as? androidx.lifecycle.LifecycleOwner)?.lifecycleScope ?: kotlinx.coroutines.MainScope()
-    scope.launch {
-        val oldDpi = themeStore.dpiFlow.first()
-        val oldFontScale = themeStore.fontSizeFlow.first()
-        val oldCustomDpiEnabled = themeStore.customDpiEnabledFlow.first()
-
-        themeStore.saveColors(colors)
-        themeStore.saveDpi(dpi)
-        themeStore.saveFontSize(fontScale)
-        themeStore.saveCustomDpiEnabled(customDpiEnabled)
-        themeStore.saveRoundScreenPaddings(roundScreenEnabled, roundLeft, roundTop, roundRight, roundBottom)
-
-        withContext(Dispatchers.Main) {
-            ThemeManager.updateCustomColors(colors)
-
-            if (oldDpi != dpi || oldFontScale != fontScale || oldCustomDpiEnabled != customDpiEnabled) {
-                (context as? Activity)?.let {
-                    if(customDpiEnabled){
-                        val resources = it.resources
-                        val configuration = Configuration(resources.configuration)
-                        val metrics = resources.displayMetrics
-                        val newDensityDpi = (dpi * DisplayMetrics.DENSITY_DEFAULT).toInt()
-                        configuration.densityDpi = newDensityDpi
-                        configuration.fontScale = fontScale
-                        metrics.densityDpi = newDensityDpi
-                        resources.updateConfiguration(configuration, metrics)
-                    }
-                }
-                delay(300)
-                restartMainActivity(context)
-            }
-        }
     }
 }
 
