@@ -381,22 +381,14 @@ private val AppTypography = Typography(
 
 @Composable
 fun BBQTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     appDarkTheme: Boolean? = null,
     content: @Composable () -> Unit
-) {
-    // 优先级: appDarkTheme > 系统设置
-    val useDarkTheme = when {
-        appDarkTheme != null -> appDarkTheme
-        else -> darkTheme
-    }
+) {   
     
-    // 加载自定义颜色 - 修复：直接访问 customColorSet 属性
     val customColors = ThemeManager.customColorSet
     
     // 创建颜色方案 (优先使用自定义颜色)
-    val colorScheme = if (useDarkTheme) {
-        // 修复：使用 darkColorScheme 而不是 lightColorScheme
+    val colorScheme = if (appDarkTheme) {
         customColors?.darkSet?.toDarkColorScheme() ?: darkScheme
     } else {
         customColors?.lightSet?.toLightColorScheme() ?: lightScheme

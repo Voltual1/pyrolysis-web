@@ -28,10 +28,5 @@ object ThemeManager {
     fun toggleTheme() {
         isAppDarkTheme = !isAppDarkTheme
     }        
-    
-    private fun isSystemInDarkTheme(context: Context): Boolean {
-        val currentNightMode = context.resources.configuration.uiMode and 
-                             android.content.res.Configuration.UI_MODE_NIGHT_MASK
-        return currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
-    }
+            
 }

@@ -390,9 +390,6 @@ fun BBQSnackbarHost(
     hostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     snackbar: @Composable (SnackbarData) -> Unit = { snackbarData ->
-        if (snackbarData.visuals.message.contains("1DM")) {
-            BBQInfoSnackbar(snackbarData)
-        } else {
             BBQSnackbar(snackbarData)
         }
     }
