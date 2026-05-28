@@ -381,7 +381,7 @@ private val AppTypography = Typography(
 
 @Composable
 fun BBQTheme(
-    appDarkTheme: Boolean? = null,
+    appDarkTheme: Boolean,
     content: @Composable () -> Unit
 ) {   
     
