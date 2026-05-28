@@ -159,21 +159,6 @@ class MainActivity : AppCompatActivity() {
         """.trimIndent()
     }
 
-    @Suppress("DEPRECATION")
-    private fun applyDpiAndFontScale(context: Context) {
-        val dpi = runBlocking { themeStore.dpiFlow.first() }
-        val fontScale = runBlocking { themeStore.fontSizeFlow.first() }
-        val resources = context.resources
-        val configuration = Configuration(resources.configuration)
-        val metrics = DisplayMetrics()
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
-        windowManager.defaultDisplay.getMetrics(metrics)
-        val newDensityDpi = (dpi * DisplayMetrics.DENSITY_DEFAULT).toInt()
-        configuration.densityDpi = newDensityDpi
-        configuration.fontScale = fontScale
-        metrics.densityDpi = newDensityDpi
-        resources.updateConfiguration(configuration, metrics)
-    }
 }
 
 val topLevelRoutes: Set<NavKey> = setOf(Home)
