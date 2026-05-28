@@ -62,7 +62,10 @@ kotlin {
     implementation(libs.filekit.dialogs.compose)
         implementation(libs.coil.compose)
     implementation(libs.coil.network.ktor)
-            implementation(libs.datastore.preferences)
+           // DataStore library
+  implementation("androidx.datastore:datastore:1.2.1")
+  // The Preferences DataStore library
+  implementation("androidx.datastore:datastore-preferences:1.2.1")
             }
         }
 
