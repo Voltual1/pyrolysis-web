@@ -170,7 +170,7 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
-    implementation(libs.datastore.preferences.core)
+    implementation(libs.datastore.core)
     
     //Shizuku
     implementation(libs.shizuku.api)

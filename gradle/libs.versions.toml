@@ -101,7 +101,7 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "pyrolysis-room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "pyrolysis-room" }
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
-datastore-preferences-core = { module = "androidx.datastore:datastore-preferences-core:", version.ref = "datastore" }
+datastore-core = { module = "androidx.datastore:datastore-preferences-core", version.ref = "datastore" }
 
 vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
