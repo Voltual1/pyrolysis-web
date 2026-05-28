@@ -8,11 +8,9 @@
 
 package me.voltual.pyrolysis.ui.community
 
-import android.content.ClipData
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -34,10 +32,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.ClipData // 导入 Compose 统一的 ClipData
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
@@ -45,14 +42,14 @@ import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.core.ui.theme.BBQSnackbarHost
 import me.voltual.pyrolysis.core.utils.cleanUrl
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImagePreviewScreen(
     imageUrl: String,
     @Suppress("UNUSED_PARAMETER") snackbarHostState: SnackbarHostState, 
     onClose: () -> Unit
 ) {
-    // 使用新的 Compose 剪贴板接口
+    // 1. 使用 Compose 多平台统一的 LocalClipboard
     val clipboard = LocalClipboard.current
     val internalSnackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -82,40 +79,49 @@ fun ImagePreviewScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    // 1. 手势捕捉：缩放和平移
+                    // 2. 缩放与平移手势
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(1f, 8f) // 限制缩放范围 1x 到 8x
-                            
-                            // 只有在放大状态下才允许平移
+                            scale = (scale * zoom).coerceIn(1f, 8f)
                             if (scale > 1f) {
                                 offset += pan
                             } else {
-                                offset = Offset.Zero // 重置位移
+                                offset = Offset.Zero
                             }
                         }
                     }
-                    // 2. 应用图形变换
+                    // 3. 点击、双击与长按手势（替代 combinedClickable 避免与 transform 冲突）
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { onClose() }, // 单击关闭
+                            onDoubleTap = {
+                                // 双击切换放大状态：如果在放大状态则还原，在原图状态则放大到 3 倍
+                                if (scale > 1f) {
+                                    scale = 1f
+                                    offset = Offset.Zero
+                                } else {
+                                    scale = 3f
+                                }
+                            },
+                            onLongPress = {
+                                scope.launch {
+                                    // 4. 方案二：使用多平台统一的 ClipData.withPlainText
+                                    val clipData = ClipData.withPlainText(cleanedImageUrl)
+                                    clipboard.setClipData(clipData)
+                                    
+                                    internalSnackbarHostState.showSnackbar(
+                                        message = "已复制图片链接"
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    // 5. 应用图形变换
                     .graphicsLayer(
                         scaleX = scale,
                         scaleY = scale,
                         translationX = offset.x,
                         translationY = offset.y
-                    )
-                    // 3. 长按复制事件
-                    .combinedClickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { onClose() }, // 点击图片也可以关闭
-                        onLongClick = {
-                            // 使用新的 API: setClipEntry 替代 setText
-                            scope.launch {
-                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(cleanedImageUrl, cleanedImageUrl)))
-                                internalSnackbarHostState.showSnackbar(
-                                    message = "已复制图片链接"
-                                )
-                            }
-                        }
                     ),
                 contentAlignment = Alignment.Center
             ) {
