@@ -28,7 +28,11 @@ kotlin {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }
-    }    
+    }
+
+    js(IR) {
+        browser()
+    }
 
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
@@ -58,7 +62,7 @@ kotlin {
     implementation(libs.filekit.dialogs.compose)
         implementation(libs.coil.compose)
     implementation(libs.coil.network.ktor)
-        implementation(libs.datastore.core)
+        implementation(libs.datastore.preferences.core)
             implementation(libs.datastore.preferences)
             }
         }
