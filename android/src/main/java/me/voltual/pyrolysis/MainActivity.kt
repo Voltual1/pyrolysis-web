@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
                 startRoute = Home,
                 topLevelRoutes = topLevelRoutes
             )
-            val view = LocalView.current 
+            val focusManager = LocalFocusManager.current 
             val topAppBarController = remember { TopAppBarController() }
             val navigator = remember(focusManager, topAppBarController, navigationState) {
         Navigator(navigationState, focusManager, topAppBarController)
