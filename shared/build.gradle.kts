@@ -68,7 +68,7 @@ kotlin {
   implementation("androidx.datastore:datastore-preferences-core:1.3.0-alpha09")
             }
         }
-
+//这里的datastore一定要+"-core"并且得是1.3.0-alpha01之后才支持wasm+js
         val androidMain by getting {
             dependencies {
                 implementation(libs.ktor.client.okhttp)
