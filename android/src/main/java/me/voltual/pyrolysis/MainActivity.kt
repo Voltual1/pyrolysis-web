@@ -11,6 +11,7 @@ package me.voltual.pyrolysis
 import android.content.Context
 import android.content.Intent
 import android.app.ActivityOptions
+import androidx.compose.ui.focus.FocusManager
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
