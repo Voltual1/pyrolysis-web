@@ -6,20 +6,25 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+
 package me.voltual.pyrolysis
 
-import androidx.datastore.core.DataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import me.voltual.pyrolysis.core.proto.UserCredentials
 
 /**
- * AuthRepository 是 AuthManager 的依赖注入版本。
- * 它与 AuthManager 共享底层的 "user_credentials_v2.pb" 文件。
+ * 伪持久化版本的 AuthRepository。
+ * 纯内存操作，不读写任何磁盘文件，App 重启后数据重置。
+ * 函数签名与原版完全一致，方便在依赖注入中随时“偷梁换柱”。
  */
-class AuthRepository(
-    private val credentialsStore: DataStore<UserCredentials>
-) {
+ //警告这是快速开发！！！！！不可用于生产环境
+class AuthRepository {
+
+    // 使用 MutableStateFlow 来完美模拟 DataStore 的响应式数据流
+    private val _credentialsStore = MutableStateFlow(UserCredentials.getDefaultInstance())
 
     // --- 1. 保存逻辑 ---
 
@@ -29,7 +34,8 @@ class AuthRepository(
         token: String,
         userId: Long
     ) {
-        credentialsStore.updateData { current ->
+        // 使用 update 保证线程安全，完美模拟 DataStore.updateData
+        _credentialsStore.update { current ->
             current.toBuilder()
                 .setUsername(username)
                 .setPassword(password)
@@ -42,7 +48,8 @@ class AuthRepository(
 
     // --- 2. 读取逻辑 ---
 
-    val credentials: Flow<UserCredentials> = credentialsStore.data
+    // 暴露为只读 Flow，UI 订阅它时就和订阅真正的 DataStore 一模一样
+    val credentials: Flow<UserCredentials> = _credentialsStore
     
     val userId: Flow<Long> = credentials.map { it.userId }
 
@@ -51,7 +58,7 @@ class AuthRepository(
     // --- 3. 清理逻辑 ---
 
     suspend fun clearCredentials() {
-        credentialsStore.updateData { UserCredentials.getDefaultInstance() }
+        _credentialsStore.value = UserCredentials.getDefaultInstance()
     }
 
     private fun generateDeviceId(): String = (1..15).map { (0..9).random() }.joinToString("")

@@ -49,6 +49,8 @@ kotlin {
                     implementation(libs.compose.navigation3)
                         implementation(libs.compose.navigation3.ui) 
                 implementation(libs.compose.material3)
+                    implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0")
+                        implementation(libs.androidx.lifecycle.viewmodel.compose)
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.serialization.json)
