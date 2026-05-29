@@ -63,7 +63,6 @@ kotlin {
                 implementation(libs.koin.core)
                     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
 
                 implementation(libs.koin.annotations)
                             implementation(libs.material.icons.core)
@@ -93,4 +92,9 @@ kotlin {
             }
         }*/
     }
+}
+
+dependencies {
+    // 针对 commonMain 源码集运行 KSP
+    add("kspCommonMainMetadata", libs.room.compiler)    
 }
