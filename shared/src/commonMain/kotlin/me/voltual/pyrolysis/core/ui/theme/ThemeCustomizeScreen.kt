@@ -9,10 +9,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.automirrored.filled.ColorLens
+import androidx.compose.material.icons.automirrored.filled.Refresh
+import androidx.compose.material.icons.automirrored.filled.Save
+import androidx.compose.material.icons.automirrored.filled.Language
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -133,8 +133,8 @@ fun ThemeCustomizeScreen(
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { showResetDialog = true }) { Icon(Icons.Filled.Refresh, "恢复默认设置") }
-                IconButton(onClick = { translate = !translate }) { Icon(Icons.Filled.Language, "翻译") }
+                IconButton(onClick = { showResetDialog = true }) { Icon(Icons.AutoMirrored.Filled.Refresh, "恢复默认设置") }
+                IconButton(onClick = { translate = !translate }) { Icon(Icons.AutoMirrored.Filled.Language, "翻译") }
             }
 
             LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 80.dp)) {
@@ -216,7 +216,7 @@ fun ThemeCustomizeScreen(
                 }
                 showSavedMessage = true
             },
-            icon = { Icon(Icons.Filled.Save, "保存") },
+            icon = { Icon(Icons.AutoMirrored.Filled.Save, "保存") },
             text = { Text("保存并应用") },
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp)
         )
@@ -283,7 +283,7 @@ fun ColorEditItem(colorName: String, currentColor: Color, onColorChange: (Color)
                 singleLine = true
             )
             Spacer(modifier = Modifier.width(8.dp))
-            IconButton(onClick = { showColorPicker = true }) { Icon(imageVector = Icons.Filled.ColorLens, contentDescription = "选择颜色") }
+            IconButton(onClick = { showColorPicker = true }) { Icon(imageVector = Icons.AutoMirrored.Filled.ColorLens, contentDescription = "选择颜色") }
         }
     }
 }
