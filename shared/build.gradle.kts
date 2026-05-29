@@ -53,7 +53,7 @@ kotlin {
                 implementation(libs.ktor.client.logging)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.koin.android.compose)
-                implementation(libs.androidx.icons.extended)
+                implementation(libs.compose.material.icons.extended)
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.koin.core)

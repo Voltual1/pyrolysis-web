@@ -58,6 +58,7 @@ compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-mu
 # Compose
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "pyrolysis-compose-bom" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
+compose-material-icons-extended = { module = "compose-material-icons-extended", version.ref = "compose-multiplatform" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
