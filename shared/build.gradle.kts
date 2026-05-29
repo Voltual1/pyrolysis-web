@@ -60,6 +60,7 @@ kotlin {
                 implementation(libs.koin.core)
                 implementation(libs.koin.annotations)
                             implementation(libs.material.icons.core)
+                            implementation(libs.material.icons.extended)
                     // FileKit
     implementation(libs.filekit.core)
     implementation(libs.filekit.dialogs)
@@ -76,7 +77,6 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation(libs.ktor.client.okhttp)
-                implementation(libs.androidx.icons.extended)
             }
         }
 
