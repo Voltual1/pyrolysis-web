@@ -58,6 +58,7 @@ kotlin {
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.koin.core)
                 implementation(libs.koin.annotations)
+                            implementation(libs.material.icons.core)
                     // FileKit
     implementation(libs.filekit.core)
     implementation(libs.filekit.dialogs)
