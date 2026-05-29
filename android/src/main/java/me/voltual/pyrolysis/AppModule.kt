@@ -23,7 +23,7 @@ import me.voltual.pyrolysis.core.database.*
 import me.voltual.pyrolysis.core.database.dao.*
 import me.voltual.pyrolysis.core.ui.theme.ThemeColorDataStore
 import me.voltual.pyrolysis.core.proto.UserCredentials
-import me.voltual.pyrolysis.core.proto.UserCredentialsSerializer
+//import me.voltual.pyrolysis.core.proto.UserCredentialsSerializer
 import me.voltual.pyrolysis.data.*
 import me.voltual.pyrolysis.feature.store.repository.*
 import me.voltual.pyrolysis.feature.store.worker.workmanagerModule
@@ -114,12 +114,12 @@ single<Aead> {
     // =========================================================================
     
     // Proto DataStore (用户凭据加密存储)
-    single<DataStore<UserCredentials>>(AUTH_STORE_QUALIFIER) {
+/*    single<DataStore<UserCredentials>>(AUTH_STORE_QUALIFIER) {
         DataStoreFactory.create(
             serializer = UserCredentialsSerializer(get()),
             produceFile = { androidContext().dataStoreFile("user_credentials_v2.pb") }
         )
-    }
+    }*/
 
     // Preferences DataStores 物理文件定义
     val storeFiles = mapOf(
