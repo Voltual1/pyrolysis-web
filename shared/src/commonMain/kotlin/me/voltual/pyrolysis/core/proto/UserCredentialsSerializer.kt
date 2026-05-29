@@ -10,17 +10,17 @@ package me.voltual.pyrolysis.core.proto
 
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer
-import com.google.crypto.tink.Aead
+/*import com.google.crypto.tink.Aead
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 import java.io.OutputStream
-import java.security.GeneralSecurityException
+import java.security.GeneralSecurityException*/
 
 /**
  * 使用 Tink AEAD 加密保护的 Protobuf 序列化器
  */
-class UserCredentialsSerializer(private val aead: Aead) : Serializer<UserCredentials> {
-    
+class UserCredentialsSerializer(/*private val aead: Aead*/) : Serializer<UserCredentials> {
+/*    
     override val defaultValue: UserCredentials = UserCredentials.getDefaultInstance()
 
     override suspend fun readFrom(input: InputStream): UserCredentials {
@@ -49,5 +49,5 @@ class UserCredentialsSerializer(private val aead: Aead) : Serializer<UserCredent
         val rawBytes = t.toByteArray()
         val encryptedData = aead.encrypt(rawBytes, null)
         output.write(encryptedData)
-    }
+    }*/
 }

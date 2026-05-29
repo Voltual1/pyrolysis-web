@@ -61,6 +61,10 @@ kotlin {
                             implementation(libs.components.resources)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.koin.core)
+                    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
                 implementation(libs.koin.annotations)
                             implementation(libs.material.icons.core)
                             implementation(libs.material.icons.extended)
