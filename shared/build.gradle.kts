@@ -30,14 +30,14 @@ kotlin {
         }
     }
 
-    js(IR) {
+/*    js(IR) {
         browser()
     }
 
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
-    }
+    }*/
 
     applyDefaultHierarchyTemplate()
 
@@ -54,6 +54,7 @@ kotlin {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.koin.android.compose)
                 implementation(libs.kotlinx.coroutines.core)
+                            implementation(libs.components.resources)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.koin.core)
                 implementation(libs.koin.annotations)
@@ -77,10 +78,10 @@ kotlin {
             }
         }
 
-        val webMain by getting {
+/*        val webMain by getting {
             dependencies {
                 implementation(libs.ktor.client.js)
             }
-        }
+        }*/
     }
 }
