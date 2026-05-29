@@ -7,18 +7,18 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>。
 package me.voltual.pyrolysis.core.ui.theme
 
-import org.jetbrains.compose.foundation.isSystemInDarkTheme
-import org.jetbrains.compose.material3.MaterialTheme
-import org.jetbrains.compose.material3.Typography
-import org.jetbrains.compose.material3.darkColorScheme
-import org.jetbrains.compose.material3.lightColorScheme
-import org.jetbrains.compose.runtime.Composable
-import org.jetbrains.compose.ui.text.TextStyle
-import org.jetbrains.compose.ui.text.font.Font
-import org.jetbrains.compose.ui.text.font.FontFamily
-import org.jetbrains.compose.ui.graphics.Color // 新增导入
-import org.jetbrains.compose.ui.text.font.FontWeight
-import org.jetbrains.compose.ui.unit.sp
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.graphics.Color // 新增导入
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,

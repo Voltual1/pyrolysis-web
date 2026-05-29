@@ -8,9 +8,9 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>。
 package me.voltual.pyrolysis.core.ui.theme
 
-import org.jetbrains.compose.runtime.getValue
-import org.jetbrains.compose.runtime.mutableStateOf
-import org.jetbrains.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 object ThemeManager {
     // 默认是浅色还是深色，作为初始兜底（不影响后续随系统或手动切换）

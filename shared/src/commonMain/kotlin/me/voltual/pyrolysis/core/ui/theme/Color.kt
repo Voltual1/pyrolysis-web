@@ -8,7 +8,7 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>。
 package me.voltual.pyrolysis.core.ui.theme
 
-import org.jetbrains.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color
 
 val Orange = Color(0xFFFF9138)
 val LightGreen = Color(0xFFAEC300)

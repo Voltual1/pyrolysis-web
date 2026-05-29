@@ -8,14 +8,14 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.core.ui.theme
 
-import org.jetbrains.compose.foundation.layout.PaddingValues
-import org.jetbrains.compose.foundation.layout.padding
-import org.jetbrains.compose.runtime.Composable
-import org.jetbrains.compose.runtime.collectAsState
-import org.jetbrains.compose.runtime.getValue
-import org.jetbrains.compose.ui.Modifier
-import org.jetbrains.compose.ui.platform.LocalDensity
-import org.jetbrains.compose.ui.unit.dp
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 
 @Composable
