@@ -326,3 +326,73 @@ fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
         }
     }
 }
+
+
+private fun tryAutoLogin(
+    username: String,
+    password: String,
+    authRepository: AuthRepository, 
+    navigator: Navigator,
+    snackbarHostState: SnackbarHostState
+) {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val deviceId = authRepository.deviceId.first()
+            val result = KtorClient.ApiServiceImpl.login(
+                username = username,
+                password = password,
+                device = deviceId
+            )
+
+            withContext(Dispatchers.Main) {
+                when {
+                    result.isSuccess -> {
+                        val loginResponse = result.getOrNull()
+                        if (loginResponse != null && loginResponse.code == 1) {
+                            val loginData = loginResponse.data
+                            if (loginData != null) {
+                                authRepository.saveCredentials(
+                                    username,
+                                    password,
+                                    loginData.usertoken,
+                                    loginData.id
+                                )
+                            } else {
+                                authRepository.clearCredentials()
+                                snackbarHostState.showSnackbar("登录数据为空")
+                                navigator.navigate(Login)
+                            }
+                        } else {
+                            authRepository.clearCredentials()
+                            val errorMsg = loginResponse?.msg ?: "登录失败"
+                            snackbarHostState.showSnackbar(errorMsg)
+                            navigator.navigate(Login)
+                        }
+                    }
+                    else -> {
+                        authRepository.clearCredentials()
+                        val exception = result.exceptionOrNull()
+                        val errorMsg = when (exception) {
+                            is IOException -> {
+                                when {
+                                    exception.message?.contains("429") == true -> "请求太频繁"
+                                    exception.message?.contains("500") == true -> "服务器错误"
+                                    else -> "网络错误: ${exception.message}"
+                                }
+                            }
+                            else -> "登录异常: ${exception?.message ?: "未知错误"}"
+                        }
+                        snackbarHostState.showSnackbar(errorMsg)
+                        navigator.navigate(Login)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                authRepository.clearCredentials()
+                snackbarHostState.showSnackbar("登录异常: ${e.message}")
+                navigator.navigate(Login)
+            }
+        }
+    }
+}
