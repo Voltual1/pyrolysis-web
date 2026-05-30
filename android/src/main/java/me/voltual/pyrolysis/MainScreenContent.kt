@@ -51,6 +51,7 @@ import me.voltual.pyrolysis.core.ui.components.UpdateDialog
 import me.voltual.pyrolysis.core.utils.UpdateChecker
 import org.koin.android.ext.android.inject
 import org.koin.compose.koinInject
+import java.io.IOException
 
 val topLevelRoutes: Set<NavKey> = setOf(Home)
 
