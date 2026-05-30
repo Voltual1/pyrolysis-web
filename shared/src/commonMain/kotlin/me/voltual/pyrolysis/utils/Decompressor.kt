@@ -13,4 +13,4 @@ package me.voltual.pyrolysis.utils
  * @param data 压缩的字节数组 (ZLIB/Deflate)
  * @return 解压后的字节数组
  */
-expect fun decompressDanmaku(data: ByteArray): ByteArray
+//expect fun decompressDanmaku(data: ByteArray): ByteArray
