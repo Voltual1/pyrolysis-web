@@ -22,6 +22,7 @@ pyrolysis-ktor = "3.3.3"
 pyrolysis-serialization = "1.9.0"
 libsu = "6.0.0"
 navigation3 = "1.2.0-alpha03"
+compose-multiplatform-navigation3-browser = "0.2.0"
 shizuku = "13.1.5"
 shizuku-hidden = "4.4.0"
 shizuku-refine = "4.4.0"    
@@ -57,6 +58,8 @@ compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-mu
 components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform"}
 material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version = "1.7.3" }
 material-icons-core = { module = "org.jetbrains.compose.material:material-icons-core", version = "1.7.3" }
+
+navigation3-browser = { module = "com.github.terrakok:navigation3-browser", version.ref = "compose-multiplatform-navigation3-browser" }
 
 # Compose
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "pyrolysis-compose-bom" }

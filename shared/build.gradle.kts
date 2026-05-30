@@ -55,7 +55,7 @@ kotlin {
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)              
                     implementation(libs.compose.navigation3)
-                        implementation(libs.compose.navigation3.ui) 
+                        implementation(libs.navigation3.browser) 
                 implementation(libs.compose.material3)
                     implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0")
                         implementation(libs.androidx.lifecycle.viewmodel.compose)
