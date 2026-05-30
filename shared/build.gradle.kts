@@ -43,10 +43,10 @@ kotlin {
         }
     }
 
-/*    @OptIn(ExperimentalWasmDsl::class)
+    @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
-    }*/
+    }
 
     applyDefaultHierarchyTemplate()
 
@@ -76,8 +76,6 @@ kotlin {
                             implementation(libs.components.resources)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.koin.core)
-                    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
 
                 implementation(libs.koin.annotations)
                             implementation(libs.material.icons.core)
