@@ -67,7 +67,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 )
 @Composable
 fun SortFilterSheet(
-    viewModel: PlazaViewModel = koinPyrolysisViewModel(),
+    viewModel: AppPageVM = koinPyrolysisViewModel(),
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current

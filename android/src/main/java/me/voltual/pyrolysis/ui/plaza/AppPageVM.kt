@@ -85,6 +85,55 @@ class AppPageVM(
     privacyRepo: PrivacyRepository,
     reposRepo: RepositoriesRepository,
 ) : ViewModel() {
+    
+    val sortFilterState: StateFlow<SortFilterState> = combine(
+        reposRepo.getAllEnabled(),
+        combine(
+            productsRepo.getAllCategories(),
+            productsRepo.getAllCategoryDetails(),
+        ) { cats, catDetails ->
+            cats.map { cat ->
+                catDetails.find { it.name == cat }
+                    ?: CategoryDetails(cat, cat)
+            }
+        }.distinctUntilChanged(),
+        reposRepo.getRepoAntiFeaturePairs().distinctUntilChanged(),
+        productsRepo.getAllLicensesDistinct().distinctUntilChanged(),
+    ) { enabledRepos, categories, antifeaturePairs, licenses ->
+        SortFilterState(
+            enabledRepos = enabledRepos,
+            categories = categories,
+            antifeaturePairs = antifeaturePairs,
+            licenses = licenses,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Lazily,
+        initialValue = SortFilterState(),
+    )
+    
+    val dataState: StateFlow<DataState> = combine(
+        reposRepo.getAllMap(),
+        extrasRepo.getAllFavorites().distinctUntilChanged(),
+        productsRepo.getIconDetailsMap().distinctUntilChanged(),
+    ) { reposMap, favorites, iconDetails ->
+        DataState(
+            reposMap = reposMap,
+            favorites = favorites,
+            iconDetails = iconDetails,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Lazily,
+        initialValue = DataState(),
+    )
+    
+    fun setFavorite(packageName: String, setBoolean: Boolean) {
+        viewModelScope.launch {
+            extrasRepo.setFavorite(packageName, setBoolean)
+        }
+    }
+    
     private val packageName = MutableStateFlow("")
 
     private val products = packageName

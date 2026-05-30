@@ -207,7 +207,7 @@ single<Aead> {
     viewModel { BrowseHistoryViewModel(get()) }
 
     viewModel { HomeViewModel(get(),get()) }
-    viewModel { PlazaViewModel(get(PLAZA_STORE_QUALIFIER), get(), get(), get(), get()) }
+    viewModel { PlazaViewModel(get(PLAZA_STORE_QUALIFIER),get()) }
     viewModel { AppDetailComposeViewModel(get()) }
     viewModel { AppReleaseViewModel(get()) }
     viewModel { VersionListViewModel(get()) }
