@@ -11,10 +11,7 @@ package me.voltual.pyrolysis.core.database
 import androidx.room3.Database
 import androidx.room3.RoomDatabase
 import androidx.room3.TypeConverters
-import androidx.room3.ConstructedBy
-import androidx.room3.RoomDatabaseConstructor
 import androidx.room3.withWriteTransaction
-import androidx.sqlite.SQLiteConnection
 import me.voltual.pyrolysis.core.database.dao.*
 import me.voltual.pyrolysis.core.database.entity.*
 import org.koin.dsl.module
@@ -36,7 +33,6 @@ import org.koin.dsl.module
     exportSchema = false
 )
 @TypeConverters(Converters::class)
-@ConstructedBy(FdroidDatabaseConstructor::class)
 abstract class FdroidDatabase : RoomDatabase() {
 
     abstract fun getRepositoryDao(): RepositoryDao
@@ -60,6 +56,9 @@ abstract class FdroidDatabase : RoomDatabase() {
     abstract fun getDownloadStatsDao(): DownloadStatsDao
     abstract fun getDownloadStatsFileDao(): DownloadStatsFileDao
 
+    // 修复：添加支持 Set 的重载，解决 RepositoryUpdater 调用匹配问题
+    suspend fun cleanUp(pairs: Set<Pair<Long, Boolean>>) = cleanUp(*pairs.toTypedArray())
+
     suspend fun cleanUp(vararg pairs: Pair<Long, Boolean>) {
         this.withWriteTransaction {
             pairs.forEach { (id, enabled) ->
@@ -80,7 +79,7 @@ abstract class FdroidDatabase : RoomDatabase() {
                 getAntiFeatureDao().deleteByRepoId(repository.id)
                 getReleaseDao().deleteById(repository.id)
                 
-                // 修复扩散操作符 null 问题
+                // 修复：处理扩散操作符的空指针风险
                 getProductDao().insert(*(getProductTempDao().getAll() ?: emptyArray()))
                 getCategoryDao().insert(*(getCategoryTempDao().getAll() ?: emptyArray()))
                 getRepoCategoryDao().insert(*(getRepoCategoryTempDao().getAll() ?: emptyArray()))
@@ -101,16 +100,17 @@ abstract class FdroidDatabase : RoomDatabase() {
     }
 }
 
-@Suppress("KotlinNoActualForExpect")
-expect object FdroidDatabaseConstructor : RoomDatabaseConstructor<FdroidDatabase> {
-    override fun initialize(): FdroidDatabase
-}
-
 val databaseModule = module {
-    single<FdroidDatabase> {
-        val builder = get<RoomDatabase.Builder<FdroidDatabase>>()
-        builder.build()
+    single {
+        androidx.room3.Room.databaseBuilder(
+            get(),
+            FdroidDatabase::class.java,
+            "main_fdroid_database.db"
+        )
+        .fallbackToDestructiveMigration(true)
+        .build()
     }
+    // 注入所有 DAO
     single { get<FdroidDatabase>().getRepositoryDao() }
     single { get<FdroidDatabase>().getProductDao() }
     single { get<FdroidDatabase>().getReleaseDao() }
