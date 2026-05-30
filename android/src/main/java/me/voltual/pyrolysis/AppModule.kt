@@ -8,7 +8,7 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis
 
-import androidx.room3.Room
+import androidx.room3.*
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
