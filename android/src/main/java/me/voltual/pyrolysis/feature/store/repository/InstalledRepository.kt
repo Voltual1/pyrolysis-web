@@ -30,13 +30,17 @@ class InstalledRepository(
 
     suspend fun load(packageName: String): Installed? = installedDao.get(packageName)
 
-    suspend fun loadUpdatedProducts() = productsDao.queryObject(
-        installed = true,
-        updates = true,
-        section = Section.All,
-        order = Order.NAME,
-        ascending = true,
-    )
+    suspend fun loadUpdatedProducts(): List<EmbeddedProduct> {
+        // 修复：使用 buildProductRoomRawQuery 构建查询
+        val query = productsDao.buildProductRoomRawQuery(
+            installed = true,
+            updates = true,
+            section = Section.All,
+            order = Order.NAME,
+            ascending = true,
+        )
+        return productsDao.queryObject(query)
+    }
 
     suspend fun loadListWithVulns(repoId: Long): List<EmbeddedProduct> =
         productsDao.getInstalledProductsWithVulnerabilities(repoId)
