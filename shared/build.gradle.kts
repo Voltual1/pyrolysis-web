@@ -16,6 +16,7 @@ plugins {
 buildConfig {
     // 自动将 Gradle 的版本号注入到代码中
     useKotlinOutput()
+    packageName("me.voltual.pyrolysis")
     
     val provider = providers.provider { project.version.toString() }
     buildConfigField("VERSION", provider)
