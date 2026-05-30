@@ -13,7 +13,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.*
-import me.voltual.pyrolysis.core.database.entity.ProductIconDetails
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.data.unified.UnifiedAppItem
 import me.voltual.pyrolysis.data.unified.UnifiedCategory
