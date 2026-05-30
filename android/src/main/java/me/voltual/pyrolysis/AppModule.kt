@@ -8,7 +8,7 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis
 
-import androidx.room.Room
+//import androidx.room.Room
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
@@ -73,7 +73,7 @@ val appModule = module {
 // =========================================================================
 
 // 1. 纯 Koin 方式托管 AppDatabase 单例，完全不再依赖传统伴生对象方法
-single<AppDatabase> {
+/*single<AppDatabase> {
     Room.databaseBuilder(
         androidContext(),
         AppDatabase::class.java,
@@ -90,7 +90,7 @@ single<AppDatabase> {
         AppDatabase.MIGRATION_5_7
     )
     .build()
-}
+}*/
 
 // 2. 所有的 Dao 统一由 Koin 容器管理，它们会自动等待上面的 AppDatabase 构建完成后注入完成
 single { get<AppDatabase>().logDao() }  

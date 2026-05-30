@@ -9,7 +9,7 @@
 
 package me.voltual.pyrolysis.core.database
 
-import androidx.room.*
+import androidx.room3.*
 
 @Dao
 interface NetworkCacheDao {

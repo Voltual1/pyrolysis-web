@@ -10,6 +10,7 @@ plugins {
     id("com.github.gmazzo.buildconfig") version "5.3.0"
     alias(libs.plugins.ksp)
     alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.androidx.room3)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -64,6 +65,8 @@ kotlin {
                     implementation(libs.markdown)
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.serialization.json)
+                implementation(libs.room3.runtime)
+                implementation(libs.sqlite.bundled)
                 implementation(libs.ktor.client.logging)
                     implementation(project(":ApkParser"))
                 implementation(libs.kotlinx.serialization.json)
@@ -114,7 +117,12 @@ compose.resources {
     generateResClass = always
 }
 
+room3 {
+    schemaDirectory("$projectDir/schemas")
+}
+
 dependencies {
-    // 针对 commonMain 源码集运行 KSP
-    add("kspCommonMainMetadata", libs.room.compiler)    
+    // 关键：为所有 KMP 目标配置 Room 编译器
+    add("kspCommonMainMetadata", libs.room3.compiler)
+    add("kspAndroid", libs.room3.compiler)
 }
