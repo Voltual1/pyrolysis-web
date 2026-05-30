@@ -56,7 +56,6 @@ import java.io.IOException
 class MainActivity : AppCompatActivity() {
     private val agreementDataStore: UserAgreementDataStore by inject()
     private val authRepository: AuthRepository by inject()    
-    private val themeStore: ThemeColorDataStore by inject()
     
     companion object {
         private const val TAG = "NeoActivity"
@@ -75,44 +74,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            val navigationState = rememberNavigationState(
-                startRoute = Home,
-                topLevelRoutes = topLevelRoutes
-            )
-            val focusManager = LocalFocusManager.current 
-            val topAppBarController = remember { TopAppBarController() }
-            val navigator = remember(focusManager, topAppBarController, navigationState) {
-        Navigator(navigationState, focusManager, topAppBarController)
-    }
-
-            CompositionLocalProvider(
-                LocalNavigator provides navigator,
-                LocalNavigationState provides navigationState,
-                LocalTopAppBarController provides topAppBarController,
-            ) {
-                val snackbarHostState = remember { SnackbarHostState() }
-
-                val userAccepted by agreementDataStore.isUserAgreementAccepted.collectAsState(initial = true)
-                val xiaoquAccepted by agreementDataStore.isXiaoquAccepted.collectAsState(initial = true)
-
-                var isAgreementDataLoaded by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) {
-                    delay(150)
-                    isAgreementDataLoaded = true
-                }
-
-                val showAgreementDialog = isAgreementDataLoaded && !(userAccepted && xiaoquAccepted)
-
-                BBQTheme(appDarkTheme = ThemeManager.isAppDarkTheme) {
-                    MainScreenContent(
-                        navigationState = navigationState,
-                        navigator = navigator,
-                        snackbarHostState = snackbarHostState,
-                        showAgreementDialog = showAgreementDialog,
-                        onAgreementDismiss = { finish() }
-                    )
-                }
-            }
+            PyrolysisApp(agreementDataStore = agreementDataStore)
         }
 
         lifecycleScope.launch {

@@ -48,14 +48,62 @@ import org.koin.compose.koinInject
 
 val topLevelRoutes: Set<NavKey> = setOf(Home)
 
+@Composable
+fun PyrolysisApp(
+    agreementDataStore: UserAgreementDataStore,
+    modifier: Modifier = Modifier
+) {
+    // 1. 初始化全局导航相关状态
+    val navigationState = rememberNavigationState(
+        startRoute = Home,
+        topLevelRoutes = topLevelRoutes
+    )
+    val focusManager = LocalFocusManager.current 
+    val topAppBarController = remember { TopAppBarController() }
+    val navigator = remember(focusManager, topAppBarController, navigationState) {
+        Navigator(navigationState, focusManager, topAppBarController)
+    }
+
+    // 2. 提供全局的 CompositionLocal 注入
+    CompositionLocalProvider(
+        LocalNavigator provides navigator,
+        LocalNavigationState provides navigationState,
+        LocalTopAppBarController provides topAppBarController,
+    ) {
+        val snackbarHostState = remember { SnackbarHostState() }
+
+        // 3. 处理用户协议与隐私政策状态
+        val userAccepted by agreementDataStore.isUserAgreementAccepted.collectAsState(initial = true)
+        val xiaoquAccepted by agreementDataStore.isXiaoquAccepted.collectAsState(initial = true)
+
+        var isAgreementDataLoaded by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            delay(150)
+            isAgreementDataLoaded = true
+        }
+
+        val showAgreementDialog = isAgreementDataLoaded && !(userAccepted && xiaoquAccepted)
+
+        // 4. 应用全局主题
+        BBQTheme(appDarkTheme = ThemeManager.isAppDarkTheme) {
+            MainScreenContent(
+                navigationState = navigationState,
+                navigator = navigator,
+                snackbarHostState = snackbarHostState,
+                showAgreementDialog = showAgreementDialog,
+                modifier = modifier
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenContent(
     navigationState: NavigationState,
     navigator: Navigator,
     snackbarHostState: SnackbarHostState,
-    showAgreementDialog: Boolean,
-    onAgreementDismiss: () -> Unit
+    showAgreementDialog: Boolean
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
