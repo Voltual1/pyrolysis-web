@@ -63,12 +63,8 @@ abstract class AppDatabase : RoomDatabase() {
 
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override suspend fun migrate(connection: SQLiteConnection) {
-                connection.execSQL(
-                    "ALTER TABLE `download_tasks` ADD COLUMN `speed` TEXT"
-                )
-                connection.execSQL(
-                    "ALTER TABLE `download_tasks` ADD COLUMN `errorMessage` TEXT"
-                )
+                connection.execSQL("ALTER TABLE `download_tasks` ADD COLUMN `speed` TEXT")
+                connection.execSQL("ALTER TABLE `download_tasks` ADD COLUMN `errorMessage` TEXT")
             }
         }
 
@@ -90,7 +86,8 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val ALL_MIGRATIONS = arrayOf(
+        // 定义迁移数组供 Builder 使用
+        val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4,
             MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
             MIGRATION_4_7, MIGRATION_5_7
