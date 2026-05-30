@@ -17,55 +17,60 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import composeapp.generated.resources.Res 
 import me.voltual.pyrolysis.core.ui.theme.AppShapes
-import me.voltual.pyrolysis.R
 import me.voltual.pyrolysis.data.UserAgreementDataStore
 import org.koin.compose.koinInject
 import me.voltual.pyrolysis.core.ui.animation.materialSharedAxisX
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun UserAgreementDialog(
-    onDismissRequest: () -> Unit,
     shape: Shape = AppShapes.medium,
     onAgreed: () -> Unit
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val agreementDataStore: UserAgreementDataStore = koinInject()
+    
     var currentAgreementIndex by remember { mutableStateOf(0) }
     val agreementContents = remember { mutableStateMapOf<Int, String>() }
     var animationForward by remember { mutableStateOf(true) }
 
-    // 协议列表，已加入灵应用商店协议
+    // 1. 使用基于纯字符串路径的 KMP 资源项声明
     val agreements = remember {
         listOf(
-            AgreementItem("《本项目 用户协议》", R.raw.useragreement),
-            AgreementItem("《小趣空间用户协议》", R.raw.xiaoquuseragreement),
+            AgreementItem("《本项目 用户协议》", "files/useragreement.md"),
+            AgreementItem("《小趣空间用户协议》", "files/xiaoquuseragreement.md"),
         )
     }
 
+    // 2. 使用 KMP 统一的内部异步方法读取文件，不依赖 Android Context
     LaunchedEffect(Unit) {
         agreements.forEachIndexed { index, item ->
-            val content = withContext(Dispatchers.IO) {
-                loadRawResourceText(context, item.resId)
+            agreementContents[index] = try {
+                // Res.readBytes 是平台无关的挂起函数，由 Compose 运行时在各平台底层自主实现
+                val bytes = Res.readBytes(item.resourcePath)
+                bytes.decodeToString()
+            } catch (e: Exception) {
+                "条款内容加载失败，请检查网络或重启应用"
             }
-            agreementContents[index] = content
         }
     }
 
     Dialog(
-        onDismissRequest = { },
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        // 留空：即使用户点击外面或者按 Android 物理返回键，也绝对无法关闭
+        onDismissRequest = { }, 
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = false, // 禁用 Android 物理返回键
+            dismissOnClickOutside = false // 禁用点击外部关闭
+        )
     ) {
         Card(
             modifier = Modifier
@@ -147,7 +152,29 @@ fun UserAgreementDialog(
                             Text("上一个")
                         }
                     } else {
-                        Spacer(modifier = Modifier.weight(1f))
+                        // 如果不需要退出，这里可以放一个“不同意”按钮用于展示纯文本提示
+                        FilledTonalButton(
+                            onClick = {
+                                scope.launch {
+                                    // 巧妙的小心思：如果用户点击了不同意，把第一页的文本直接改成提示语
+                                    agreementContents[0] = """
+                                        ### 您需要同意才能使用
+                                        
+                                        很抱歉，如果您不同意本团队的《用户协议》与《小趣空间用户协议》，应用将无法为您初始化核心服务。
+                                        
+                                        如果您希望退出应用，请直接**关闭此后台程序**或**返回手机桌面**。
+                                    """.trimIndent()
+                                    mainScrollState.animateScrollTo(0)
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        ) {
+                            Text("不同意")
+                        }
                     }
 
                     Button(
@@ -176,16 +203,10 @@ fun UserAgreementDialog(
     }
 }
 
-private data class AgreementItem(val title: String, val resId: Int)
+// 移除了 Android 独有的 R 引用，改为通用路径
+private data class AgreementItem(val title: String, val resourcePath: String)
 
-private fun loadRawResourceText(context: android.content.Context, resId: Int): String {
-    return try {
-        context.resources.openRawResource(resId).use { it.bufferedReader().readText() }
-    } catch (e: Exception) {
-        "加载失败"
-    }
-}
-
+// 利用 KMP 分发的 DataStore 异步保存状态
 private suspend fun saveAgreement(ds: UserAgreementDataStore, index: Int) {
     when (index) {
         0 -> ds.acceptUserAgreement()
