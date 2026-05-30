@@ -125,6 +125,9 @@ dependencies {
     implementation(libs.biometric)
     implementation(libs.simple.storage)
     
+                    implementation(libs.room3.runtime)
+                implementation(libs.sqlite.bundled)
+    
     // Compose
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.components.resources)    
