@@ -42,14 +42,14 @@ kotlin {
         }
     }
 
-/*    js(IR) {
+    js(IR) {
         browser()
     }
 
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
-    }*/
+    }
 
     applyDefaultHierarchyTemplate()
 
@@ -97,14 +97,16 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation(libs.ktor.client.okhttp)
+                implementation(libs.ijkplayer)
+                implementation(project(":DanmakuFlameMaster"))
             }
         }
 
-/*        val webMain by getting {
+        val webMain by getting {
             dependencies {
                 implementation(libs.ktor.client.js)
             }
-        }*/
+        }
     }
 }
 

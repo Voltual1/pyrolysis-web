@@ -1,5 +1,5 @@
 //Copyright (C) 2025 Voltual
-// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
 // 有关更多细节，请参阅 GNU 通用公共许可证。
@@ -12,7 +12,6 @@ package me.voltual.pyrolysis.api
 
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
@@ -21,14 +20,15 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.io.IOException
+import kotlinx.coroutines.delay
+import me.voltual.pyrolysis.PyrolysisNetworkException // 导入自定义异常
 
 object BiliApiManager {
     private const val BILI_API_BASE_URL = "https://api.bilibili.com/"
     private const val USER_AGENT_WEB = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
-    // Ktor HttpClient for Bilibili API
-    private val httpClient = HttpClient(OkHttp) {
+    // Ktor HttpClient 实例，移除 OkHttp 引擎指定以适配多平台
+    private val httpClient = HttpClient {
         defaultRequest {
             url(BILI_API_BASE_URL)
             header(HttpHeaders.UserAgent, USER_AGENT_WEB)
@@ -58,9 +58,7 @@ object BiliApiManager {
 
     val instance: BiliApiService = BiliApiServiceImpl()
 
-    // 模型类使用 kotlinx.serialization
     object models {
-        // 视频信息响应 (对应 /x/web-interface/view)
         @Serializable
         data class BiliVideoInfoResponse(
             val code: Int,
@@ -93,7 +91,6 @@ object BiliApiManager {
             val duration: Int
         )
 
-        // 视频播放地址响应 (对应 /x/player/playurl)
         @Serializable
         data class BiliPlayUrlResponse(
             val code: Int,
@@ -115,18 +112,13 @@ object BiliApiManager {
     }
 
     interface BiliApiService {
-        // 获取视频详细信息（最重要的是cid）
         suspend fun getVideoInfo(bvid: String): Result<models.BiliVideoInfoResponse>
-
-        // 获取视频播放地址
         suspend fun getPlayUrl(
             bvid: String,
             cid: Long,
-            quality: Int = 80, // 80=1080P, 64=720P, 32=480P, 16=360P
-            fnval: Int = 1 // 1=flv, 16=DASH
+            quality: Int = 80,
+            fnval: Int = 1
         ): Result<models.BiliPlayUrlResponse>
-
-        // 获取弹幕，返回原始字节数据
         suspend fun getDanmaku(cid: Long): Result<ByteArray>
     }
 
@@ -137,26 +129,24 @@ object BiliApiManager {
         }
 
         /**
-         * 安全地执行 Ktor 请求，并处理异常和重试
+         * 使用 PyrolysisNetworkException 替代 java.io.IOException
          */
-          @Suppress("RedundantSuspendModifier")
         private suspend inline fun <reified T> safeApiCall(block: suspend () -> T): Result<T> {
             var attempts = 0
             while (attempts < MAX_RETRIES) {
                 try {
                     val result = block()
                     return Result.success(result)
-                } catch (e: IOException) {
-                    attempts++
-                    if (attempts >= MAX_RETRIES) {
-                        return Result.failure(IOException("Request failed after $MAX_RETRIES attempts: ${e.message}"))
-                    }
-                    kotlinx.coroutines.delay(RETRY_DELAY)
                 } catch (e: Exception) {
-                    return Result.failure(e)
+                    attempts++
+                    // 如果是最后一次尝试，或者不是网络相关的异常，则直接抛出
+                    if (attempts >= MAX_RETRIES) {
+                        return Result.failure(PyrolysisNetworkException("BiliApi 请求在 $MAX_RETRIES 次尝试后失败: ${e.message}", e))
+                    }
+                    delay(RETRY_DELAY)
                 }
             }
-            return Result.failure(IOException("Request failed after $MAX_RETRIES attempts"))
+            return Result.failure(PyrolysisNetworkException("BiliApi 请求执行了未知的失败路径"))
         }
 
         override suspend fun getVideoInfo(bvid: String): Result<models.BiliVideoInfoResponse> {
@@ -185,7 +175,6 @@ object BiliApiManager {
 
         override suspend fun getDanmaku(cid: Long): Result<ByteArray> {
             return safeApiCall {
-                // 弹幕接口返回的是 XML 格式的压缩数据，需要解压
                 httpClient.get("x/v1/dm/list.so") {
                     parameter("oid", cid)
                 }.body<ByteArray>()
@@ -193,9 +182,6 @@ object BiliApiManager {
         }
     }
 
-    /**
-     * 关闭 HttpClient（在应用退出时调用）
-     */
     fun close() {
         httpClient.close()
     }
