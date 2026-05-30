@@ -8,12 +8,7 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis
 
-import android.content.Context
-import android.content.Intent
-import android.app.ActivityOptions
 import androidx.compose.ui.focus.FocusManager
-import android.os.Bundle
-import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -51,7 +46,6 @@ import me.voltual.pyrolysis.core.ui.components.UpdateDialog
 import me.voltual.pyrolysis.core.utils.UpdateChecker
 import org.koin.android.ext.android.inject
 import org.koin.compose.koinInject
-import java.io.IOException
 
 val topLevelRoutes: Set<NavKey> = setOf(Home)
 
@@ -66,7 +60,6 @@ fun MainScreenContent(
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
     val authRepository: AuthRepository = koinInject() 
     val themeStore: ThemeColorDataStore = koinInject()
 
@@ -373,7 +366,7 @@ private fun tryAutoLogin(
                         authRepository.clearCredentials()
                         val exception = result.exceptionOrNull()
                         val errorMsg = when (exception) {
-                            is IOException -> {
+                            is PyrolysisNetworkException -> {
                                 when {
                                     exception.message?.contains("429") == true -> "请求太频繁"
                                     exception.message?.contains("500") == true -> "服务器错误"
