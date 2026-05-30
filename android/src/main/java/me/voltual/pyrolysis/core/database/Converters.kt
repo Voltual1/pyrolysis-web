@@ -8,7 +8,7 @@
  */
 package me.voltual.pyrolysis.core.database
 
-import androidx.room.TypeConverter
+import androidx.room3.TypeConverter
 import me.voltual.pyrolysis.core.database.entity.Release
 import me.voltual.pyrolysis.data.entity.Author
 import me.voltual.pyrolysis.data.entity.Donate

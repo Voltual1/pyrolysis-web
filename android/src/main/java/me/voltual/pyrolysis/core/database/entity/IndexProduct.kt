@@ -8,7 +8,7 @@
  */
 package me.voltual.pyrolysis.core.database.entity
 
-import androidx.room.ColumnInfo
+import androidx.room3.ColumnInfo
 import me.voltual.pyrolysis.data.entity.Author
 import me.voltual.pyrolysis.data.entity.Donate
 import me.voltual.pyrolysis.core.utils.extension.android.Android

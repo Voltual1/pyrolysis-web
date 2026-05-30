@@ -8,9 +8,9 @@
  */
 package me.voltual.pyrolysis.core.database.entity
 
-import androidx.room.Entity
-import androidx.room.Index
-import androidx.room.PrimaryKey
+import androidx.room3.Entity
+import androidx.room3.Index
+import androidx.room3.PrimaryKey
 import me.voltual.pyrolysis.ROW_KEY
 import me.voltual.pyrolysis.TABLE_TRACKER
 import kotlinx.serialization.ExperimentalSerializationApi

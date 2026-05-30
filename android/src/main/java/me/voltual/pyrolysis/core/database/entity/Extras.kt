@@ -8,10 +8,10 @@
  */
 package me.voltual.pyrolysis.core.database.entity
 
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.Index
-import androidx.room.PrimaryKey
+import androidx.room3.ColumnInfo
+import androidx.room3.Entity
+import androidx.room3.Index
+import androidx.room3.PrimaryKey
 import me.voltual.pyrolysis.ROW_ALLOW_UNSTABLE
 import me.voltual.pyrolysis.ROW_FAVORITE
 import me.voltual.pyrolysis.ROW_IGNORED_VERSION

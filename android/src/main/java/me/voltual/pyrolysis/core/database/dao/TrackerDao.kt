@@ -8,9 +8,9 @@
  */
 package me.voltual.pyrolysis.core.database.dao
 
-import androidx.room.Dao
-import androidx.room.Query
-import androidx.room.Transaction
+import androidx.room3.Dao
+import androidx.room3.Query
+import androidx.room3.Transaction
 import me.voltual.pyrolysis.core.database.entity.Tracker
 import kotlinx.coroutines.flow.Flow
 

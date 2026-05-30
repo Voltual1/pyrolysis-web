@@ -8,12 +8,12 @@
  */
 package me.voltual.pyrolysis.core.database.entity
 
-import androidx.room.ColumnInfo
-import androidx.room.DatabaseView
-import androidx.room.Embedded
-import androidx.room.Entity
-import androidx.room.Index
-import androidx.room.Relation
+import androidx.room3.ColumnInfo
+import androidx.room3.DatabaseView
+import androidx.room3.Embedded
+import androidx.room3.Entity
+import androidx.room3.Index
+import androidx.room3.Relation
 import me.voltual.pyrolysis.ROW_ADDED
 import me.voltual.pyrolysis.ROW_AUTHOR
 import me.voltual.pyrolysis.ROW_ICON

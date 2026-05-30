@@ -8,19 +8,18 @@
  */
 package me.voltual.pyrolysis.core.database.dao
 
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Update
-import androidx.room.Upsert
+import androidx.room3.Delete
+import androidx.room3.Insert
+import androidx.room3.OnConflictStrategy
+import androidx.room3.Update
+import androidx.room3.Upsert
 
 interface BaseDao<T> {
     @Insert
-    suspend fun insert(vararg product: T)
+    suspend fun insert(vararg obj: T)
 
-    // TODO replace upsert() with multipleUpserts() where it makes sense
     @Upsert
-    suspend fun upsert(vararg product: T)
+    suspend fun upsert(vararg obj: T)
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
     suspend fun update(vararg obj: T): Int

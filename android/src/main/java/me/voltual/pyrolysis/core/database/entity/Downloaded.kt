@@ -8,9 +8,9 @@
  */
 package me.voltual.pyrolysis.core.database.entity
 
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.Index
+import androidx.room3.ColumnInfo
+import androidx.room3.Entity
+import androidx.room3.Index
 import me.voltual.pyrolysis.FIELD_CACHEFILENAME
 import me.voltual.pyrolysis.FIELD_VERSION
 import me.voltual.pyrolysis.ROW_CHANGED

@@ -8,8 +8,8 @@
  */
 package me.voltual.pyrolysis.core.database.dao
 
-import androidx.room.Dao
-import androidx.room.Query
+import androidx.room3.Dao
+import androidx.room3.Query
 import me.voltual.pyrolysis.core.database.entity.Release
 import me.voltual.pyrolysis.core.database.entity.ReleaseTemp
 

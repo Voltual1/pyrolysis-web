@@ -11,10 +11,10 @@ package me.voltual.pyrolysis.core.database.entity
 import android.util.Base64
 import android.util.Log
 import android.util.Xml
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.Index
-import androidx.room.PrimaryKey
+import androidx.room3.ColumnInfo
+import androidx.room3.Entity
+import androidx.room3.Index
+import androidx.room3.PrimaryKey
 import me.voltual.pyrolysis.ROW_ADDRESS
 import me.voltual.pyrolysis.ROW_ENABLED
 import me.voltual.pyrolysis.ROW_ID

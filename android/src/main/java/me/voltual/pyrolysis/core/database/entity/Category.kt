@@ -8,8 +8,8 @@
  */
 package me.voltual.pyrolysis.core.database.entity
 
-import androidx.room.Entity
-import androidx.room.Index
+import androidx.room3.Entity
+import androidx.room3.Index
 import me.voltual.pyrolysis.ROW_NAME
 import me.voltual.pyrolysis.ROW_PACKAGE_NAME
 import me.voltual.pyrolysis.ROW_REPOSITORY_ID
