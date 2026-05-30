@@ -17,9 +17,6 @@ import me.voltual.pyrolysis.core.database.entity.ProductIconDetails
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.data.unified.UnifiedAppItem
 import me.voltual.pyrolysis.data.unified.UnifiedCategory
-import me.voltual.pyrolysis.core.database.entity.CategoryDetails
-import me.voltual.pyrolysis.data.entity.*
-import me.voltual.pyrolysis.core.database.entity.Repository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -95,12 +92,6 @@ class PlazaViewModel(
         }
     }
     
-    data class DataState(
-        val reposMap: Map<Long, Repository> = emptyMap(),
-        val favorites: List<String> = emptyList(),
-        val iconDetails: Map<String, ProductIconDetails> = emptyMap(),
-    )
-
     fun initialize(isMyResource: Boolean, userId: String?, mode: String = "public", storeName: String = AppStore.XIAOQU_SPACE.name) {
         val needsReinit = _currentIsMyResourceMode != isMyResource ||
                           _currentUserIdState != userId ||
@@ -330,13 +321,3 @@ class PlazaViewModel(
         }
     }
 }
-
-/**
- * UI 层的过滤状态模型
- */
-data class SortFilterState(
-    val enabledRepos: List<Repository> = emptyList(),
-    val categories: List<CategoryDetails> = emptyList(),
-    val antifeaturePairs: List<Pair<String, String>> = emptyList(),
-    val licenses: List<String> = emptyList()
-)

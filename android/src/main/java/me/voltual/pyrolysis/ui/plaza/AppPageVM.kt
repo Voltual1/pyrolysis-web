@@ -112,6 +112,12 @@ class AppPageVM(
         initialValue = SortFilterState(),
     )
     
+        data class DataState(
+        val reposMap: Map<Long, Repository> = emptyMap(),
+        val favorites: List<String> = emptyList(),
+        val iconDetails: Map<String, ProductIconDetails> = emptyMap(),
+    )
+    
     val dataState: StateFlow<DataState> = combine(
         reposRepo.getAllMap(),
         extrasRepo.getAllFavorites().distinctUntilChanged(),
@@ -789,4 +795,15 @@ data class ExtraAppState(
     val mainAction: ActionState = ActionState.Bookmark,
     val subActions: Set<ActionState> = emptySet(),
     val extras: Extras? = null,
+)
+
+
+/**
+ * UI 层的过滤状态模型
+ */
+data class SortFilterState(
+    val enabledRepos: List<Repository> = emptyList(),
+    val categories: List<CategoryDetails> = emptyList(),
+    val antifeaturePairs: List<Pair<String, String>> = emptyList(),
+    val licenses: List<String> = emptyList()
 )
