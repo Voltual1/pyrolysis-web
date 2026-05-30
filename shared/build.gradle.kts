@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.android.multiplatform.library)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.compose)
+    id("com.github.gmazzo.buildconfig") version "5.3.0"
     alias(libs.plugins.ksp)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.serialization)
@@ -15,7 +16,7 @@ plugins {
 kotlin {
     // AGP 9.0 KMP 库专用 Android 配置块
     android {
-        namespace = "me.voltual.pyrolysis.shared"
+        namespace = "me.voltual.pyrolysis"
         compileSdk = 37
         minSdk = 24 // 直接设置，不需要 defaultConfig
         

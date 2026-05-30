@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.AuthRepository 
-import me.voltual.pyrolysis.restartMainActivity
+//import me.voltual.pyrolysis.restartMainActivity
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.theme.BBQTheme
 import me.voltual.pyrolysis.core.ui.theme.ThemeManager
@@ -66,7 +66,7 @@ fun HomeDestination(
             if (!uiState.showLoginPrompt) {
                 viewModel.refreshUserData() 
             }
-            restartMainActivity(context) 
+//            restartMainActivity(context) 
         }
     }
 
