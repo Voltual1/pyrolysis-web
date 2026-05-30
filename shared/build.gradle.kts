@@ -17,7 +17,7 @@ plugins {
 
 buildConfig {
     useKotlinOutput()
-    packageName("me.voltual.pyrolysis.shared")
+    packageName("me.voltual.pyrolysis")
     
     // 直接在这里写死，简单粗暴且完全可行
     buildConfigField("VERSION_NAME", "22.1")
@@ -27,7 +27,7 @@ buildConfig {
 kotlin {
     // AGP 9.0 KMP 库专用 Android 配置块
     android {
-        namespace = "me.voltual.pyrolysis"
+        namespace = "me.voltual.pyrolysis.shared"
         compileSdk = 37
         minSdk = 24 // 直接设置，不需要 defaultConfig
         
