@@ -55,8 +55,7 @@ kotlin {
             dependencies {
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)              
-                    implementation(libs.compose.navigation3)
-                        implementation(libs.navigation3.browser) 
+                    implementation(libs.compose.navigation3)                        
                 implementation(libs.compose.material3)
                     implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0")
                         implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -100,11 +99,9 @@ kotlin {
             }
         }
 
-/*        val webMain by getting {
-            dependencies {
-                implementation(libs.ktor.client.js)
-            }
-        }*/
+        wasmJsMain.dependencies {
+            implementation(libs.navigation3.browser) 
+        }
     }
 }
 
