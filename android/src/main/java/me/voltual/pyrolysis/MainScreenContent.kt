@@ -9,7 +9,6 @@
 package me.voltual.pyrolysis
 
 import androidx.compose.ui.focus.FocusManager
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
