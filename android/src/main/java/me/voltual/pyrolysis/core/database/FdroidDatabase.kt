@@ -17,6 +17,7 @@ import androidx.room3.withWriteTransaction
 import androidx.sqlite.SQLiteConnection
 import me.voltual.pyrolysis.core.database.dao.*
 import me.voltual.pyrolysis.core.database.entity.*
+import org.koin.dsl.module
 
 @Database(
     entities = [
@@ -79,11 +80,12 @@ abstract class FdroidDatabase : RoomDatabase() {
                 getAntiFeatureDao().deleteByRepoId(repository.id)
                 getReleaseDao().deleteById(repository.id)
                 
-                getProductDao().insert(*(getProductTempDao().getAll()))
-                getCategoryDao().insert(*(getCategoryTempDao().getAll()))
-                getRepoCategoryDao().insert(*(getRepoCategoryTempDao().getAll()))
-                getAntiFeatureDao().insert(*(getAntiFeatureTempDao().getAll()))
-                getReleaseDao().insert(*(getReleaseTempDao().getAll()))
+                // 修复扩散操作符 null 问题
+                getProductDao().insert(*(getProductTempDao().getAll() ?: emptyArray()))
+                getCategoryDao().insert(*(getCategoryTempDao().getAll() ?: emptyArray()))
+                getRepoCategoryDao().insert(*(getRepoCategoryTempDao().getAll() ?: emptyArray()))
+                getAntiFeatureDao().insert(*(getAntiFeatureTempDao().getAll() ?: emptyArray()))
+                getReleaseDao().insert(*(getReleaseTempDao().getAll() ?: emptyArray()))
                 getRepositoryDao().put(repository)
             }
             getProductTempDao().emptyTable()
@@ -102,4 +104,31 @@ abstract class FdroidDatabase : RoomDatabase() {
 @Suppress("KotlinNoActualForExpect")
 expect object FdroidDatabaseConstructor : RoomDatabaseConstructor<FdroidDatabase> {
     override fun initialize(): FdroidDatabase
+}
+
+val databaseModule = module {
+    single<FdroidDatabase> {
+        val builder = get<RoomDatabase.Builder<FdroidDatabase>>()
+        builder.build()
+    }
+    single { get<FdroidDatabase>().getRepositoryDao() }
+    single { get<FdroidDatabase>().getProductDao() }
+    single { get<FdroidDatabase>().getReleaseDao() }
+    single { get<FdroidDatabase>().getReleaseTempDao() }
+    single { get<FdroidDatabase>().getProductTempDao() }
+    single { get<FdroidDatabase>().getCategoryDao() }
+    single { get<FdroidDatabase>().getCategoryTempDao() }
+    single { get<FdroidDatabase>().getRepoCategoryDao() }
+    single { get<FdroidDatabase>().getRepoCategoryTempDao() }
+    single { get<FdroidDatabase>().getAntiFeatureDao() }
+    single { get<FdroidDatabase>().getAntiFeatureTempDao() }
+    single { get<FdroidDatabase>().getInstalledDao() }
+    single { get<FdroidDatabase>().getExtrasDao() }
+    single { get<FdroidDatabase>().getExodusInfoDao() }
+    single { get<FdroidDatabase>().getTrackerDao() }
+    single { get<FdroidDatabase>().getDownloadedDao() }
+    single { get<FdroidDatabase>().getInstallTaskDao() }
+    single { get<FdroidDatabase>().getRBLogDao() }
+    single { get<FdroidDatabase>().getDownloadStatsDao() }
+    single { get<FdroidDatabase>().getDownloadStatsFileDao() }
 }

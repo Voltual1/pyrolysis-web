@@ -12,12 +12,7 @@ import me.voltual.pyrolysis.core.database.dao.CategoryDao
 import me.voltual.pyrolysis.core.database.dao.DownloadStatsDao
 import me.voltual.pyrolysis.core.database.dao.ProductDao
 import me.voltual.pyrolysis.core.database.dao.RepoCategoryDao
-import me.voltual.pyrolysis.core.database.entity.CategoryDetails
-import me.voltual.pyrolysis.core.database.entity.EmbeddedProduct
-import me.voltual.pyrolysis.core.database.entity.Licenses
-import me.voltual.pyrolysis.core.database.entity.PackageSum
-import me.voltual.pyrolysis.core.database.entity.Product
-import me.voltual.pyrolysis.core.database.entity.ProductIconDetails
+import me.voltual.pyrolysis.core.database.entity.*
 import me.voltual.pyrolysis.data.entity.Order
 import me.voltual.pyrolysis.data.entity.Request
 import me.voltual.pyrolysis.data.entity.Section
@@ -38,7 +33,24 @@ class ProductsRepository(
 
     fun getDownloadStatsNotEmpty(): Flow<Boolean> = downloadStatsDao.isNotEmpty()
 
-    fun getProducts(req: Request): Flow<List<EmbeddedProduct>> = productsDao.queryFlowList(req)
+    fun getProducts(req: Request): Flow<List<EmbeddedProduct>> {
+        val query = productsDao.buildProductRoomRawQuery(
+            installed = req.installed,
+            updates = req.updates,
+            section = req.section,
+            filteredOutRepos = req.filteredOutRepos,
+            category = req.category,
+            filteredAntiFeatures = req.filteredAntiFeatures,
+            filteredLicenses = req.filteredLicenses,
+            order = req.order,
+            ascending = req.ascending,
+            numberOfItems = req.numberOfItems,
+            updateCategory = req.updateCategory,
+            targetSdkVersion = req.targetSDK,
+            minSdkVersion = req.minSDK,
+        )
+        return productsDao.queryFlowList(query)
+    }
 
     fun getProduct(packageName: String): Flow<List<EmbeddedProduct>> =
         productsDao.getFlow(packageName)
@@ -83,16 +95,22 @@ class ProductsRepository(
         section: Section,
         order: Order,
         ascending: Boolean
-    ): List<EmbeddedProduct> = productsDao.queryObject(
-        installed = installed,
-        updates = updates,
-        section = section,
-        order = order,
-        ascending = ascending,
-    )
+    ): List<EmbeddedProduct> {
+        val query = productsDao.buildProductRoomRawQuery(
+            installed = installed,
+            updates = updates,
+            section = section,
+            order = order,
+            ascending = ascending,
+        )
+        return productsDao.queryObject(query)
+    }
 
     suspend fun loadProduct(packageName: String): List<EmbeddedProduct> =
         productsDao.get(packageName)
 
     suspend fun productExists(packageName: String): Boolean = productsDao.exists(packageName)
+    
+    suspend fun getVulnerableApps(repoId: Long): List<EmbeddedProduct> = 
+        productsDao.getInstalledProductsWithVulnerabilities(repoId)
 }

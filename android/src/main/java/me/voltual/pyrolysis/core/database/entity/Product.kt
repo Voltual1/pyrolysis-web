@@ -14,17 +14,7 @@ import androidx.room3.Embedded
 import androidx.room3.Entity
 import androidx.room3.Index
 import androidx.room3.Relation
-import me.voltual.pyrolysis.ROW_ADDED
-import me.voltual.pyrolysis.ROW_AUTHOR
-import me.voltual.pyrolysis.ROW_ICON
-import me.voltual.pyrolysis.ROW_LABEL
-import me.voltual.pyrolysis.ROW_LICENSES
-import me.voltual.pyrolysis.ROW_METADATA_ICON
-import me.voltual.pyrolysis.ROW_PACKAGE_NAME
-import me.voltual.pyrolysis.ROW_REPOSITORY_ID
-import me.voltual.pyrolysis.ROW_UPDATED
-import me.voltual.pyrolysis.TABLE_PRODUCT
-import me.voltual.pyrolysis.TABLE_PRODUCT_TEMP
+import me.voltual.pyrolysis.*
 import me.voltual.pyrolysis.data.content.Preferences
 import me.voltual.pyrolysis.data.entity.Author
 import me.voltual.pyrolysis.data.entity.Donate
@@ -54,7 +44,6 @@ open class Product(
     val repositoryId: Long,
     val packageName: String,
 ) {
-    // TODO make all vals
     var label: String = ""
     var summary: String = ""
     var description: String = ""
@@ -134,7 +123,7 @@ open class Product(
     }
 }
 
-@Entity(tableName = TABLE_PRODUCT_TEMP,inheritSuperIndices = true)
+@Entity(tableName = TABLE_PRODUCT_TEMP, inheritSuperIndices = true)
 class ProductTemp(
     repositoryId: Long,
     packageName: String,
@@ -218,8 +207,8 @@ data class Licenses(
 data class EmbeddedProduct(
     @Embedded val product: Product,
     @Relation(
-        parentColumn = ROW_PACKAGE_NAME,
-        entityColumn = ROW_PACKAGE_NAME,
+        parentColumns = ["packageName"], // Room 3.0-alpha05 复数形式
+        entityColumns = ["packageName"], // Room 3.0-alpha05 复数形式
     )
     val releases: List<Release> = emptyList(),
 ) {
@@ -288,7 +277,6 @@ data class EmbeddedProduct(
                 releasePairs.indexOfFirst { predicate(it.first) }
         val firstSelected = if (firstReleaseIndex >= 0) releasePairs[firstReleaseIndex] else null
 
-        // TODO update releases
         return releasePairs.map { (release, incompatibilities) ->
             release
                 .copy(
