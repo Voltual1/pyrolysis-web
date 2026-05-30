@@ -8,16 +8,6 @@ plugins {
 }
 
 kotlin {
-    js(IR) {
-        outputModuleName = "pyrolysis-web"
-        browser {
-            commonWebpackConfig {
-                outputFileName = "pyrolysis.js"
-            }
-        }
-        binaries.executable()
-        useEsModules()
-    }
 
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {

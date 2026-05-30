@@ -12,10 +12,6 @@ version = "1.0"
 kotlin {
 	jvm()  
 
-    js(IR) {
-        browser()
-    }
-
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
