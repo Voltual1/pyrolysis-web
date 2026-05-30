@@ -217,7 +217,6 @@ fun MainScreenContent(
                     if (showAgreementDialog) {
                         UserAgreementDialog(
                             onAgreed = { /* ... */ },
-                            onDismissRequest = onAgreementDismiss
                         )
                     }
 
