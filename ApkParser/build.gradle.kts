@@ -49,9 +49,7 @@ kotlin {
                 implementation(kotlin("reflect"))
             }
         }
-        val webMain by getting {
-            dependencies {
-            }
+        webMain.dependencies {
         }
     }
 }
