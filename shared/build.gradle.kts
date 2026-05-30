@@ -42,10 +42,10 @@ kotlin {
         }
     }
 
-    @OptIn(ExperimentalWasmDsl::class)
+/*    @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
-    }
+    }*/
 
     applyDefaultHierarchyTemplate()
 
