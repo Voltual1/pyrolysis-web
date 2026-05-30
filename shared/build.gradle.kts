@@ -108,6 +108,12 @@ kotlin {
     }
 }
 
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "me.voltual.pyrolysis"
+    generateResClass = always
+}
+
 dependencies {
     // 针对 commonMain 源码集运行 KSP
     add("kspCommonMainMetadata", libs.room.compiler)    
