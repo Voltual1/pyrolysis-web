@@ -54,6 +54,7 @@ import org.koin.compose.koinInject
 import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
+    private val agreementDataStore: UserAgreementDataStore by inject()
     private val authRepository: AuthRepository by inject()    
     
     companion object {
