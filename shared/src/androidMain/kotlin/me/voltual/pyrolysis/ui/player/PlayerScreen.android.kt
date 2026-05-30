@@ -1,11 +1,4 @@
-//Copyright (C) 2025 Voltual
-// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
-//（或任意更新的版本）的条款重新分发和/或修改它。
-//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
-//
-// 你应该已经收到了一份 GNU 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+// shared/src/androidMain/kotlin/me/voltual/pyrolysis/ui/player/PlayerScreen.android.kt
 package me.voltual.pyrolysis.ui.player
 
 import android.app.Activity
@@ -192,16 +185,16 @@ fun PlayerSuccessContent(state: PlayerUiState.Success, viewModel: PlayerViewMode
         drawerContent = {
             SettingsDrawer(
                 settings = settings,
-                onScaleModeChange = { viewModel.updateScaleMode(it) },
-                onDanmakuSizeChange = { viewModel.updateDanmakuSize(it) },
+                onScaleModeChange = { mode: VideoScaleMode -> viewModel.updateScaleMode(mode) },
+                onDanmakuSizeChange = { size: Float -> viewModel.updateDanmakuSize(size) },
                 currentVolume = currentVolume,
                 maxVolume = maxVolume,
-                onVolumeChange = { newVolume ->
+                onVolumeChange = { newVolume: Int ->
                     currentVolume = newVolume
                     audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVolume, 0)
                 },
                 currentBrightness = currentBrightness,
-                onBrightnessChange = { newBrightness ->
+                onBrightnessChange = { newBrightness: Float ->
                     currentBrightness = newBrightness
                     window.attributes = window.attributes.apply { screenBrightness = newBrightness }
                 }
@@ -312,7 +305,7 @@ fun PlayerSuccessContent(state: PlayerUiState.Success, viewModel: PlayerViewMode
                     }
                     isPlaying = !isPlaying
                 },
-                onSeek = { newPosition ->
+                onSeek = { newPosition: Long ->
                     ijkPlayer.seekTo(newPosition)
                     danmakuView.seekTo(newPosition)
                     currentPosition = newPosition
@@ -355,4 +348,98 @@ fun PlayerSuccessContent(state: PlayerUiState.Success, viewModel: PlayerViewMode
         })
         danmakuView.prepare(parser, danmakuContext)
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsDrawer(
+    settings: PlayerSettings,
+    onScaleModeChange: (VideoScaleMode) -> Unit,
+    onDanmakuSizeChange: (Float) -> Unit,
+    currentVolume: Int,
+    maxVolume: Int,
+    onVolumeChange: (Int) -> Unit,
+    currentBrightness: Float,
+    onBrightnessChange: (Float) -> Unit
+) {
+    ModalDrawerSheet(modifier = Modifier.width(300.dp)) {
+        Text("播放设置", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge)
+        HorizontalDivider()
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("缩放模式", style = MaterialTheme.typography.titleMedium)
+            val scaleOptions = mapOf(
+                VideoScaleMode.FIT to "适应屏幕",
+                VideoScaleMode.FILL to "拉伸填充",
+                VideoScaleMode.ZOOM to "缩放填充"
+            )
+            scaleOptions.forEach { (mode, text) ->
+                Row(
+                    Modifier.fillMaxWidth().selectable(selected = (settings.scaleMode == mode), onClick = { onScaleModeChange(mode) }).padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(selected = (settings.scaleMode == mode), onClick = { onScaleModeChange(mode) })
+                    Text(text = text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 16.dp))
+                }
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            Text("弹幕字号", style = MaterialTheme.typography.titleMedium)
+            Slider(value = settings.danmakuSize, onValueChange = onDanmakuSizeChange, valueRange = 0.5f..2.5f)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            Text("亮度", style = MaterialTheme.typography.titleMedium)
+            Slider(value = currentBrightness, onValueChange = onBrightnessChange, valueRange = 0.01f..1.0f)
+            Text("音量", style = MaterialTheme.typography.titleMedium)
+            Slider(value = currentVolume.toFloat(), onValueChange = { onVolumeChange(it.toInt()) }, valueRange = 0f..maxVolume.toFloat(), steps = maxVolume - 1)
+        }
+    }
+}
+
+@Composable
+fun PlayerControls(
+    title: String,
+    isVisible: Boolean,
+    isPlaying: Boolean,
+    isBuffering: Boolean,
+    currentPosition: Long,
+    duration: Long,
+    onPlayPauseClicked: () -> Unit,
+    onSeek: (Long) -> Unit,
+    onBackClicked: () -> Unit,
+    onSettingsClicked: () -> Unit
+) {
+    AnimatedVisibility(visible = isVisible, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.background(Color.Black.copy(alpha = 0.4f))) {
+            Row(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                BBQIconButton(onClick = onBackClicked, icon = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = Color.White)
+                Text(text = title, color = Color.White, fontSize = 18.sp, maxLines = 1, modifier = Modifier.padding(horizontal = 16.dp).weight(1f))
+                BBQIconButton(onClick = onSettingsClicked, icon = Icons.Default.Settings, contentDescription = "设置", tint = Color.White)
+            }
+            if (isBuffering) CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            Column(modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    BBQIconButton(onClick = onPlayPauseClicked, icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = "播放/暂停", tint = Color.White)
+                    Text(text = formatDuration(currentPosition), color = Color.White, fontSize = 14.sp)
+                    Slider(value = currentPosition.toFloat(), onValueChange = { onSeek(it.toLong()) }, modifier = Modifier.weight(1f), valueRange = 0f..duration.toFloat())
+                    Text(text = formatDuration(duration), color = Color.White, fontSize = 14.sp)
+                }
+            }
+        }
+    }
+}
+
+private fun formatDuration(millis: Long): String {
+    val seconds = TimeUnit.MILLISECONDS.toSeconds(millis)
+    val hours = TimeUnit.SECONDS.toHours(seconds)
+    val minutes = TimeUnit.SECONDS.toMinutes(seconds) % 60
+    val remainingSeconds = seconds % 60
+    return if (hours > 0) String.format("%02d:%02d:%02d", hours, minutes, remainingSeconds)
+    else String.format("%02d:%02d", minutes, remainingSeconds)
+}
+
+private fun createParser(danmakuData: ByteArray?): BaseDanmakuParser {
+    if (danmakuData == null) return object : BaseDanmakuParser() { override fun parse() = master.flame.danmaku.danmaku.model.android.Danmakus() }
+    val loader = DanmakuLoaderFactory.create(DanmakuLoaderFactory.TAG_BILI)
+    loader.load(ByteArrayInputStream(danmakuData))
+    val parser = BiliDanmukuParser()
+    parser.load(loader.dataSource)
+    return parser
 }
