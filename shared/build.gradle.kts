@@ -13,13 +13,15 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// shared/build.gradle.kts
+
 buildConfig {
-    // 自动将 Gradle 的版本号注入到代码中
     useKotlinOutput()
     packageName("me.voltual.pyrolysis")
     
-    val provider = providers.provider { project.version.toString() }
-    buildConfigField("VERSION", provider)
+    // 直接在这里写死，简单粗暴且完全可行
+    buildConfigField("VERSION", "22.1")
+    buildConfigField("VERSION_CODE", 511) 
 }
 
 kotlin {
