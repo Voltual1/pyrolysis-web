@@ -6,7 +6,17 @@ group = "me.voltual.apkparser"
 version = "1.0"
 
 kotlin {
-	jvm()    
+	jvm()  
+
+    js(IR) {
+        browser()
+    }
+
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+    }
+	  
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -33,6 +43,10 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-junit"))
                 implementation(kotlin("reflect"))
+            }
+        }
+        val webMain by getting {
+            dependencies {
             }
         }
     }
