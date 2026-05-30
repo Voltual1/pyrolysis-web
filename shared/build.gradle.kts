@@ -13,6 +13,14 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+buildConfig {
+    // 自动将 Gradle 的版本号注入到代码中
+    useKotlinOutput()
+    
+    val provider = providers.provider { project.version.toString() }
+    buildConfigField("VERSION", provider)
+}
+
 kotlin {
     // AGP 9.0 KMP 库专用 Android 配置块
     android {
@@ -53,6 +61,7 @@ kotlin {
                     implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0")
                         implementation(libs.androidx.lifecycle.viewmodel.compose)
                 implementation(libs.ktor.client.core)
+                    implementation(libs.markdown)
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.serialization.json)
                 implementation(libs.ktor.client.logging)
