@@ -50,7 +50,7 @@ val topLevelRoutes: Set<NavKey> = setOf(Home)
 
 @Composable
 fun PyrolysisApp(
-    agreementDataStore: UserAgreementDataStore,
+    agreementDataStore: UserAgreementDataStore = koinInject(), 
     modifier: Modifier = Modifier
 ) {
     // 1. 初始化全局导航相关状态
@@ -90,8 +90,7 @@ fun PyrolysisApp(
                 navigationState = navigationState,
                 navigator = navigator,
                 snackbarHostState = snackbarHostState,
-                showAgreementDialog = showAgreementDialog,
-                modifier = modifier
+                showAgreementDialog = showAgreementDialog
             )
         }
     }
