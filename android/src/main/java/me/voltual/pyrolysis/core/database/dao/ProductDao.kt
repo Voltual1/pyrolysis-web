@@ -175,3 +175,12 @@ interface ProductDao : BaseDao<Product> {
     @Query("DELETE FROM $TABLE_PRODUCT")
     suspend fun emptyTable()
 }
+
+@Dao
+interface ProductTempDao : BaseDao<ProductTemp> {
+    @Query("SELECT * FROM $TABLE_PRODUCT_TEMP")
+    suspend fun getAll(): Array<ProductTemp>
+
+    @Query("DELETE FROM $TABLE_PRODUCT_TEMP")
+    suspend fun emptyTable()
+}

@@ -324,12 +324,3 @@ data class ProductIconDetails(
     val icon: String,
     val metadataIcon: String
 )
-
-@Dao
-interface ProductTempDao : BaseDao<ProductTemp> {
-    @Query("SELECT * FROM $TABLE_PRODUCT_TEMP")
-    suspend fun getAll(): Array<ProductTemp>? // 允许返回 null 以配合扩散操作符处理
-
-    @Query("DELETE FROM $TABLE_PRODUCT_TEMP")
-    suspend fun emptyTable()
-}
