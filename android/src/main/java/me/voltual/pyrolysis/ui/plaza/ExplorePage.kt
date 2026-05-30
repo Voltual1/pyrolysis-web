@@ -90,7 +90,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ExplorePage(
     viewModel: ExploreVM = koinPyrolysisViewModel(),
-    plazaViewModel: PlazaViewModel = koinPyrolysisViewModel(),
+    appPageVM: AppPageVM = koinPyrolysisViewModel(),
 ) {
     val context = LocalContext.current
     val mainActivity = LocalActivity.current as MainActivity
@@ -101,7 +101,7 @@ fun ExplorePage(
 
     val categoryProductsState by viewModel.categoryProductsState.collectAsStateWithLifecycle()
     val topProductsState by viewModel.topProductsState.collectAsStateWithLifecycle()
-    val dataState by plazaViewModel.dataState.collectAsStateWithLifecycle()
+    val dataState by appPageVM.dataState.collectAsStateWithLifecycle()
     val selectedCategory = rememberSaveable {
         mutableStateOf("")
     }
@@ -269,7 +269,7 @@ fun ExplorePage(
                                 navigator.navigate(AppPage(it.packageName))
                                 },
                                 onFavouriteClick = {
-                                    plazaViewModel.setFavorite(
+                                    appPageVM.setFavorite(
                                         it.packageName,
                                         !dataState.favorites.contains(it.packageName)
                                     )
@@ -359,7 +359,7 @@ fun ExplorePage(
                               navigator.navigate(AppPage(it.packageName))
                             },
                             onFavouriteClick = {
-                                plazaViewModel.setFavorite(
+                                appPageVM.setFavorite(
                                     it.packageName,
                                     !dataState.favorites.contains(it.packageName)
                                 )

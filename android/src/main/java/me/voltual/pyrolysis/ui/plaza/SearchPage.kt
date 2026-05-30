@@ -62,7 +62,7 @@ import me.voltual.pyrolysis.core.utils.onLaunchClick
 @Composable
 fun SearchPage(
     viewModel: SearchVM = koinPyrolysisViewModel(),
-    plazaViewModel: PlazaViewModel = koinPyrolysisViewModel(),
+    appPageVM: AppPageVM = koinPyrolysisViewModel(),
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -73,7 +73,7 @@ fun SearchPage(
 
     val listState = rememberLazyListState()
     val pageState by viewModel.pageState.collectAsStateWithLifecycle()
-    val dataState by plazaViewModel.dataState.collectAsStateWithLifecycle()
+    val dataState by appPageVM.dataState.collectAsStateWithLifecycle()
 
     val currentTab by remember {
         derivedStateOf {
@@ -226,7 +226,7 @@ fun SearchPage(
                         navigator.navigate(AppPage(it.packageName))
                         },
                         onFavouriteClick = {
-                            plazaViewModel.setFavorite(
+                            appPageVM.setFavorite(
                                 it.packageName,
                                 !dataState.favorites.contains(it.packageName)
                             )

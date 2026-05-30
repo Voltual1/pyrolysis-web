@@ -17,6 +17,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import me.voltual.pyrolysis.ARG_PACKAGE_NAME
+import me.voltual.pyrolysis.core.database.entity.ProductIconDetails
 import me.voltual.pyrolysis.MainActivity
 import me.voltual.pyrolysis.BBQApplication
 import me.voltual.pyrolysis.RELEASE_STATE_INSTALLED
