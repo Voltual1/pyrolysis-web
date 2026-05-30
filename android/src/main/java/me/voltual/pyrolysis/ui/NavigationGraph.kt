@@ -28,7 +28,6 @@ import me.voltual.pyrolysis.ui.billing.BillingScreen
 import me.voltual.pyrolysis.ui.billing.BillingViewModel
 import me.voltual.pyrolysis.ui.community.*
 import me.voltual.pyrolysis.ui.community.compose.PostDetailScreen
-import me.voltual.pyrolysis.core.ui.components.IDMTransferDialog
 import me.voltual.pyrolysis.ui.home.*
 import me.voltual.pyrolysis.ui.log.LogScreen
 import me.voltual.pyrolysis.ui.log.LogViewModel
