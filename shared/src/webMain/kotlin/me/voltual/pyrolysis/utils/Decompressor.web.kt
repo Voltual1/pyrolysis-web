@@ -8,9 +8,7 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis.utils
 
-/**
- * 跨平台解压函数
- * @param data 压缩的字节数组 (ZLIB/Deflate)
- * @return 解压后的字节数组
- */
-expect fun decompressDanmaku(data: ByteArray): ByteArray
+actual fun decompressDanmaku(data: ByteArray): ByteArray {
+    // 暂不处理弹幕逻辑，直接返回原数据
+    return data
+}
