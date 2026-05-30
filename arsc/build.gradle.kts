@@ -1,3 +1,7 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl 
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     id("org.jetbrains.kotlinx.binary-compatibility-validator") version "0.14.0"
@@ -12,6 +16,11 @@ kotlin {
 		"-opt-in=kotlin.ExperimentalUnsignedTypes",
 		"-opt-in=dev.rushii.arsc.internal.ArscInternalApi"
 	)
+	
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+    }	
 	    
     sourceSets {
         val commonMain by getting {

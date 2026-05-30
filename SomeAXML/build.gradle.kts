@@ -1,3 +1,7 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
 }
@@ -6,7 +10,12 @@ group = "org.duangsuse"
 version = "1.0"
 
 kotlin {
-	jvm()    
+	jvm() 
+	
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+    }	      
     sourceSets {
         val commonMain by getting {
             dependencies {
