@@ -72,10 +72,15 @@ val appModule = module {
 // 1. 核心基础设施 & 数据库 (Core Infrastructure & Database)
 // =========================================================================
 
-// 1. 纯 Koin 方式托管 AppDatabase 单例，完全不再依赖传统伴生对象方法
     single<AppDatabase> { 
-        val builder = get<RoomDatabase.Builder<AppDatabase>>()
-        builder.build()
+        Room.databaseBuilder(
+            androidContext(),
+            AppDatabase::class.java,
+            "pyrolysis_database"
+        )
+        .setDriver(BundledSQLiteDriver()) // Room 3 强制要求设置驱动
+        .addMigrations(*AppDatabase.ALL_MIGRATIONS)
+        .build()
     }
 // 2. 所有的 Dao 统一由 Koin 容器管理，它们会自动等待上面的 AppDatabase 构建完成后注入完成
 single { get<AppDatabase>().logDao() }  

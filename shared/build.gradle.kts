@@ -56,8 +56,7 @@ kotlin {
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)              
                     implementation(libs.compose.navigation3)
-//                        implementation(libs.navigation3.browser) 
-//这个是给浏览器用的之后放webmain里面
+                        implementation(libs.navigation3.browser) 
                 implementation(libs.compose.material3)
                     implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0")
                         implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -70,7 +69,6 @@ kotlin {
                 implementation(libs.ktor.client.logging)
                     implementation(project(":ApkParser"))
                 implementation(libs.kotlinx.serialization.json)
-                    implementation(libs.compose.navigation3.ui)
                 implementation(libs.koin.android.compose)
                 implementation(libs.kotlinx.coroutines.core)
                             implementation(libs.components.resources)
@@ -97,6 +95,7 @@ kotlin {
             dependencies {
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.ijkplayer)
+                                    implementation(libs.compose.navigation3.ui)
                 implementation(project(":DanmakuFlameMaster"))
             }
         }
