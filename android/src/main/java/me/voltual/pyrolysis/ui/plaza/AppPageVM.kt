@@ -134,13 +134,7 @@ class AppPageVM(
         started = SharingStarted.Lazily,
         initialValue = DataState(),
     )
-    
-    fun setFavorite(packageName: String, setBoolean: Boolean) {
-        viewModelScope.launch {
-            extrasRepo.setFavorite(packageName, setBoolean)
-        }
-    }
-    
+        
     private val packageName = MutableStateFlow("")
 
     private val products = packageName
