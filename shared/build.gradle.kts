@@ -20,7 +20,7 @@ buildConfig {
     packageName("me.voltual.pyrolysis")
     
     // 直接在这里写死，简单粗暴且完全可行
-    buildConfigField("VERSION", "22.1")
+    buildConfigField("VERSION_NAME", "22.1")
     buildConfigField("VERSION_CODE", 511) 
 }
 
