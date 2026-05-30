@@ -98,11 +98,11 @@ kotlin {
             }
         }
 
-        val webMain by getting {
+/*        val webMain by getting {
             dependencies {
                 implementation(libs.ktor.client.js)
             }
-        }
+        }*/
     }
 }
 
