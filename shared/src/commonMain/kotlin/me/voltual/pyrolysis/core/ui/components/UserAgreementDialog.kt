@@ -22,7 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import composeapp.generated.resources.Res 
+import me.voltual.pyrolysis.Res 
 import me.voltual.pyrolysis.core.ui.theme.AppShapes
 import me.voltual.pyrolysis.data.UserAgreementDataStore
 import org.koin.compose.koinInject
