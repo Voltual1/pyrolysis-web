@@ -17,7 +17,7 @@ plugins {
 
 buildConfig {
     useKotlinOutput()
-    packageName("me.voltual.pyrolysis")
+    packageName("me.voltual.pyrolysis.shared")
     
     // 直接在这里写死，简单粗暴且完全可行
     buildConfigField("VERSION_NAME", "22.1")
