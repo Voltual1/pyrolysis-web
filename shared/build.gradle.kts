@@ -68,9 +68,6 @@ kotlin {
                 implementation(libs.ktor.client.logging)
                     implementation(project(":ApkParser"))
                 implementation(libs.kotlinx.serialization.json)
-                    implementation(libs.compose.adaptive)
-    implementation(libs.compose.adaptive.layout)
-    implementation(libs.compose.adaptive.navigation)
                 implementation(libs.koin.android.compose)
                 implementation(libs.kotlinx.coroutines.core)
                             implementation(libs.components.resources)
@@ -100,6 +97,9 @@ kotlin {
                                 implementation(libs.sqlite.bundled)
                                     implementation(libs.compose.navigation3.ui)
                 implementation(project(":DanmakuFlameMaster"))
+                                    implementation(libs.compose.adaptive)
+    implementation(libs.compose.adaptive.layout)
+    implementation(libs.compose.adaptive.navigation)
             }
         }
 
