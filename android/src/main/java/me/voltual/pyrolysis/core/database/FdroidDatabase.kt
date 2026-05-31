@@ -8,13 +8,19 @@
  */
 package me.voltual.pyrolysis.core.database
 
+import android.util.Log
 import androidx.room3.Database
 import androidx.room3.RoomDatabase
 import androidx.room3.TypeConverters
 import androidx.room3.withWriteTransaction
+import androidx.sqlite.SQLiteConnection
 import me.voltual.pyrolysis.core.database.dao.*
 import me.voltual.pyrolysis.core.database.entity.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.koin.dsl.module
+import java.io.File
 
 @Database(
     entities = [
@@ -56,7 +62,6 @@ abstract class FdroidDatabase : RoomDatabase() {
     abstract fun getDownloadStatsDao(): DownloadStatsDao
     abstract fun getDownloadStatsFileDao(): DownloadStatsFileDao
 
-    // 修复：添加支持 Set 的重载，解决 RepositoryUpdater 调用匹配问题
     suspend fun cleanUp(pairs: Set<Pair<Long, Boolean>>) = cleanUp(*pairs.toTypedArray())
 
     suspend fun cleanUp(vararg pairs: Pair<Long, Boolean>) {
@@ -79,7 +84,6 @@ abstract class FdroidDatabase : RoomDatabase() {
                 getAntiFeatureDao().deleteByRepoId(repository.id)
                 getReleaseDao().deleteById(repository.id)
                 
-                // 修复：处理扩散操作符的空指针风险
                 getProductDao().insert(*(getProductTempDao().getAll() ?: emptyArray()))
                 getCategoryDao().insert(*(getCategoryTempDao().getAll() ?: emptyArray()))
                 getRepoCategoryDao().insert(*(getRepoCategoryTempDao().getAll() ?: emptyArray()))
@@ -97,20 +101,64 @@ abstract class FdroidDatabase : RoomDatabase() {
 
     companion object {
         const val TAG = "fdroid.db"
+
+        // 适配 Room 3.0 异步 SQLiteConnection 的数据库回调
+        val dbCreateCallback = object : RoomDatabase.Callback() {
+            override suspend fun onOpen(connection: SQLiteConnection) {
+                super.onOpen(connection)
+                
+                // 使用 IO 协程进行异步数据填充，避免阻塞主线程和数据库初始化
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val dao = org.koin.java.KoinJavaComponent.get<RepositoryDao>(RepositoryDao::class.java)
+                        
+                        // 只有数据库为空时才初始化默认仓库
+                        if (dao.getCount() == 0) {
+                            val allRepos = (Repository.defaultRepositories + loadPresetRepos())
+                                .distinctBy { it.address }
+                                .toTypedArray()
+                            
+                            dao.put(*allRepos)
+                            Log.d(TAG, "Database initialized with ${allRepos.size} default repositories.")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to seed initial repositories", e)
+                    }
+                }
+            }
+        }
+
+        /**
+         * 从系统不同分区加载 OEM 预置仓库
+         */
+        private fun loadPresetRepos(): List<Repository> {
+            val roots = listOf("/system", "/product", "/vendor", "/odm", "/oem")
+            return roots.mapNotNull { root ->
+                val additionalReposFile = File("$root/etc/org.fdroid.fdroid/additional_repos.xml")
+                if (additionalReposFile.exists() && additionalReposFile.isFile) {
+                    Repository.parsePresetReposXML(additionalReposFile)
+                } else {
+                    null
+                }
+            }.flatten()
+        }
     }
 }
 
+// 补全并修复后的 Koin 模块：正确挂载了 dbCreateCallback 并使用 Bundled 驱动
 val databaseModule = module {
-    single {
+    single<FdroidDatabase> {
         androidx.room3.Room.databaseBuilder(
             get(),
             FdroidDatabase::class.java,
             "main_fdroid_database.db"
         )
+        .setDriver(androidx.sqlite.driver.bundled.BundledSQLiteDriver()) // 必须显式设置 Room3 驱动
+        .addCallback(FdroidDatabase.dbCreateCallback) // 修复：挂载初始化回调
         .fallbackToDestructiveMigration(true)
         .build()
     }
-    // 注入所有 DAO
+    
     single { get<FdroidDatabase>().getRepositoryDao() }
     single { get<FdroidDatabase>().getProductDao() }
     single { get<FdroidDatabase>().getReleaseDao() }
