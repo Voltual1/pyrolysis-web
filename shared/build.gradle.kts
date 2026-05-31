@@ -64,7 +64,7 @@ kotlin {
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.serialization.json)
                 implementation(libs.room3.runtime)
-                implementation(libs.sqlite.bundled)
+                implementation(libs.sqlite)
                 implementation(libs.ktor.client.logging)
                     implementation(project(":ApkParser"))
                 implementation(libs.kotlinx.serialization.json)
@@ -97,6 +97,7 @@ kotlin {
             dependencies {
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.ijkplayer)
+                                implementation(libs.sqlite.bundled)
                                     implementation(libs.compose.navigation3.ui)
                 implementation(project(":DanmakuFlameMaster"))
             }
@@ -104,6 +105,7 @@ kotlin {
 
         wasmJsMain.dependencies {
             implementation(libs.navigation3.browser) 
+             implementation(libs.sqlite.web)
         }
     }
 }

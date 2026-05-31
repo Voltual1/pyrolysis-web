@@ -57,6 +57,8 @@ room3-compiler = { group = "androidx.room3", name = "room3-compiler", version.re
 room3-paging = { group = "androidx.room3", name = "room3-paging", version.ref = "pyrolysis-room3" }
 # SQLite 驱动
 sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "androidx-sqlite" }
+sqlite = { module = "androidx.sqlite:sqlite", version.ref = "androidx-sqlite" }
+sqlite-web = { module = "androidx.sqlite:sqlite-web", version.ref = "androidx-sqlite" }
 
 # Compose Multiplatform
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose-multiplatform" }
