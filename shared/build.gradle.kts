@@ -43,10 +43,10 @@ kotlin {
         }
     }
 
-/*    @OptIn(ExperimentalWasmDsl::class)
+    @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
-    }*/
+    }
 
     applyDefaultHierarchyTemplate()
 
@@ -106,10 +106,10 @@ kotlin {
             }
         }
 
-/*        wasmJsMain.dependencies {
+        wasmJsMain.dependencies {
             implementation(libs.navigation3.browser) 
              implementation(libs.sqlite.web)
-        }*/
+        }
     }
 }
 
