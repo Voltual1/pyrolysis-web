@@ -99,7 +99,7 @@ kotlin {
                                     implementation(libs.compose.adaptive)
     implementation(libs.compose.adaptive.layout)
     implementation(libs.compose.adaptive.navigation)
-                        implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0")
+                        implementation(libs.androidx.lifecycle.viewmodel.navigation3)
             }
         }
 
