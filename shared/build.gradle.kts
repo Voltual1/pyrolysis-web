@@ -69,7 +69,7 @@ kotlin {
                                 implementation(libs.kotlinx.io)
                     implementation(project(":ApkParser"))
                 implementation(libs.kotlinx.serialization.json)
-                implementation(libs.koin.viewmodel.compose)
+                implementation(libs.koin.compose.viewmodel)
                 implementation(libs.kotlinx.coroutines.core)
                             implementation(libs.components.resources)
                 implementation(libs.kotlinx.datetime)
