@@ -54,7 +54,7 @@ import me.voltual.pyrolysis.ui.user.*
 import me.voltual.pyrolysis.ui.user.compose.UserListScreen
 import androidx.compose.foundation.*
 import androidx.navigation3.ui.NavDisplay
-import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.compose.material3.*
