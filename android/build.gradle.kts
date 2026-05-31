@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.androidx.room3)    
     alias(libs.plugins.protobuf)
     alias(libs.plugins.shizuku.refine)
 }
@@ -188,6 +189,7 @@ dependencies {
     implementation(libs.koin.workmanager)
     implementation(libs.koin.startup)
     ksp(libs.koin.ksp.compiler)
+    ksp(libs.room3.compiler)
 
     // Ktor 与 序列化
     implementation(libs.ktor.client.core)
