@@ -109,6 +109,7 @@ kotlin {
         wasmJsMain.dependencies {
             implementation(libs.navigation3.browser) 
              implementation(libs.sqlite.web)
+              implementation(libs.kotlinx.io)             
         }
     }
 }
