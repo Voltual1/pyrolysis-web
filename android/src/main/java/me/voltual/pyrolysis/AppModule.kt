@@ -9,6 +9,7 @@
 package me.voltual.pyrolysis
 
 import androidx.room3.*
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
@@ -87,7 +88,7 @@ single { get<AppDatabase>().logDao() }
 single { get<AppDatabase>().browseHistoryDao() } 
 single { get<AppDatabase>().postDraftDao() }         
 
-// Crypto (Tink 安全加密维持原样)
+/*// Crypto 
 single<Aead> {
     AeadConfig.register()
     val keysetHandle = AndroidKeysetManager.Builder()
@@ -97,7 +98,7 @@ single<Aead> {
         .build()
         .keysetHandle
     keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
-}
+}*/
 
     // =========================================================================
     // 2. 底层 DataStore 实例定义 (Platform Specific Instances)
