@@ -125,7 +125,9 @@ room3 {
 }
 
 dependencies {
-    // 关键：为所有 KMP 目标配置 Room 编译器
+    // 为所有 KMP 目标配置 Room 编译器
     add("kspCommonMainMetadata", libs.room3.compiler)
     add("kspAndroid", libs.room3.compiler)
+    // 别忘了给 wasmJs 目标也加上 KSP 编译器
+    add("kspWasmJs", libs.room3.compiler)
 }
