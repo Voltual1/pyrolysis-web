@@ -133,7 +133,7 @@ class PaymentViewModel(
                 return@launch
             }
 
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.Default) {
                 KtorClient.ApiServiceImpl.getPostDetail(token = token, postId = postId)
             }.onSuccess { result ->
                 val post = result.data
@@ -165,7 +165,7 @@ class PaymentViewModel(
                 return@launch
             }
 
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.Default) {
                 KtorClient.ApiServiceImpl.getUserInformation(
                     userId = credentials.userId,
                     token = credentials.token
@@ -188,7 +188,7 @@ class PaymentViewModel(
 
             when (info.type) {
                 PaymentType.APP_PURCHASE -> {
-                    withContext(Dispatchers.IO) {
+                    withContext(Dispatchers.Default) {
                         KtorClient.ApiServiceImpl.getAppsInformation(
                             token = "",
                             appsId = info.appId,
@@ -201,7 +201,7 @@ class PaymentViewModel(
                     }
                 }
                 PaymentType.POST_REWARD -> {
-                    withContext(Dispatchers.IO) {
+                    withContext(Dispatchers.Default) {
                         KtorClient.ApiServiceImpl.getPostDetail(
                             token = "",
                             postId = info.postId
@@ -242,7 +242,7 @@ class PaymentViewModel(
                 return@launch
             }
 
-            val response = withContext(Dispatchers.IO) {
+            val response = withContext(Dispatchers.Default) {
                 when (info.type) {
                     PaymentType.APP_PURCHASE -> KtorClient.ApiServiceImpl.payForApp(
                         token = credentials.token,

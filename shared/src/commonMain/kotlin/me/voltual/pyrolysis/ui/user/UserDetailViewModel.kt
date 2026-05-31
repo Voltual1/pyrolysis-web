@@ -80,7 +80,7 @@ class UserDetailViewModel(
                     return@launch
                 }
                 
-                val result = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.Default) {
                     apiService.followUser(
                         token = token,
                         followedId = targetUserId
@@ -124,7 +124,7 @@ class UserDetailViewModel(
             _isLoading.value = true
 
             try {
-                val result = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.Default) {
                     when (_currentStore) {
                         AppStore.XIAOQU_SPACE -> {
                             apiService.getUserInformation(

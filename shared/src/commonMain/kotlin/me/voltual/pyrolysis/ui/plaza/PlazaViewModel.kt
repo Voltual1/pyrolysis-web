@@ -192,7 +192,7 @@ class PlazaViewModel(
         _isLoading.value = true
         _currentCategoryId.value = null 
         
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             try {
                 when {
                     _appStore.value == AppStore.LOCAL -> {
@@ -260,7 +260,7 @@ class PlazaViewModel(
         _isLoading.value = true 
         _errorMessage.value = null
 
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             try {
                 val finalUserId = currentUserId
 

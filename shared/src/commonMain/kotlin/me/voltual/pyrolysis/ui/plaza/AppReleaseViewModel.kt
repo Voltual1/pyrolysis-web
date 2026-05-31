@@ -131,7 +131,7 @@ class AppReleaseViewModel(
         
         screenshotsFiles.addAll(filesToUpload)
         
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             filesToUpload.forEach { file ->
                 val now = Clock.System.now().toEpochMilliseconds()
                 val path = fileToTempPath(file, "screenshot_${now}.png")
@@ -152,7 +152,7 @@ class AppReleaseViewModel(
      * 重构后的 APK 解析与上传逻辑，使用 SystemTemporaryDirectory
      */
     fun parseAndUploadApk(file: PlatformFile) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             _processFeedback.value = Result.success("正在读取 APK 文件...")
             
             // 1. 将 PlatformFile 写入系统临时目录
@@ -220,7 +220,7 @@ class AppReleaseViewModel(
     private suspend fun executeXiaoQuUpload(apkPath: Path, iconPath: Path?) {
         val uploadJobs = mutableListOf<kotlinx.coroutines.Job>()
 
-        uploadJobs += viewModelScope.launch(Dispatchers.IO) {
+        uploadJobs += viewModelScope.launch(Dispatchers.Default) {
             isApkUploading.value = true
             val serviceType = when (selectedApkUploadService.value) {
                 ApkUploadService.KEYUN -> "KEYUN"
@@ -236,7 +236,7 @@ class AppReleaseViewModel(
         }
 
         iconPath?.let { path ->
-            uploadJobs += viewModelScope.launch(Dispatchers.IO) {
+            uploadJobs += viewModelScope.launch(Dispatchers.Default) {
                 isIconUploading.value = true
                 val imageResult = xiaoQuRepo.uploadImage(path, "icon")
                 imageResult.onSuccess { url ->
@@ -253,7 +253,7 @@ class AppReleaseViewModel(
     fun uploadIntroductionImages(files: List<PlatformFile>) {
         if (_selectedStore.value != AppStore.XIAOQU_SPACE) return
         
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             val currentCount = introductionImageUrls.size
             if (currentCount >= MAX_INTRO_IMAGES_XIAOQU) {
                 _processFeedback.value = Result.failure(Exception("最多只能上传 $MAX_INTRO_IMAGES_XIAOQU 张介绍图"))
@@ -312,7 +312,7 @@ class AppReleaseViewModel(
     }
 
     fun releaseApp(onSuccess: () -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             isReleasing.value = true
             _processFeedback.value = Result.success("正在准备发布...")
             

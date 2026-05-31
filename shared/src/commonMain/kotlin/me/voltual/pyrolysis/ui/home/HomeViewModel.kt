@@ -94,7 +94,7 @@ class HomeViewModel(
                 dataLoadState = DataLoadState.Loading
             )
 
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.Default) {
                 KtorClient.ApiServiceImpl.getUserInfo(token = token)
             }.onSuccess { response ->
                 val userData = response.data
@@ -156,7 +156,7 @@ class HomeViewModel(
 
             uiState.value = uiState.value.copy(isLoading = true)
 
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.Default) {
                 KtorClient.ApiServiceImpl.userSignIn(token = token)
             }.onSuccess { result ->
                 if (result.code == 401) {

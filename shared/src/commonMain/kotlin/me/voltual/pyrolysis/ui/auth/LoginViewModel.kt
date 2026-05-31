@@ -97,7 +97,7 @@ class LoginViewModel(
             // 直接从 Repository 获取设备 ID，不再需要 Context
             val deviceId = authRepository.deviceId.first()
             
-            val loginResult = withContext(Dispatchers.IO) {
+            val loginResult = withContext(Dispatchers.Default) {
                 KtorClient.ApiServiceImpl.login(
                     username = _username.value,
                     password = _password.value,
@@ -145,7 +145,7 @@ class LoginViewModel(
             try {
                 val deviceId = authRepository.deviceId.first()
 
-                val registerResult = withContext(Dispatchers.IO) {
+                val registerResult = withContext(Dispatchers.Default) {
                     KtorClient.ApiServiceImpl.register(
                         username = _username.value,
                         password = _password.value,
@@ -178,7 +178,7 @@ class LoginViewModel(
     private suspend fun loginAfterRegister() {
         try {
             val deviceId = authRepository.deviceId.first()
-            val loginResult = withContext(Dispatchers.IO) {
+            val loginResult = withContext(Dispatchers.Default) {
                 KtorClient.ApiServiceImpl.login(
                     username = _username.value,
                     password = _password.value,

@@ -82,7 +82,7 @@ class PostDetailViewModel(
                 val userCredentials = authRepository.credentials.first()
                 val token = userCredentials.token
 
-                val result = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.Default) {
                     KtorClient.ApiServiceImpl.getPostDetail(
                         token = token,
                         postId = postId
@@ -128,7 +128,7 @@ class PostDetailViewModel(
 
         viewModelScope.launch {
             try {
-                val result = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.Default) {
                     KtorClient.ApiServiceImpl.getPostComments(
                         postId = postId,
                         limit = 20,
@@ -196,7 +196,7 @@ class PostDetailViewModel(
                 val userCredentials = authRepository.credentials.first()
                 val token = userCredentials.token
 
-                val result = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.Default) {
                     KtorClient.ApiServiceImpl.likePost(
                         token = token,
                         postId = postId
@@ -252,7 +252,7 @@ class PostDetailViewModel(
                 val postId = postDetail.value?.id ?: return@launch
                 val parentId = _currentReplyComment.value?.id ?: 0L
 
-                val result = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.Default) {
                     KtorClient.ApiServiceImpl.postComment(
                         token = token,
                         content = content,
@@ -289,7 +289,7 @@ class PostDetailViewModel(
                 val userCredentials = authRepository.credentials.first()
                 val token = userCredentials.token
 
-                val result = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.Default) {
                     KtorClient.ApiServiceImpl.deletePost(
                         token = token,
                         postId = postId
@@ -319,7 +319,7 @@ class PostDetailViewModel(
                 val userCredentials = authRepository.credentials.first()
                 val token = userCredentials.token
 
-                val result = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.Default) {
                     KtorClient.ApiServiceImpl.deleteComment(
                         token = token,
                         commentId = commentId

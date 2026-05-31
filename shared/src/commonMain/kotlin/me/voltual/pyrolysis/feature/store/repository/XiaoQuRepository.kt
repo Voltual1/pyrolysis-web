@@ -384,7 +384,7 @@ class XiaoQuRepository(
     @OptIn(DelicateCoroutinesApi::class)
     private fun createChannelProvider(path: Path): ChannelProvider {
         return ChannelProvider {
-            GlobalScope.writer(Dispatchers.IO) {
+            GlobalScope.writer(Dispatchers.Default) {
                 fileSystem.source(path).buffered().use { source ->
                     val buffer = Buffer()
                     while (!source.exhausted()) {

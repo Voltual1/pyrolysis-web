@@ -447,7 +447,7 @@ fun CommentDialog(
         showProgressDialog = true
         progressMessage = "上传图片中..."
 
-        coroutineScope.launch(Dispatchers.IO) {
+        coroutineScope.launch(Dispatchers.Default) {
             runCatching {
                 val fileBytes = file.readBytes()
                 val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {

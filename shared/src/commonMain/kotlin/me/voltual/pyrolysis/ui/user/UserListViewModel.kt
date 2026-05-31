@@ -77,7 +77,7 @@ class UserListViewModel(
                 val userCredentials = authRepository.credentials.first()
                 val token = userCredentials.token
 
-                val result = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.Default) {
                     when (currentListType) {
                         UserListType.FOLLOWERS -> apiService.getFollowList(token = token, limit = 10, page = page)
                         UserListType.FANS -> apiService.getFanList(token = token, limit = 10, page = page)

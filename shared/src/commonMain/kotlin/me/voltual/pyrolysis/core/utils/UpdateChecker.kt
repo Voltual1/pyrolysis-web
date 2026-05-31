@@ -24,7 +24,7 @@ sealed class UpdateCheckResult {
 object UpdateChecker {
     // 修改函数签名，使用回调传递结果
     fun checkForUpdates(onUpdateResult: (UpdateCheckResult) -> Unit) {
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.Default).launch {
             try {
                 val result = KtorClient.ApiServiceImpl.getLatestRelease()
                 if (result.isSuccess) {

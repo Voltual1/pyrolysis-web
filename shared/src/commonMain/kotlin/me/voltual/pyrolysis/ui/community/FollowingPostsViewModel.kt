@@ -74,7 +74,7 @@ class FollowingPostsViewModel(
                 val userCredentials = authRepository.credentials.first()
                 val token = userCredentials.token
 
-                val followingPostsResult = withContext(Dispatchers.IO) {
+                val followingPostsResult = withContext(Dispatchers.Default) {
                     KtorClient.ApiServiceImpl.getMyFollowingPosts(
                         token = token,
                         limit = PAGE_SIZE,

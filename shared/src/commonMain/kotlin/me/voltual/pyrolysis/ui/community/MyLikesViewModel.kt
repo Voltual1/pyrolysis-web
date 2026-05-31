@@ -76,7 +76,7 @@ class MyLikesViewModel(
             val token = userCredentials.token
 
             // 发起请求并处理结果
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.Default) {
                 KtorClient.ApiServiceImpl.getLikesRecords(
                     token = token,
                     limit = PAGE_SIZE,

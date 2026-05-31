@@ -48,7 +48,7 @@ class BillingViewModel(
             )
         
             try {
-                val billingResult = withContext(Dispatchers.IO) {
+                val billingResult = withContext(Dispatchers.Default) {
                     KtorClient.ApiServiceImpl.getUserBilling(
                         token = token,
                         limit = 10,
@@ -105,7 +105,7 @@ class BillingViewModel(
             _state.value = _state.value.copy(isLoading = true)
         
             try {
-                val billingResult = withContext(Dispatchers.IO) {
+                val billingResult = withContext(Dispatchers.Default) {
                     KtorClient.ApiServiceImpl.getUserBilling(
                         token = token,
                         limit = 10,

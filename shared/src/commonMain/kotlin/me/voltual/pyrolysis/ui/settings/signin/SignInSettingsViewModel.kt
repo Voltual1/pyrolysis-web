@@ -46,7 +46,7 @@ class SignInSettingsViewModel(
                 }
                 
                 val token = userCredentials.token
-                val result = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.Default) {
                     KtorClient.ApiServiceImpl.userSignIn(token = token)
                 }
                 

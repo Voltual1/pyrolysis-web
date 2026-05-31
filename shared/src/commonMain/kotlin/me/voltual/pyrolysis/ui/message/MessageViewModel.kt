@@ -69,7 +69,7 @@ class MessageViewModel(
                 val userCredentials = authRepository.credentials.first()
                 val token = userCredentials.token
 
-                val messageNotificationsResult = withContext(Dispatchers.IO) {
+                val messageNotificationsResult = withContext(Dispatchers.Default) {
                     KtorClient.ApiServiceImpl.getMessageNotifications(
                         token = token,
                         limit = 5,

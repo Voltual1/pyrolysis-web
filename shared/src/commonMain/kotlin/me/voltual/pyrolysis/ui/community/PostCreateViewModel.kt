@@ -150,7 +150,7 @@ class PostCreateViewModel(
         }
     }
 
-    private suspend fun uploadImageKtor(file: PlatformFile): Result<String> = withContext(Dispatchers.IO) {
+    private suspend fun uploadImageKtor(file: PlatformFile): Result<String> = withContext(Dispatchers.Default) {
         try {
             val fileBytes = file.readBytes()
             val response: HttpResponse = KtorClient.uploadHttpClient.post("api.php") {
@@ -228,7 +228,7 @@ class PostCreateViewModel(
 
             val finalSubsectionId = if (mode == "refund") 21 else subsectionId
 
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.Default) {
                 KtorClient.ApiServiceImpl.createPost(
                     token = credentials.token,
                     title = title,
