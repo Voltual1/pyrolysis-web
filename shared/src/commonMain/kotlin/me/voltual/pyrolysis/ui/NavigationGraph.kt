@@ -38,7 +38,10 @@ import me.voltual.pyrolysis.ui.payment.PaymentType
 import me.voltual.pyrolysis.ui.payment.PaymentViewModel
 import me.voltual.pyrolysis.ui.player.PlayerScreen
 import me.voltual.pyrolysis.ui.player.PlayerViewModel
-import me.voltual.pyrolysis.ui.plaza.*
+import me.voltual.pyrolysis.ui.plaza.ResourcePlazaScreen
+import me.voltual.pyrolysis.ui.plaza.AppDetailScreen
+import me.voltual.pyrolysis.ui.plaza.AppReleaseScreen
+import me.voltual.pyrolysis.ui.plaza.AppReleaseViewModel
 import me.voltual.pyrolysis.ui.rank.RankingListScreen
 import me.voltual.pyrolysis.ui.search.SearchScreen
 import me.voltual.pyrolysis.ui.search.SearchViewModel
@@ -64,25 +67,24 @@ fun BBQNavDisplay(
     onBack: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
-    // 新增平台页面注入器：允许 Android 壳工程将高耦合页面注入进来
+    // 平台页面注入器：允许 Android 壳工程注入所有高耦合页面
     platformEntryProvider: @Composable (NavKey) -> (@Composable () -> Unit)? = { null }
 ) {
     val mySceneStrategy = remember { DialogSceneStrategy<NavKey>() }
-    val slideDistance = rememberSlideDistance() // 获取 30dp 对应的像素值
+    val slideDistance = rememberSlideDistance()
     
     val decorators = listOf(
-        rememberSaveableStateHolderNavEntryDecorator<NavKey>(), // 保持 UI 状态（如滚动位置）
-        rememberViewModelStoreNavEntryDecorator<NavKey>()      // 核心：为每个 Entry 提供独立的 ViewModel 存储
+        rememberSaveableStateHolderNavEntryDecorator<NavKey>(),
+        rememberViewModelStoreNavEntryDecorator<NavKey>()
     )
 
     NavDisplay(
         backStack = backStack,
         onBack = onBack,
-        entryDecorators = decorators, // 传入装饰器
+        entryDecorators = decorators,
         modifier = modifier.fillMaxSize(),
         sceneStrategy = mySceneStrategy,
         
-        //  前进动画：当新页面入栈时触发
         transitionSpec = {
             materialSharedAxisX(
                 forward = true, 
@@ -90,425 +92,426 @@ fun BBQNavDisplay(
             )
         },
 
-        //  返回动画：当页面出栈（Pop）时触发
         popTransitionSpec = {
             materialSharedAxisX(
                 forward = false, 
                 slideDistance = slideDistance
             )
         },
-        // 使用手动实现的 entryProvider 闭包
+        // 统一在 NavEntry 内部处理 Composable 作用域与平台注入
         entryProvider = { key ->
-            // 1. 优先尝试从外部注入的平台页面中匹配
-            val platformContent = platformEntryProvider(key)
-            if (platformContent != null) {
-                NavEntry(key) {
+            NavEntry(key) {
+                val platformContent = platformEntryProvider(key)
+                if (platformContent != null) {
                     platformContent()
-                }
-            } else {
-                // 2. 匹配通用页面
-                when (key) {
-                    is Home -> NavEntry(key) {
-                        HomeDestination(snackbarHostState = snackbarHostState)
-                    }
+                } else {
+                    // 匹配通用页面或提供跨平台保底
+                    when (key) {
+                        is Home -> {
+                            HomeDestination(snackbarHostState = snackbarHostState)
+                        }
 
-                    is Login -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        val viewModel: LoginViewModel = koinViewModel()
-                        LoginScreen(
-                            viewModel = viewModel,
-                            onLoginSuccess = { navigator.goBack() },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                        is Login -> {
+                            val navigator = LocalNavigator.current
+                            val viewModel: LoginViewModel = koinViewModel()
+                            LoginScreen(
+                                viewModel = viewModel,
+                                onLoginSuccess = { navigator.goBack() },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
 
-                    is About -> NavEntry(key) {
-                        AboutScreen(
-                            modifier = Modifier.fillMaxSize(),
-                            snackbarHostState = snackbarHostState
-                        )
-                    }
+                        is About -> {
+                            AboutScreen(
+                                modifier = Modifier.fillMaxSize(),
+                                snackbarHostState = snackbarHostState
+                            )
+                        }
 
-                    is Search -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        val viewModel: SearchViewModel = koinViewModel()
-                        val userIdLong = key.userId?.toLongOrNull()
-                        val nickname = key.nickname
+                        is Search -> {
+                            val navigator = LocalNavigator.current
+                            val viewModel: SearchViewModel = koinViewModel()
+                            val userIdLong = key.userId?.toLongOrNull()
+                            val nickname = key.nickname
 
-                        LaunchedEffect(userIdLong, nickname) {
-                            if (userIdLong != null && nickname != null) {
-                                viewModel.initFromNavArgs(userIdLong, nickname)
+                            LaunchedEffect(userIdLong, nickname) {
+                                if (userIdLong != null && nickname != null) {
+                                    viewModel.initFromNavArgs(userIdLong, nickname)
+                                }
                             }
+                            SearchScreen(
+                                viewModel = viewModel,
+                                onPostClick = { postId -> navigator.navigate(PostDetail(postId)) },
+                                onLogClick = { navigator.navigate(LogViewer) },
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
-                        SearchScreen(
-                            viewModel = viewModel,
-                            onPostClick = { postId -> navigator.navigate(PostDetail(postId)) },
-                            onLogClick = { navigator.navigate(LogViewer) },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
 
-                    is SignInSettings -> NavEntry(key) {
-                        SignInSettingsScreen(snackbarHostState = snackbarHostState)
-                    }
-
-                    is ThemeCustomize -> NavEntry(key) {
-                        ThemeCustomizeScreen(modifier = Modifier.fillMaxSize())
-                    }
-
-                    is PostDetail -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        val viewModel: PostDetailViewModel = koinViewModel()
-                        PostDetailScreen(
-                            postId = key.postId,
-                            onPostDeleted = { navigator.goBack() },
-                            viewModel = viewModel,   
-                            snackbarHostState = snackbarHostState,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    is CreatePost -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        val viewModel: PostCreateViewModel = koinViewModel()
-                        PostCreateScreen(
-                            viewModel = viewModel,
-                            onBackClick = { navigator.goBack() },
-                            mode = "create",
-                            refundAppName = "",
-                            refundAppId = 0L,
-                            refundVersionId = 0L,
-                            refundPayMoney = 0,
-                            snackbarHostState = snackbarHostState,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    is CreateRefundPost -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        val viewModel: PostCreateViewModel = koinViewModel()
-                        PostCreateScreen(
-                            viewModel = viewModel,
-                            onBackClick = { navigator.goBack() },
-                            mode = "refund",
-                            refundAppName = key.appName,
-                            refundAppId = key.appId,
-                            refundVersionId = key.versionId,
-                            refundPayMoney = key.payMoney,
-                            snackbarHostState = snackbarHostState,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    is BrowseHistory -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        val viewModel: BrowseHistoryViewModel = koinViewModel() // 显式获取 ViewModel
-                        BrowseHistoryScreen(
-                            onPostClick = { postId -> navigator.navigate(PostDetail(postId)) },
-                            viewModel = viewModel, // 传递已获取的实例
-                            modifier = Modifier.fillMaxSize(),
-                            snackbarHostState = snackbarHostState
-                        )
-                    }
-
-                    is ImagePreview -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        ImagePreviewScreen(
-                            imageUrl = key.imageUrl,
-                            snackbarHostState = snackbarHostState,
-                            onClose = { navigator.goBack() }
-                        )
-                    }                
-
-                    is MyComments -> NavEntry(key) {
-                        MyCommentsScreen(modifier = Modifier.fillMaxSize())
-                    }
-
-                    is MyReviews -> NavEntry(key) {
-                        MyReviewsScreen(modifier = Modifier.fillMaxSize())
-                    }
-
-                    is UserDetail -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        val viewModel: UserDetailViewModel = koinViewModel()
-                        LaunchedEffect(key.userId, key.store) {
-                            viewModel.loadUserDetails(key.userId, key.store)
+                        is SignInSettings -> {
+                            SignInSettingsScreen(snackbarHostState = snackbarHostState)
                         }
-                        UserDetailScreen(
-                            viewModel = viewModel,
-                            onPostsClick = {
-                                val userData = viewModel.userData.value
-                                val nickname = userData?.displayName ?: "用户"
-                                navigator.navigate(MyPosts(key.userId, nickname))
-                            },
-                            onResourcesClick = { uid, targetStore ->
-                                navigator.navigate(
-                                    ResourcePlaza(
-                                        isMyResource = false,
-                                        userId = uid,
-                                        mode = "public",
-                                        storeName = targetStore.name
+
+                        is ThemeCustomize -> {
+                            ThemeCustomizeScreen(modifier = Modifier.fillMaxSize())
+                        }
+
+                        is PostDetail -> {
+                            val navigator = LocalNavigator.current
+                            val viewModel: PostDetailViewModel = koinViewModel()
+                            PostDetailScreen(
+                                postId = key.postId,
+                                onPostDeleted = { navigator.goBack() },
+                                viewModel = viewModel,   
+                                snackbarHostState = snackbarHostState,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        is CreatePost -> {
+                            val navigator = LocalNavigator.current
+                            val viewModel: PostCreateViewModel = koinViewModel()
+                            PostCreateScreen(
+                                viewModel = viewModel,
+                                onBackClick = { navigator.goBack() },
+                                mode = "create",
+                                refundAppName = "",
+                                refundAppId = 0L,
+                                refundVersionId = 0L,
+                                refundPayMoney = 0,
+                                snackbarHostState = snackbarHostState,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        is CreateRefundPost -> {
+                            val navigator = LocalNavigator.current
+                            val viewModel: PostCreateViewModel = koinViewModel()
+                            PostCreateScreen(
+                                viewModel = viewModel,
+                                onBackClick = { navigator.goBack() },
+                                mode = "refund",
+                                refundAppName = key.appName,
+                                refundAppId = key.appId,
+                                refundVersionId = key.versionId,
+                                refundPayMoney = key.payMoney,
+                                snackbarHostState = snackbarHostState,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        is BrowseHistory -> {
+                            val navigator = LocalNavigator.current
+                            val viewModel: BrowseHistoryViewModel = koinViewModel()
+                            BrowseHistoryScreen(
+                                onPostClick = { postId -> navigator.navigate(PostDetail(postId)) },
+                                viewModel = viewModel,
+                                modifier = Modifier.fillMaxSize(),
+                                snackbarHostState = snackbarHostState
+                            )
+                        }
+
+                        is ImagePreview -> {
+                            val navigator = LocalNavigator.current
+                            ImagePreviewScreen(
+                                imageUrl = key.imageUrl,
+                                snackbarHostState = snackbarHostState,
+                                onClose = { navigator.goBack() }
+                            )
+                        }                
+
+                        is MyComments -> {
+                            MyCommentsScreen(modifier = Modifier.fillMaxSize())
+                        }
+
+                        is MyReviews -> {
+                            MyReviewsScreen(modifier = Modifier.fillMaxSize())
+                        }
+
+                        is UserDetail -> {
+                            val navigator = LocalNavigator.current
+                            val viewModel: UserDetailViewModel = koinViewModel()
+                            LaunchedEffect(key.userId, key.store) {
+                                viewModel.loadUserDetails(key.userId, key.store)
+                            }
+                            UserDetailScreen(
+                                viewModel = viewModel,
+                                onPostsClick = {
+                                    val userData = viewModel.userData.value
+                                    val nickname = userData?.displayName ?: "用户"
+                                    navigator.navigate(MyPosts(key.userId, nickname))
+                                },
+                                onResourcesClick = { uid, targetStore ->
+                                    navigator.navigate(
+                                        ResourcePlaza(
+                                            isMyResource = false,
+                                            userId = uid,
+                                            mode = "public",
+                                            storeName = targetStore.name
+                                        )
                                     )
-                                )
-                            },
-                            onImagePreview = { imageUrl ->
-                                navigator.navigate(ImagePreview(imageUrl))
-                            },
-                            modifier = Modifier.fillMaxSize(),
-                            snackbarHostState = snackbarHostState
-                        )
-                    }
-
-                    is MyPosts -> NavEntry(key) {
-                        val viewModel: MyPostsViewModel = koinViewModel()
-                        MyPostsScreen(
-                            viewModel = viewModel,
-                            userId = key.userId,
-                            nickname = key.nickname,
-                            snackbarHostState = snackbarHostState,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    is FollowList -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        val viewModel: UserListViewModel = koinViewModel()
-                        LaunchedEffect(Unit) {
-                            viewModel.setListType(UserListType.FOLLOWERS)
-                            viewModel.loadInitialData()
+                                },
+                                onImagePreview = { imageUrl ->
+                                    navigator.navigate(ImagePreview(imageUrl))
+                                },
+                                modifier = Modifier.fillMaxSize(),
+                                snackbarHostState = snackbarHostState
+                            )
                         }
-                        val state by viewModel.uiState.collectAsStateWithLifecycle()
-                        UserListScreen(
-                            users = state.users,
-                            isLoading = state.isLoading,
-                            errorMessage = state.errorMessage,
-                            onLoadMore = { viewModel.loadNextPage() },
-                            onUserClick = { userId -> navigator.navigate(UserDetail(userId)) },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
 
-                    is FanList -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        val viewModel: UserListViewModel = koinViewModel()
-                        LaunchedEffect(Unit) {
-                            viewModel.setListType(UserListType.FANS)
-                            viewModel.loadInitialData()
+                        is MyPosts -> {
+                            val viewModel: MyPostsViewModel = koinViewModel()
+                            MyPostsScreen(
+                                viewModel = viewModel,
+                                userId = key.userId,
+                                nickname = key.nickname,
+                                snackbarHostState = snackbarHostState,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
-                        val state by viewModel.uiState.collectAsStateWithLifecycle()
-                        UserListScreen(
-                            users = state.users,
-                            isLoading = state.isLoading,
-                            errorMessage = state.errorMessage,
-                            onLoadMore = { viewModel.loadNextPage() },
-                            onUserClick = { userId -> navigator.navigate(UserDetail(userId)) },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
 
-                    is AccountProfile -> NavEntry(key) {
-                        val viewModel: UserProfileViewModel = koinViewModel()
-                        AccountProfileScreen(
-                            modifier = Modifier.fillMaxSize(),
-                            snackbarHostState = snackbarHostState,
-                            viewModel = viewModel,
-                            store = key.store
-                        )
-                    }
+                        is FollowList -> {
+                            val navigator = LocalNavigator.current
+                            val viewModel: UserListViewModel = koinViewModel()
+                            LaunchedEffect(Unit) {
+                                viewModel.setListType(UserListType.FOLLOWERS)
+                                viewModel.loadInitialData()
+                            }
+                            val state by viewModel.uiState.collectAsStateWithLifecycle()
+                            UserListScreen(
+                                users = state.users,
+                                isLoading = state.isLoading,
+                                errorMessage = state.errorMessage,
+                                onLoadMore = { viewModel.loadNextPage() },
+                                onUserClick = { userId -> navigator.navigate(UserDetail(userId)) },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
 
-                    is ResourcePlaza -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        ResourcePlazaScreen(
-                            isMyResourceMode = key.isMyResource,
-                            mode = key.mode,
-                            storeName = key.storeName,
-                            navigateToAppDetail = { appId, versionId, store ->
-                                navigator.navigate(AppDetail(appId, versionId, store))
-                            },
-                            userId = if (key.userId != -1L) key.userId.toString() else null,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                        is FanList -> {
+                            val navigator = LocalNavigator.current
+                            val viewModel: UserListViewModel = koinViewModel()
+                            LaunchedEffect(Unit) {
+                                viewModel.setListType(UserListType.FANS)
+                                viewModel.loadInitialData()
+                            }
+                            val state by viewModel.uiState.collectAsStateWithLifecycle()
+                            UserListScreen(
+                                users = state.users,
+                                isLoading = state.isLoading,
+                                errorMessage = state.errorMessage,
+                                onLoadMore = { viewModel.loadNextPage() },
+                                onUserClick = { userId -> navigator.navigate(UserDetail(userId)) },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
 
-                    is AppDetail -> NavEntry(key) {
-                        AppDetailScreen(
-                            appId = key.appId,
-                            versionId = key.versionId,
-                            storeName = key.storeName,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                    
-                    is AppPage -> NavEntry(key) {
-                        AppPage(
-                            packageName = key.packageName,
-                            onDismiss = onBack
-                        )
-                    }
-                    
-                    is SearchPage -> NavEntry(key) {
-                        SearchPage(
-                            onDismiss = onBack
-                        )
-                    }
+                        is AccountProfile -> {
+                            val viewModel: UserProfileViewModel = koinViewModel()
+                            AccountProfileScreen(
+                                modifier = Modifier.fillMaxSize(),
+                                snackbarHostState = snackbarHostState,
+                                viewModel = viewModel,
+                                store = key.store
+                            )
+                        }
 
-                    is CreateAppRelease -> NavEntry(key) {
-                        val viewModel: AppReleaseViewModel = koinViewModel()
-                        AppReleaseScreen(
-                            viewModel = viewModel,
-                            snackbarHostState = snackbarHostState,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                        is ResourcePlaza -> {
+                            val navigator = LocalNavigator.current
+                            ResourcePlazaScreen(
+                                isMyResourceMode = key.isMyResource,
+                                mode = key.mode,
+                                storeName = key.storeName,
+                                navigateToAppDetail = { appId, versionId, store ->
+                                    navigator.navigate(AppDetail(appId, versionId, store))
+                                },
+                                userId = if (key.userId != -1L) key.userId.toString() else null,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
 
-                    is UpdateAppRelease -> NavEntry(key) {
-                        val viewModel: AppReleaseViewModel = koinViewModel()
-                        if (key.appDetailJson.isNotBlank()) {
-                            val appDetail = KtorClient.JsonConverter.fromJson(key.appDetailJson)
-                            if (appDetail != null) {
-                                viewModel.populateFromAppDetail(appDetail)
+                        is AppDetail -> {
+                            AppDetailScreen(
+                                appId = key.appId,
+                                versionId = key.versionId,
+                                storeName = key.storeName,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        is CreateAppRelease -> {
+                            val viewModel: AppReleaseViewModel = koinViewModel()
+                            AppReleaseScreen(
+                                viewModel = viewModel,
+                                snackbarHostState = snackbarHostState,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        is UpdateAppRelease -> {
+                            val viewModel: AppReleaseViewModel = koinViewModel()
+                            if (key.appDetailJson.isNotBlank()) {
+                                val appDetail = KtorClient.JsonConverter.fromJson(key.appDetailJson)
+                                if (appDetail != null) {
+                                    viewModel.populateFromAppDetail(appDetail)
+                                }
+                            }
+                            AppReleaseScreen(
+                                viewModel = viewModel,
+                                snackbarHostState = snackbarHostState,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        is LogViewer -> {
+                            val viewModel: LogViewModel = koinViewModel()
+                            LogScreen(
+                                viewModel = viewModel,
+                                snackbarHostState = snackbarHostState,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        is MessageCenter -> {
+                            val navigator = LocalNavigator.current
+                            val viewModel: MessageViewModel = koinViewModel()
+                            MessageCenterScreen(
+                                viewModel = viewModel,
+                                onMessageClick = { postId -> navigator.navigate(PostDetail(postId)) },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        is Billing -> {
+                            val viewModel: BillingViewModel = koinViewModel()
+                            LaunchedEffect(Unit) { viewModel.loadBilling() }
+                            BillingScreen(viewModel = viewModel)
+                        }
+
+                        is PaymentCenterAdvanced -> {
+                            val viewModel: PaymentViewModel = koinViewModel()
+                            viewModel.setPaymentInfo(type = PaymentType.POST_REWARD, locked = false)
+                            PaymentCenterScreen(
+                                viewModel = viewModel,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        is PaymentForApp -> {
+                            val viewModel: PaymentViewModel = koinViewModel()
+                            viewModel.setPaymentInfo(
+                                type = PaymentType.APP_PURCHASE,
+                                appId = key.appId,
+                                appName = key.appName,
+                                versionId = key.versionId,
+                                price = key.price,
+                                iconUrl = key.iconUrl,
+                                previewContent = key.previewContent,
+                                locked = true
+                            )
+                            PaymentCenterScreen(
+                                viewModel = viewModel,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        is PaymentForPost -> {
+                            val viewModel: PaymentViewModel = koinViewModel()
+                            viewModel.setPaymentInfo(
+                                type = PaymentType.POST_REWARD,
+                                postId = key.postId,
+                                postTitle = key.postTitle,
+                                previewContent = key.previewContent,
+                                authorName = key.authorName,
+                                authorAvatar = key.authorAvatar,
+                                postTime = key.postTime,
+                                locked = false
+                            )
+                            PaymentCenterScreen(
+                                viewModel = viewModel,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        is UpdateSettings -> {
+                            val viewModel: UpdateSettingsViewModel = koinViewModel()
+                            UpdateSettingsScreen(
+                                viewModel = viewModel,
+                                snackbarHostState = snackbarHostState
+                            )
+                        }
+
+                        is Community -> {
+                            CommunityScreen(snackbarHostState = snackbarHostState)
+                        }
+
+                        is MyLikes -> {
+                            MyLikesScreen(snackbarHostState = snackbarHostState)
+                        }
+
+                        is HotPosts -> {
+                            HotPostsScreen(snackbarHostState = snackbarHostState)
+                        }
+
+                        is FollowingPosts -> {
+                            FollowingPostsScreen(snackbarHostState = snackbarHostState)
+                        }
+
+                        is RankingList -> {
+                            RankingListScreen()
+                        }
+
+                        is Player -> {
+                            val navigator = LocalNavigator.current
+                            val viewModel: PlayerViewModel = koinViewModel()
+                            LaunchedEffect(key.bvid) { viewModel.loadVideoData(key.bvid) }
+                            PlayerScreen(
+                                viewModel = viewModel,
+                                onBack = { navigator.goBack() }
+                            )
+                        }                
+
+                        // --- 以下为 Android 独占页面的跨平台保底占位 UI ---
+                        is PrefsReposPage -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("当前平台暂不支持仓库设置", color = Color.Gray)
                             }
                         }
-                        AppReleaseScreen(
-                            viewModel = viewModel,
-                            snackbarHostState = snackbarHostState,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
 
-                    is LogViewer -> NavEntry(key) {
-                        val viewModel: LogViewModel = koinViewModel()
-                        LogScreen(
-                            viewModel = viewModel,
-                            snackbarHostState = snackbarHostState,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    is MessageCenter -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        val viewModel: MessageViewModel = koinViewModel()
-                        MessageCenterScreen(
-                            viewModel = viewModel,
-                            onMessageClick = { postId -> navigator.navigate(PostDetail(postId)) },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    is Billing -> NavEntry(key) {
-                        val viewModel: BillingViewModel = koinViewModel()
-                        LaunchedEffect(Unit) { viewModel.loadBilling() }
-                        BillingScreen(viewModel = viewModel)
-                    }
-
-                    is PaymentCenterAdvanced -> NavEntry(key) {
-                        val viewModel: PaymentViewModel = koinViewModel()
-                        viewModel.setPaymentInfo(type = PaymentType.POST_REWARD, locked = false)
-                        PaymentCenterScreen(
-                            viewModel = viewModel,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    is PaymentForApp -> NavEntry(key) {
-                        val viewModel: PaymentViewModel = koinViewModel()
-                        viewModel.setPaymentInfo(
-                            type = PaymentType.APP_PURCHASE,
-                            appId = key.appId,
-                            appName = key.appName,
-                            versionId = key.versionId,
-                            price = key.price,
-                            iconUrl = key.iconUrl,
-                            previewContent = key.previewContent,
-                            locked = true
-                        )
-                        PaymentCenterScreen(
-                            viewModel = viewModel,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    is PaymentForPost -> NavEntry(key) {
-                        val viewModel: PaymentViewModel = koinViewModel()
-                        viewModel.setPaymentInfo(
-                            type = PaymentType.POST_REWARD,
-                            postId = key.postId,
-                            postTitle = key.postTitle,
-                            previewContent = key.previewContent,
-                            authorName = key.authorName,
-                            authorAvatar = key.authorAvatar,
-                            postTime = key.postTime,
-                            locked = false
-                        )
-                        PaymentCenterScreen(
-                            viewModel = viewModel,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    is UpdateSettings -> NavEntry(key) {
-                    val viewModel: UpdateSettingsViewModel = koinViewModel()
-                        UpdateSettingsScreen(
-                            viewModel = viewModel,
-                            snackbarHostState = snackbarHostState
-                        )
-                    }
-
-                    is Community -> NavEntry(key) {
-                        CommunityScreen(snackbarHostState = snackbarHostState)
-                    }
-
-                    is MyLikes -> NavEntry(key) {
-                        MyLikesScreen(snackbarHostState = snackbarHostState)
-                    }
-
-                    is HotPosts -> NavEntry(key) {
-                        HotPostsScreen(snackbarHostState = snackbarHostState)
-                    }
-
-                    is FollowingPosts -> NavEntry(key) {
-                        FollowingPostsScreen(snackbarHostState = snackbarHostState)
-                    }
-
-                    is RankingList -> NavEntry(key) {
-                        RankingListScreen()
-                    }
-
-                    is Player -> NavEntry(key) {
-                        val navigator = LocalNavigator.current
-                        val viewModel: PlayerViewModel = koinViewModel()
-                        LaunchedEffect(key.bvid) { viewModel.loadVideoData(key.bvid) }
-                        PlayerScreen(
-                            viewModel = viewModel,
-                            onBack = { navigator.goBack() }
-                        )
-                    }                
-                    
-                    is Explore -> NavEntry(key) {
-                        ExplorePage()                    
-                    }
-                    
-                    is SortFilterSheet -> NavEntry(key) {
-                        SortFilterSheet(onDismiss = onBack)
-                    }
-
-                    // 跨平台保底占位 UI
-                    is PrefsReposPage -> NavEntry(key) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                            Text("当前平台暂不支持仓库设置", color = Color.Gray)
+                        is StoreManager -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("当前平台暂不支持存储空间管理", color = Color.Gray)
+                            }
                         }
-                    }
 
-                    is StoreManager -> NavEntry(key) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                            Text("当前平台暂不支持存储空间管理", color = Color.Gray)
+                        is AppPage -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("当前平台暂不支持应用详情页", color = Color.Gray)
+                            }
                         }
-                    }
 
-                    // 保底逻辑
-                    else -> NavEntry(key) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                            Text("Unknown Key: ${key::class.simpleName}", color = Color.Red)
+                        is SearchPage -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("当前平台暂不支持搜索页", color = Color.Gray)
+                            }
+                        }
+
+                        is Explore -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("当前平台暂不支持探索页", color = Color.Gray)
+                            }
+                        }
+
+                        is SortFilterSheet -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("当前平台暂不支持筛选", color = Color.Gray)
+                            }
+                        }
+
+                        // 保底逻辑
+                        else -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("Unknown Key: ${key::class.simpleName}", color = Color.Red)
+                            }
                         }
                     }
                 }
