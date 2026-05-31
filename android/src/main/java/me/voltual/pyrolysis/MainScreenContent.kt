@@ -8,50 +8,137 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis
 
-import androidx.compose.ui.focus.FocusManager
+// Androidx & Jetpack Compose 核心基础与布局
+import androidx.compose.foundation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+
+// Jetpack Material 3 设计组件与图标
+import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
+
+// Jetpack Compose 状态管理
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+
+// Jetpack Lifecycle & ViewModel
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+
+// Jetpack Navigation 3 (包含 ViewModel 装饰器)
+import androidx.navigation3.runtime.*
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.scene.DialogSceneStrategy
+import androidx.navigation3.ui.NavDisplay
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+
+// Kotlin 协程与流
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.voltual.pyrolysis.data.UpdateInfo
-import me.voltual.pyrolysis.data.UpdateSettingsDataStore
-import me.voltual.pyrolysis.core.database.LogEntry
-import me.voltual.pyrolysis.core.database.LogDao
-import me.voltual.pyrolysis.data.UserAgreementDataStore
-import me.voltual.pyrolysis.ui.*
-import me.voltual.pyrolysis.core.ui.components.UserAgreementDialog
-import me.voltual.pyrolysis.core.ui.theme.*
-import me.voltual.pyrolysis.core.utils.UpdateCheckResult
-import me.voltual.pyrolysis.core.ui.components.UpdateDialog
-import me.voltual.pyrolysis.core.utils.UpdateChecker
+
+// Koin 依赖注入 (Android, Compose & ViewModel)
 import org.koin.android.ext.android.inject
 import org.koin.compose.koinInject
-import me.voltual.pyrolysis.ui.settings.repos.PrefsReposPage
-import me.voltual.pyrolysis.ui.settings.storage.StoreManagerScreen
+import org.koin.androidx.compose.koinViewModel
+
+// ----------------------------------------------------
+// 项目核心基础库、数据层与网络 (Core & Data)
+// ----------------------------------------------------
+import me.voltual.pyrolysis.AppStore
+import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.data.UpdateInfo
+import me.voltual.pyrolysis.data.UpdateSettingsDataStore
+import me.voltual.pyrolysis.data.UserAgreementDataStore
+import me.voltual.pyrolysis.core.database.LogEntry
+import me.voltual.pyrolysis.core.database.LogDao
+import me.voltual.pyrolysis.core.utils.UpdateCheckResult
+import me.voltual.pyrolysis.core.utils.UpdateChecker
+
+// 项目通用 UI 组件、主题与动画 (Core UI)
+import me.voltual.pyrolysis.core.ui.theme.*
+import me.voltual.pyrolysis.core.ui.theme.ThemeCustomizeScreen
+import me.voltual.pyrolysis.core.ui.components.UserAgreementDialog
+import me.voltual.pyrolysis.core.ui.components.UpdateDialog
+import me.voltual.pyrolysis.core.ui.animation.*
+
+// ----------------------------------------------------
+// 项目业务 UI 界面 (Feature Screens)
+// ----------------------------------------------------
+import me.voltual.pyrolysis.ui.*
+
+// 认证 (Auth)
+import me.voltual.pyrolysis.ui.auth.LoginScreen
+import me.voltual.pyrolysis.ui.auth.LoginViewModel
+
+// 社区 (Community)
+import me.voltual.pyrolysis.ui.community.*
+import me.voltual.pyrolysis.ui.community.compose.PostDetailScreen
+
+// 主页与排行 (Home & Rank)
+import me.voltual.pyrolysis.ui.home.*
+import me.voltual.pyrolysis.ui.rank.RankingListScreen
+
+// 搜索 (Search)
+import me.voltual.pyrolysis.ui.search.SearchScreen
+import me.voltual.pyrolysis.ui.search.SearchViewModel
+
+// 广场、应用详情与发现 (Plaza & App)
+import me.voltual.pyrolysis.ui.plaza.ResourcePlazaScreen
 import me.voltual.pyrolysis.ui.plaza.AppPage
 import me.voltual.pyrolysis.ui.plaza.SearchPage
 import me.voltual.pyrolysis.ui.plaza.ExplorePage
 import me.voltual.pyrolysis.ui.plaza.SortFilterSheet
+import me.voltual.pyrolysis.ui.plaza.AppDetailScreen
+import me.voltual.pyrolysis.ui.plaza.AppReleaseScreen
+import me.voltual.pyrolysis.ui.plaza.AppReleaseViewModel
+
+// 播放器 (Player)
+import me.voltual.pyrolysis.ui.player.PlayerScreen
+import me.voltual.pyrolysis.ui.player.PlayerViewModel
+
+// 用户中心 (User)
+import me.voltual.pyrolysis.ui.user.*
+import me.voltual.pyrolysis.ui.user.compose.UserListScreen
+
+// 消息与通知 (Message)
+import me.voltual.pyrolysis.ui.message.MessageCenterScreen
+import me.voltual.pyrolysis.ui.message.MessageViewModel
+
+// 支付与账单 (Payment & Billing)
+import me.voltual.pyrolysis.ui.payment.PaymentCenterScreen
+import me.voltual.pyrolysis.ui.payment.PaymentType
+import me.voltual.pyrolysis.ui.payment.PaymentViewModel
+import me.voltual.pyrolysis.ui.billing.BillingScreen
+import me.voltual.pyrolysis.ui.billing.BillingViewModel
+
+// 日志 (Log)
+import me.voltual.pyrolysis.ui.log.LogScreen
+import me.voltual.pyrolysis.ui.log.LogViewModel
+
+// 设置中心 (Settings)
+import me.voltual.pyrolysis.ui.settings.repos.PrefsReposPage
+import me.voltual.pyrolysis.ui.settings.storage.StoreManagerScreen
+import me.voltual.pyrolysis.ui.settings.signin.SignInSettingsScreen
+import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsScreen
+import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsViewModel
 
 val topLevelRoutes: Set<NavKey> = setOf(Home)
 

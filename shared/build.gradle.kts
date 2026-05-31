@@ -55,7 +55,9 @@ kotlin {
             dependencies {
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)              
-                    implementation(libs.compose.navigation3)                        
+                    implementation(libs.compose.navigation3)                                        implementation(libs.jetbrains.navigation3.ui)
+                      implementation(libs.jetbrains.lifecycle.viewmodelNavigation3)
+                        implementation(libs.jetbrains.material3.adaptiveNavigation3)
                 implementation(libs.compose.material3)
                 implementation(libs.ktor.client.core)
                     implementation(libs.markdown)
@@ -94,12 +96,12 @@ kotlin {
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.ijkplayer)
                                 implementation(libs.sqlite.bundled)
-                                    implementation(libs.compose.navigation3.ui)
+//                                    implementation(libs.compose.navigation3.ui)
                 implementation(project(":DanmakuFlameMaster"))
                                     implementation(libs.compose.adaptive)
-    implementation(libs.compose.adaptive.layout)
-    implementation(libs.compose.adaptive.navigation)
-                        implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+//    implementation(libs.compose.adaptive.layout)
+//    implementation(libs.compose.adaptive.navigation)
+//                        implementation(libs.androidx.lifecycle.viewmodel.navigation3)
                                                 implementation(libs.androidx.lifecycle.viewmodel.compose)
             }
         }
