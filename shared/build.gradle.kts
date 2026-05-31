@@ -69,7 +69,7 @@ kotlin {
                                 implementation(libs.kotlinx.io)
                     implementation(project(":ApkParser"))
                 implementation(libs.kotlinx.serialization.json)
-                implementation(libs.koin.android.compose)
+                implementation(libs.koin.viewmodel.compose)
                 implementation(libs.kotlinx.coroutines.core)
                             implementation(libs.components.resources)
                 implementation(libs.kotlinx.datetime)
@@ -95,6 +95,7 @@ kotlin {
             dependencies {
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.ijkplayer)
+                                implementation(libs.koin.android.compose)
                                 implementation(libs.sqlite.bundled)
 //                                    implementation(libs.compose.navigation3.ui)
                 implementation(project(":DanmakuFlameMaster"))
