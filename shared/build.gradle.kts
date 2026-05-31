@@ -55,7 +55,7 @@ kotlin {
             dependencies {
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)              
-                    implementation(libs.compose.navigation3)                                        implementation(libs.jetbrains.navigation3.ui)
+//                    implementation(libs.compose.navigation3)                                        implementation(libs.jetbrains.navigation3.ui)
                       implementation(libs.jetbrains.lifecycle.viewmodelNavigation3)
                         implementation(libs.jetbrains.material3.adaptiveNavigation3)
                 implementation(libs.compose.material3)
