@@ -134,9 +134,9 @@ koin-workmanager = { module = "io.insert-koin:koin-androidx-workmanager",version
 koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin-annotations" }
 koin-ksp-compiler = { module = "io.insert-koin:koin-ksp-compiler", version.ref = "koin-annotations" }
 koin-startup = { module = "io.insert-koin:koin-androidx-startup",version.ref = "koin"}
-compose-adaptive = { module = "androidx.compose.material3.adaptive:adaptive" }
-compose-adaptive-layout = { module = "androidx.compose.material3.adaptive:adaptive-layout" }
-compose-adaptive-navigation = { module = "androidx.compose.material3.adaptive:adaptive-navigation" }
+compose-adaptive = { module = "androidx.compose.material3.adaptive:adaptive", version.ref = "compose-adaptive" }
+compose-adaptive-layout = { module = "androidx.compose.material3.adaptive:adaptive-layout", version.ref = "compose-adaptive" }
+compose-adaptive-navigation = { module = "androidx.compose.material3.adaptive:adaptive-navigation", version.ref = "compose-adaptive" }
 # 网络与序列化
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "pyrolysis-ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "pyrolysis-ktor" }
