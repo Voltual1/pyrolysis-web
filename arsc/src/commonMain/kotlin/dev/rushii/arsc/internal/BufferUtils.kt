@@ -41,7 +41,7 @@ internal fun Source.readStringUtf16(charSize: Int): String {
 		if (code == 0 && actualLen == charSize) actualLen = i
 		chars[i] = code.toChar()
 	}
-	return String(chars, 0, actualLen)
+	return chars.concatToString(0, actualLen) // <-- 换成这个（注意参数是 startIndex 和 endIndex）
 }
 
 internal fun Sink.putStringUtf16(string: String, outSize: Int) {

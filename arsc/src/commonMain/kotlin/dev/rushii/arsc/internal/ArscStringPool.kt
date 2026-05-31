@@ -78,14 +78,14 @@ public data class ArscStringPool(
         }
 
         private fun readUtf16String(source: Source): String {
-            val charLen = readLen16(source)
-            val chars = CharArray(charLen)
-            for (i in 0 until charLen) {
-                chars[i] = source.readU16().toInt().toChar()
-            }
-            source.readU16() 
-            return String(chars)
-        }
+    val charLen = readLen16(source)
+    val chars = CharArray(charLen)
+    for (i in 0 until charLen) {
+        chars[i] = source.readU16().toInt().toChar()
+    }
+    source.readU16() 
+    return chars.concatToString()
+}
 
         private fun readLen16(source: Source): Int {
             val l = source.readU16().toInt()
