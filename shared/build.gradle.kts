@@ -64,6 +64,7 @@ kotlin {
                 implementation(libs.room3.runtime)
                 implementation(libs.sqlite)
                 implementation(libs.ktor.client.logging)
+                                implementation(libs.kotlinx.io)
                     implementation(project(":ApkParser"))
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.koin.android.compose)
