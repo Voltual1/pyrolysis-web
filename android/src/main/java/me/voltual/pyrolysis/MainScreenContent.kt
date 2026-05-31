@@ -254,9 +254,10 @@ fun MainScreenContent(
                     .roundScreenPadding()
                 ) {
                     BBQNavDisplay(
-    backStack = backStack,
-    onBack = onBack,
-    snackbarHostState = snackbarHostState,
+                        backStack = currentBackStack,
+                        onBack = { navigator.goBack() },
+                        snackbarHostState = snackbarHostState,
+                        modifier = Modifier.fillMaxSize(),
     platformEntryProvider = { key ->
         when (key) {
             is PrefsReposPage -> {
