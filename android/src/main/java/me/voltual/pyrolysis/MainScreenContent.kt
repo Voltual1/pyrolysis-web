@@ -45,6 +45,12 @@ import me.voltual.pyrolysis.core.ui.components.UpdateDialog
 import me.voltual.pyrolysis.core.utils.UpdateChecker
 import org.koin.android.ext.android.inject
 import org.koin.compose.koinInject
+import me.voltual.pyrolysis.ui.settings.repos.PrefsReposPage
+import me.voltual.pyrolysis.ui.settings.storage.StoreManagerScreen
+import me.voltual.pyrolysis.ui.plaza.AppPage
+import me.voltual.pyrolysis.ui.plaza.SearchPage
+import me.voltual.pyrolysis.ui.plaza.ExplorePage
+import me.voltual.pyrolysis.ui.plaza.SortFilterSheet
 
 val topLevelRoutes: Set<NavKey> = setOf(Home)
 
@@ -248,11 +254,33 @@ fun MainScreenContent(
                     .roundScreenPadding()
                 ) {
                     BBQNavDisplay(
-                        backStack = currentBackStack,
-                        onBack = { navigator.goBack() },
-                        snackbarHostState = snackbarHostState,
-                        modifier = Modifier.fillMaxSize()
-                    )
+    backStack = backStack,
+    onBack = onBack,
+    snackbarHostState = snackbarHostState,
+    platformEntryProvider = { key ->
+        when (key) {
+            is PrefsReposPage -> {
+                { PrefsReposPage() }
+            }
+            is StoreManager -> {
+                { StoreManagerScreen() }
+            }
+            is AppPage -> {
+                { AppPage(packageName = key.packageName, onDismiss = onBack) }
+            }
+            is SearchPage -> {
+                { SearchPage(onDismiss = onBack) }
+            }
+            is Explore -> {
+                { ExplorePage() }
+            }
+            is SortFilterSheet -> {
+                { SortFilterSheet(onDismiss = onBack) }
+            }
+            else -> null
+        }
+    }
+)
 
                     if (showAgreementDialog) {
                         UserAgreementDialog(
