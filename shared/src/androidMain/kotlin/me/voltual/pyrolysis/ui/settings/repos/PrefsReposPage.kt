@@ -68,7 +68,7 @@ import kotlinx.coroutines.launch
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
-fun PrefsReposPage(viewModel: PrefsVM = koinPyrolysisViewModel()) {
+actual fun PrefsReposPage(viewModel: PrefsVM = koinPyrolysisViewModel()) {
     val mActivity = LocalActivity.current as MainActivity
     val scope = rememberCoroutineScope()
     val paneNavigator = rememberListDetailPaneScaffoldNavigator<Any>()
