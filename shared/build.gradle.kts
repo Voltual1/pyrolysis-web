@@ -57,7 +57,6 @@ kotlin {
                 implementation(libs.compose.foundation)              
                     implementation(libs.compose.navigation3)                        
                 implementation(libs.compose.material3)
-                        implementation(libs.androidx.lifecycle.viewmodel.compose)
                 implementation(libs.ktor.client.core)
                     implementation(libs.markdown)
                 implementation(libs.ktor.client.content.negotiation)
@@ -100,6 +99,7 @@ kotlin {
     implementation(libs.compose.adaptive.layout)
     implementation(libs.compose.adaptive.navigation)
                         implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+                                                implementation(libs.androidx.lifecycle.viewmodel.compose)
             }
         }
 
