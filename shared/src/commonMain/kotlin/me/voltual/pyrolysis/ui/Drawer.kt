@@ -25,7 +25,6 @@ import me.voltual.pyrolysis.core.ui.icons.phosphor.*
 import me.voltual.pyrolysis.core.ui.icons.drawable.* // 导入转换后的图标
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey        
@@ -73,7 +72,6 @@ fun NavigationDrawerItems(
     drawerState: DrawerState,
     scope: CoroutineScope
 ) {
-    val context = LocalContext.current
     val authRepository: AuthRepository = koinInject()
 
     val allDrawerItems = remember {

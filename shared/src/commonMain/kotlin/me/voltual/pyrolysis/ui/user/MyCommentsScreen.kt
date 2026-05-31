@@ -24,13 +24,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler // 引入 Compose 跨平台 UriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import coil3.request.CachePolicy
-import coil3.request.ImageRequest
 import io.ktor.http.Url // 引入 Ktor 的 Url 解析
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AppStore
@@ -178,7 +175,9 @@ fun MyCommentsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.hideDeleteCommentDialog() }) {
+                TextButton(
+                    onClick = { viewModel.hideDeleteCommentDialog() }
+                ) {
                     Text("取消")
                 }
             }
@@ -202,11 +201,9 @@ fun MyCommentItem(
         Column(modifier = Modifier.padding(12.dp)) {
             // 评论头部
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // 修改点：直接传递 String 到 model，剥离 ImageRequest.Builder 及其多余依赖
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(comment.sender.avatarUrl ?: "https://icdn.binmt.cc/2603/69ad3fa30e30c.png")
-                        .diskCachePolicy(CachePolicy.DISABLED)
-                        .build(),
+                    model = comment.sender.avatarUrl ?: "https://icdn.binmt.cc/2603/69ad3fa30e30c.png",
                     contentDescription = "用户头像",
                     modifier = Modifier
                         .size(32.dp)

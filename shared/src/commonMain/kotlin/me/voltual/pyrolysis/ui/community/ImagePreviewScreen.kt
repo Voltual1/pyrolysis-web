@@ -32,26 +32,22 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalClipboardManager // 迎回老朋友
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale // 记得引入这个
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import coil3.compose.AsyncImage
-import coil3.request.CachePolicy
-import coil3.request.ImageRequest
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.core.ui.theme.BBQSnackbarHost
 import me.voltual.pyrolysis.core.utils.cleanUrl
 
-// 在函数头上直接压制弃用警告，眼不见心不烦
 @Suppress("DEPRECATION")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImagePreviewScreen(
-    imageUrl: String,
+    imageUrl: String, // 如果你外面传进来的确实是 avatarUrl，这里也可以改成 avatarUrl
     @Suppress("UNUSED_PARAMETER") snackbarHostState: SnackbarHostState, 
     onClose: () -> Unit
 ) {
-    // 愉快地继续使用旧版 API，直接传 AnnotatedString 极其省心
     val clipboardManager = LocalClipboardManager.current
     val internalSnackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -91,7 +87,7 @@ fun ImagePreviewScreen(
                             }
                         }
                     }
-                    // 2. 完美的手势融合：单击关闭、双击放大、长按复制
+                    // 2. 手势融合
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onTap = { onClose() },
@@ -105,9 +101,7 @@ fun ImagePreviewScreen(
                             },
                             onLongPress = {
                                 scope.launch {
-                                    // 老 API 直接塞字符串，一行搞定
                                     clipboardManager.setText(AnnotatedString(cleanedImageUrl))
-                                    
                                     internalSnackbarHostState.showSnackbar(
                                         message = "已复制图片链接"
                                     )
@@ -125,14 +119,10 @@ fun ImagePreviewScreen(
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(cleanedImageUrl)
-                        .size(coil3.size.Size.ORIGINAL)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .build(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize()
+                    model = cleanedImageUrl,
+                    contentDescription = "用户头像",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
             }
         }
