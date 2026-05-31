@@ -233,11 +233,5 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 }
 
 room3 {
-    // 明确告诉 Room 插件：我不导出 Schema
-    generateKotlinExtensions = true 
-}
-
-// 配合 KSP 禁用导出
-ksp {
-    arg("room.schemaLocation", "false")
+    schemaDirectory("$projectDir/schemas")
 }
