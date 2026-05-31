@@ -4,7 +4,7 @@
 //本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
-// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 你应该已经收到了一份 GNU 通用公共许可证副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.pyrolysis
 
@@ -346,30 +346,30 @@ fun MainScreenContent(
                         onBack = { navigator.goBack() },
                         snackbarHostState = snackbarHostState,
                         modifier = Modifier.fillMaxSize(),
-    platformEntryProvider = { key ->
-        when (key) {
-            is PrefsReposPage -> {
-                { PrefsReposPage() }
-            }
-            is StoreManager -> {
-                { StoreManagerScreen() }
-            }
-            is AppPage -> {
-                { AppPage(packageName = key.packageName, onDismiss = onBack) }
-            }
-            is SearchPage -> {
-                { SearchPage(onDismiss = onBack) }
-            }
-            is Explore -> {
-                { ExplorePage() }
-            }
-            is SortFilterSheet -> {
-                { SortFilterSheet(onDismiss = onBack) }
-            }
-            else -> null
-        }
-    }
-)
+                        platformEntryProvider = { key ->
+                            when (key) {
+                                is PrefsReposPage -> {
+                                    { PrefsReposPage() }
+                                }
+                                is StoreManager -> {
+                                    { StoreManagerScreen() }
+                                }
+                                is AppPage -> {
+                                    { AppPage(packageName = key.packageName, onDismiss = { navigator.goBack() }) }
+                                }
+                                is SearchPage -> {
+                                    { SearchPage(onDismiss = { navigator.goBack() }) }
+                                }
+                                is Explore -> {
+                                    { ExplorePage() }
+                                }
+                                is SortFilterSheet -> {
+                                    { SortFilterSheet(onDismiss = { navigator.goBack() }) }
+                                }
+                                else -> null
+                            }
+                        }
+                    )
 
                     if (showAgreementDialog) {
                         UserAgreementDialog(
