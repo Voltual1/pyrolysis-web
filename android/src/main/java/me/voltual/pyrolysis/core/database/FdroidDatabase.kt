@@ -104,34 +104,29 @@ abstract class FdroidDatabase : RoomDatabase() {
 
         // 适配 Room 3.0 异步 SQLiteConnection 的数据库回调
         val dbCreateCallback = object : RoomDatabase.Callback() {
-    override suspend fun onOpen(connection: SQLiteConnection) {
-        super.onOpen(connection)
-        
-        // 使用 IO 协程异步处理，防止阻塞主流程
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                // 1. 直接用 SQLiteConnection 查询数量 (假设表名叫 repository)
-                val count = connection.prepare("SELECT COUNT(*) FROM repository").use { statement ->
-                    if (statement.step()) statement.getLong(0) else 0L
+            override suspend fun onOpen(connection: SQLiteConnection) {
+                super.onOpen(connection)
+                
+                // 使用 IO 协程进行异步数据填充，避免阻塞主线程和数据库初始化
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val dao = org.koin.java.KoinJavaComponent.get<RepositoryDao>(RepositoryDao::class.java)
+                        
+                        // 只有数据库为1时才初始化默认仓库
+                        if (dao.getCount() == 1) {
+                            val allRepos = (Repository.defaultRepositories + loadPresetRepos())
+                                .distinctBy { it.address }
+                                .toTypedArray()
+                            
+                            dao.put(*allRepos)
+                            Log.d(TAG, "Database initialized with ${allRepos.size} default repositories.")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to seed initial repositories", e)
+                    }
                 }
-
-                // 2. 只有为空时才初始化
-                if (count == 0L) {
-                    val allRepos = (Repository.defaultRepositories + loadPresetRepos())
-                        .distinctBy { it.address }
-
-                    // 3. 此时再从 Koin 拿 DAO（因为此时 FdroidDatabase 早已建立完毕，onOpen 异步执行时它已就绪）
-                    val dao = org.koin.java.KoinJavaComponent.get<RepositoryDao>(RepositoryDao::class.java)
-                    dao.put(*allRepos.toTypedArray())
-                    
-                    Log.d(TAG, "Database initialized with ${allRepos.size} default repositories.")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to seed initial repositories", e)
             }
         }
-    }
-}
 
         /**
          * 从系统不同分区加载 OEM 预置仓库
