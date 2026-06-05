@@ -27,7 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.ktor.http.Url
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.BuildConfig 
+import me.voltual.pyrolysis.shared.BuildConfig 
 import me.voltual.pyrolysis.core.ui.components.MarkDownText
 import me.voltual.pyrolysis.core.ui.icons.drawable.* import kotlinx.datetime.TimeZone
 import kotlin.time.Clock
