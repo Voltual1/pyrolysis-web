@@ -6,6 +6,7 @@ import org.w3c.dom.Worker
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import me.voltual.pyrolysis.core.database.AppDatabase
+import androidx.room3.RoomDatabase
 import me.voltual.pyrolysis.core.proto.createDataStore
 import me.voltual.pyrolysis.core.proto.createPreferenceDataStore
 import me.voltual.pyrolysis.core.proto.UserCredentials
