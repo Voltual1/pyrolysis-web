@@ -40,6 +40,7 @@ kotlin {
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
+        useEsModules()
     }
 
     applyDefaultHierarchyTemplate()
