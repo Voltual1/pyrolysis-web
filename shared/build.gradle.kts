@@ -101,7 +101,6 @@ kotlin {
         }
 
         wasmJsMain.dependencies {
-            implementation(npm("@androidx/sqlite-web-worker", file("sqlite-worker-pkg")))
             implementation(libs.sqlite.web)
             implementation(libs.kotlinx.io)             
         }
