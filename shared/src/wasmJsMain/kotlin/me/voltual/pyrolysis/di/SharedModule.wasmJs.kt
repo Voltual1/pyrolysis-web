@@ -15,11 +15,12 @@ import org.koin.dsl.module
 actual val platformModule: Module = module {
     // 1. WasmJS 专属的 Room 数据库构建
     single<AppDatabase> { 
+        val worker = js("new Worker('sqlite.worker.js', { type: 'module' })").unsafeCast<Worker>()
+
         Room.databaseBuilder<AppDatabase>(
             name = "pyrolysis_database"
         )
-        // 修复：Web 端必须使用 WebWorkerSQLiteDriver 并传入对应的 Worker 实例
-        .setDriver(WebWorkerSQLiteDriver(Worker("sqlite.worker.js")))
+        .setDriver(WebWorkerSQLiteDriver(worker)) // 传入打上 module 标签的 worker
         .build()
     }
 
