@@ -19,6 +19,7 @@ import me.voltual.pyrolysis.ui.settings.signin.SignInSettingsViewModel
 import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsViewModel
 import me.voltual.pyrolysis.ui.user.*
 import me.voltual.pyrolysis.core.ui.theme.ThemeColorDataStore
+import me.voltual.pyrolysis.ui.payment.PaymentViewModel
 import me.voltual.pyrolysis.feature.store.repository.XiaoQuRepository
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
 import me.voltual.pyrolysis.AppStore
@@ -85,6 +86,7 @@ val commonModule = module {
     viewModel { UserProfileViewModel(get(), get()) }
     viewModel { UserListViewModel(get()) }
     viewModel { UserDetailViewModel(get()) }
+    viewModel { PaymentViewModel(get(), get(PAYMENT_STORE_QUALIFIER)) }    
     viewModel { SignInSettingsViewModel(get(), get()) }
 
     viewModel { CommunityViewModel() }

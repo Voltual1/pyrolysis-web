@@ -59,3 +59,9 @@ npx esbuild worker.js --bundle --minify --format=esm --outfile=sqlite.worker.js
     js("new Worker('sqlite.worker.js', { type: 'module' })")
     接着.setDriver(WebWorkerSQLiteDriver(worker)) // 传入打上 module 标签的 worker
     
+    必须在wasmjs目标配置useEsModules()！
+wasmJs {
+        browser()
+        useEsModules()
+    }
+    不然浏览器不认识sqlite.worker.js
