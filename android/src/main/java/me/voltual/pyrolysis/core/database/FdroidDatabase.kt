@@ -110,10 +110,10 @@ abstract class FdroidDatabase : RoomDatabase() {
                 // 使用 IO 协程进行异步数据填充，避免阻塞主线程和数据库初始化
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        val dao = org.koin.java.KoinJavaComponent.get<RepositoryDao>(RepositoryDao::class.java)
+                        val dao = val dao = get<RepositoryDao>(RepositoryDao::class.java)
                         
-                        // 只有数据库为1时才初始化默认仓库
-                        if (dao.getCount() == 1) {
+                        // 只有数据库为空时才初始化默认仓库
+                        if (dao.getCount() == 0) {
                             val allRepos = (Repository.defaultRepositories + loadPresetRepos())
                                 .distinctBy { it.address }
                                 .toTypedArray()
@@ -154,7 +154,7 @@ val databaseModule = module {
             "main_fdroid_database.db"
         )
         .setDriver(androidx.sqlite.driver.bundled.BundledSQLiteDriver()) // 必须显式设置 Room3 驱动
-        .addCallback(FdroidDatabase.dbCreateCallback) // 修复：挂载初始化回调
+        .addCallback(dbCreateCallback) // 修复：挂载初始化回调
         .fallbackToDestructiveMigration(true)
         .build()
     }
