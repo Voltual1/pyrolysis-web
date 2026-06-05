@@ -5,6 +5,7 @@
 合并了
 https://github.com/duangsuse-valid-projects/SomeAXML
 的代码
+（这两个项目的io被改成kotlinx.io作为项目的模块用于在KMP中解析apk信息）
 吸取了
 https://slack-chats.kotlinlang.org/t/32605455/how-can-i-configure-kmp-to-stop-downloading-the-nodejs-and-y
 的教训添加了
@@ -50,3 +51,11 @@ eruda是个好东西🙃
 
 wasmjs的字体加载参考了kotlinconf
 用preloadFont在ComposeViewport中进行非阻塞的字体预加载
+
+配置了coi-serviceworker.js使room3正常工作不会触发SQLiteException: ut.oo1.OpfsDb is not a constructor
+加入了sqlite3-opfs-async-proxy.js使room3正常工作
+npx esbuild worker.js --bundle --minify --format=esm --outfile=sqlite.worker.js
+然后private fun createWasmWorker(): Worker = 
+    js("new Worker('sqlite.worker.js', { type: 'module' })")
+    接着.setDriver(WebWorkerSQLiteDriver(worker)) // 传入打上 module 标签的 worker
+    
