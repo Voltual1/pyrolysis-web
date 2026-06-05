@@ -24,6 +24,7 @@ actual val platformModule: Module = module {
             name = "pyrolysis_database"
         )
         .setDriver(WebWorkerSQLiteDriver(worker)) // 传入打上 module 标签的 worker
+        .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
         .build()
     }
 
