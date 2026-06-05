@@ -12,10 +12,13 @@ import me.voltual.pyrolysis.core.proto.UserCredentials
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
+private fun createWasmWorker(): Worker = 
+    js("new Worker('sqlite.worker.js', { type: 'module' })")
+
 actual val platformModule: Module = module {
     // 1. WasmJS 专属的 Room 数据库构建
     single<AppDatabase> { 
-        val worker = js("new Worker('sqlite.worker.js', { type: 'module' })").unsafeCast<Worker>()
+        val worker = createWasmWorker()
 
         Room.databaseBuilder<AppDatabase>(
             name = "pyrolysis_database"
