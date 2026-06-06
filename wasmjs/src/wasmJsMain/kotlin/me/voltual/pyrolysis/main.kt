@@ -26,81 +26,54 @@ import org.jetbrains.compose.resources.preloadFont
 import me.voltual.pyrolysis.di.commonModule
 import me.voltual.pyrolysis.di.platformModule
 import me.voltual.pyrolysis.Res
-import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.unifont
 import me.voltual.pyrolysis.core.ui.theme.BBQTheme
 import me.voltual.pyrolysis.core.ui.icons.drawable.Fire
 import org.koin.core.context.startKoin
-import androidx.compose.ui.platform.LocalUriHandler
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
-    startKoin {
-        modules(commonModule, platformModule)
-    }
+    startKoin {
+        modules(commonModule, platformModule)
+    }
 
-    val composeRoot = document.getElementById("ComposeApp")!!
+    val composeRoot = document.getElementById("ComposeApp")!!
 
-    ComposeViewport(composeRoot) {
-        @OptIn(ExperimentalResourceApi::class)
-        val unifontState = preloadFont(Res.font.unifont)
-        val unifont = unifontState.value
-        val fontFamilyResolver = LocalFontFamilyResolver.current
-        
-        BBQTheme {
-            if (unifont != null) {
-                LaunchedEffect(unifont) {
-                    fontFamilyResolver.preload(FontFamily(listOf(unifont)))
-                }
+    ComposeViewport(composeRoot) {
+        @OptIn(ExperimentalResourceApi::class)
+        val unifontState = preloadFont(Res.font.unifont)
+        val unifont = unifontState.value
+        val fontFamilyResolver = LocalFontFamilyResolver.current
+        
+        // 外部包裹 BBQTheme 以确保启动页能获取到主题中的 primaryContainer 颜色
+        BBQTheme {
+            if (unifont != null) {
+                LaunchedEffect(unifont) {
+                    fontFamilyResolver.preload(FontFamily(listOf(unifont)))
+                }
 
-                // 在这里注入平台拦截逻辑
-                PyrolysisApp(
-                    platformEntryProvider = { key, navigator ->
-                        when (key) {
-                            // 拦截 Player Key
-                            is Player -> {
-                                {
-                                    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
-                                    
-                                    LaunchedEffect(key.bvid) {
-                                        // 1. 打开外部浏览器链接
-                                        uriHandler.openUri("https://www.bilibili.com/video/${key.bvid}")
-                                        // 2. 将导航栈回退，避免留在空白保底页
-                                        navigator.goBack()
-                                    }
-                                    
-                                    // 渲染一个短暂的加载或空白占位，防止视觉闪烁
-                                    Box(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularProgressIndicator()
-                                    }
-                                }
-                            }
-                            else -> null
-                        }
-                    }
-                )
-            } else {
-                // WasmJS 启动页不变...
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.primaryContainer
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Fire,
-                            contentDescription = "Loading",
-                            modifier = Modifier.size(100.dp),
-                            tint = Color.Unspecified
-                        )
-                    }
-                }
-            }
-        }
-    }
+                PyrolysisApp(
+                    platformEntryProvider = { _, _ -> null }
+                )
+            } else {
+                // WasmJS 启动页：背景为主题的 primaryContainer，中间是 Fire 图标
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Fire,
+                            contentDescription = "Loading",
+                            modifier = Modifier.size(100.dp),
+                            tint = Color.Unspecified // 保持图标原始颜色
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
