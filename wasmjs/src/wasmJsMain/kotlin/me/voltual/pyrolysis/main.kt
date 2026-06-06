@@ -33,47 +33,47 @@ import org.koin.core.context.startKoin
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
-    startKoin {
-        modules(commonModule, platformModule)
-    }
+    startKoin {
+        modules(commonModule, platformModule)
+    }
 
-    val composeRoot = document.getElementById("ComposeApp")!!
+    val composeRoot = document.getElementById("ComposeApp")!!
 
-    ComposeViewport(composeRoot) {
-        @OptIn(ExperimentalResourceApi::class)
-        val unifontState = preloadFont(Res.font.unifont)
-        val unifont = unifontState.value
-        val fontFamilyResolver = LocalFontFamilyResolver.current
-        
-        // 外部包裹 BBQTheme 以确保启动页能获取到主题中的 primaryContainer 颜色
-        BBQTheme {
-            if (unifont != null) {
-                LaunchedEffect(unifont) {
-                    fontFamilyResolver.preload(FontFamily(listOf(unifont)))
-                }
+    ComposeViewport(composeRoot) {
+        @OptIn(ExperimentalResourceApi::class)
+        val unifontState = preloadFont(Res.font.unifont)
+        val unifont = unifontState.value
+        val fontFamilyResolver = LocalFontFamilyResolver.current
+        
+        // 外部包裹 BBQTheme 以确保启动页能获取到主题中的 primaryContainer 颜色
+        BBQTheme {
+            if (unifont != null) {
+                LaunchedEffect(unifont) {
+                    fontFamilyResolver.preload(FontFamily(listOf(unifont)))
+                }
 
-                PyrolysisApp(
-                    platformEntryProvider = { _, _ -> null }
-                )
-            } else {
-                // WasmJS 启动页：背景为主题的 primaryContainer，中间是 Fire 图标
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.primaryContainer
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Fire,
-                            contentDescription = "Loading",
-                            modifier = Modifier.size(100.dp),
-                            tint = Color.Unspecified // 保持图标原始颜色
-                        )
-                    }
-                }
-            }
-        }
-    }
+                PyrolysisApp(
+                    platformEntryProvider = { _, _ -> null }
+                )
+            } else {
+                // WasmJS 启动页：背景为主题的 primaryContainer，中间是 Fire 图标
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Fire,
+                            contentDescription = "Loading",
+                            modifier = Modifier.size(100.dp),
+                            tint = Color.Unspecified // 保持图标原始颜色
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
