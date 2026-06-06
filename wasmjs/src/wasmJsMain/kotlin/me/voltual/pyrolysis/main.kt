@@ -24,6 +24,8 @@ import me.voltual.pyrolysis.unifont
 import me.voltual.pyrolysis.core.ui.theme.BBQTheme
 import me.voltual.pyrolysis.core.ui.icons.drawable.Fire
 import org.koin.core.context.startKoin
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.navigation3.runtime.LocalNavigator
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
@@ -39,18 +41,45 @@ fun main() {
         val unifont = unifontState.value
         val fontFamilyResolver = LocalFontFamilyResolver.current
         
-        // 外部包裹 BBQTheme 以确保启动页能获取到主题中的 primaryContainer 颜色
         BBQTheme {
             if (unifont != null) {
                 LaunchedEffect(unifont) {
                     fontFamilyResolver.preload(FontFamily(listOf(unifont)))
                 }
 
+                // 在这里实现平台级页面注入
                 PyrolysisApp(
-                    platformEntryProvider = { _, _ -> null }
+                    platformEntryProvider = { key ->
+                        // 拦截并匹配 Player 路由
+                        if (key is Player) {
+                            @Composable {
+                                val uriHandler = LocalUriHandler.current
+                                val navigator = LocalNavigator.current
+                                
+                                LaunchedEffect(key.bvid) {
+                                    if (key.bvid.isNotBlank()) {
+                                        // 1. 在浏览器新标签页（或当前页）打开 Bilibili 链接
+                                        uriHandler.openUri("https://www.bilibili.com/video/${key.bvid}")
+                                    }
+                                    // 2. 联动回退导航栈，防止 Wasm 页面卡在一个空白的 Player 路由上
+                                    navigator.goBack()
+                                }
+
+                                // 渲染一个过渡的加载中 UI 或保持空白
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator() // 或者直接放空 Box()
+                                }
+                            }
+                        } else {
+                            null // 其他页面依然走公共保底逻辑
+                        }
+                    }
                 )
             } else {
-                // WasmJS 启动页：背景为主题的 primaryContainer，中间是 Fire 图标
+                // WasmJS 启动页
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.primaryContainer
@@ -63,7 +92,7 @@ fun main() {
                             imageVector = Fire,
                             contentDescription = "Loading",
                             modifier = Modifier.size(100.dp),
-                            tint = Color.Unspecified // 保持图标原始颜色
+                            tint = Color.Unspecified
                         )
                     }
                 }
