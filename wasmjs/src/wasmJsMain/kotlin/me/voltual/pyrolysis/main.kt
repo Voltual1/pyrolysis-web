@@ -1,5 +1,11 @@
 //Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//（或任意更新的版本）的条款重新分发和/或修改它。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 
 package me.voltual.pyrolysis
 
@@ -47,37 +53,37 @@ fun main() {
                     fontFamilyResolver.preload(FontFamily(listOf(unifont)))
                 }
 
+                // 在这里注入平台拦截逻辑
                 PyrolysisApp(
-                    platformEntryProvider = { key ->
+                    platformEntryProvider = { key, navigator ->
                         when (key) {
-                        is Player -> {           
-                                val uriHandler = LocalUriHandler.current
-                                val navigator = LocalNavigator.current
-                                
-                                LaunchedEffect(key.bvid) {
-                                    if (key.bvid.isNotBlank()) {
-                                        // 1. 在浏览器新标签页（或当前页）打开 Bilibili 链接
+                            // 拦截 Player Key
+                            is Player -> {
+                                {
+                                    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                                    
+                                    LaunchedEffect(key.bvid) {
+                                        // 1. 打开外部浏览器链接
                                         uriHandler.openUri("https://www.bilibili.com/video/${key.bvid}")
+                                        // 2. 将导航栈回退，避免留在空白保底页
+                                        navigator.goBack()
                                     }
-                                    // 2. 联动回退导航栈，防止 Wasm 页面卡在一个空白的 Player 路由上
-                                    navigator.goBack()
-                                }
-
-                                // 渲染一个过渡的加载中 UI 或保持空白
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator() // 或者直接放空 Box()
+                                    
+                                    // 渲染一个短暂的加载或空白占位，防止视觉闪烁
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
                                 }
                             }
-                        } else {
-                            null // 其他页面依然走公共保底逻辑
+                            else -> null
                         }
                     }
                 )
             } else {
-                // WasmJS 启动页
+                // WasmJS 启动页不变...
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.primaryContainer
