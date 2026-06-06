@@ -26,7 +26,6 @@ import me.voltual.pyrolysis.core.ui.theme.BBQTheme
 import me.voltual.pyrolysis.core.ui.icons.drawable.Fire
 import org.koin.core.context.startKoin
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.navigation3.runtime.LocalNavigator
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
@@ -48,12 +47,10 @@ fun main() {
                     fontFamilyResolver.preload(FontFamily(listOf(unifont)))
                 }
 
-                // 在这里实现平台级页面注入
                 PyrolysisApp(
                     platformEntryProvider = { key ->
-                        // 拦截并匹配 Player 路由
-                        if (key is Player) {
-                            @Composable {
+                        when (key) {
+                        is Player -> {           
                                 val uriHandler = LocalUriHandler.current
                                 val navigator = LocalNavigator.current
                                 
