@@ -38,7 +38,7 @@ class PyrolysisNetworkException(message: String, cause: Throwable? = null) : Exc
 object KtorClient {
     private val BASE_URL = ApiBaseUrl
     private const val UPLOAD_BASE_URL = "https://file.bz6.top/"
-    private const val WANYUEYUN_UPLOAD_BASE_URL = WanyueyunUploadApiBaseUrl
+    private val WANYUEYUN_UPLOAD_BASE_URL = WanyueyunUploadApiBaseUrl
     
     private const val MAX_RETRIES = 3
     private val RETRY_DELAY = 1000.milliseconds
