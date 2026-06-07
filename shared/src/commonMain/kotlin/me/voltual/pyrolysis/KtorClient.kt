@@ -36,9 +36,9 @@ import kotlin.time.Duration.Companion.seconds
 class PyrolysisNetworkException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 object KtorClient {
-    private const val BASE_URL = "http://apk.xiaoqu.online/"
+    private val BASE_URL = ApiBaseUrl
     private const val UPLOAD_BASE_URL = "https://file.bz6.top/"
-    private const val WANYUEYUN_UPLOAD_BASE_URL = "http://wanyueyun-x.xbjstd.cn:9812/"
+    private const val WANYUEYUN_UPLOAD_BASE_URL = WanyueyunUploadApiBaseUrl
     
     private const val MAX_RETRIES = 3
     private val RETRY_DELAY = 1000.milliseconds
