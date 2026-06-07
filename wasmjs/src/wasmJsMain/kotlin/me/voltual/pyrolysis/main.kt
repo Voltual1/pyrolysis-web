@@ -36,6 +36,8 @@ fun main() {
     startKoin {
         modules(commonModule, platformModule)
     }
+    
+    initCoil()
 
     val composeRoot = document.getElementById("ComposeApp")!!
 

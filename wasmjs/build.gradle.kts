@@ -32,6 +32,8 @@ kotlin {
             
             // 修复：补齐 Compose 资源加载核心依赖，使 Wasm 壳工程能解析 FontResource
             implementation(libs.components.resources)
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor)
             
             implementation(libs.koin.core)
             implementation(libs.compose.navigation3)
