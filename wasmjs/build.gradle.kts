@@ -14,7 +14,7 @@ kotlin {
         outputModuleName = "pyrolysis-wasm"
         browser()
         binaries.executable()
-        nodejs()        
+        useEsModules()
     }
 
     applyDefaultHierarchyTemplate()
