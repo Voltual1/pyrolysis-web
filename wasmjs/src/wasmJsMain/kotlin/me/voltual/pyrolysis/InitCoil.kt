@@ -17,6 +17,7 @@ import coil3.util.DebugLogger
 import coil3.memory.MemoryCache
 import coil3.disk.DiskCache
 import coil3.request.CachePolicy
+import okio.Path
 
 internal val platformContext: PlatformContext = PlatformContext.INSTANCE
 
@@ -24,26 +25,62 @@ fun initCoil() {
     SingletonImageLoader.setSafe {
         ImageLoader.Builder(platformContext)
             .components {
+                // 挂载万能图片中转拦截器
                 add(UniversalImageProxyInterceptor())
             }
+            // 显式配置内存缓存
             .memoryCache {
                 MemoryCache.Builder()
                     .maxSizePercent(platformContext, 0.25)
                     .build()
             }
-            // 直接重写 diskCache，返回一个完全不关联实际文件系统的空壳
+            // 塞给它一个“完全不依赖文件系统”的空 DiskCache 实现！
             .diskCache {
-                DiskCache.Builder()
-                    // 核心：强制将其最大体积限制为 0 字节，阻止任何写入
-                    .maxSize(0) 
-                    // 重点：不要去调 FileSystem.SYSTEM 
-                    // 如果编译器强制要求传入 directory，可以传一个由空文件系统生成的虚拟路径
-                    // 或者依赖下面这一行将策略彻底掐死：
-                    .build()
+                object : DiskCache {
+                    override val fileSystem get() = throw UnsupportedOperationException("WASM环境下不启用文件系统")
+                    override val directory: Path get() = throw UnsupportedOperationException("WASM环境下不启用路径")
+                    override val maxSize: Long get() = 0L
+                    override val size: Long get() = 0L
+                    
+                    override fun clear() {}
+                    override fun get(key: String): DiskCache.Snapshot? = null
+                    override fun openEditor(key: String): DiskCache.Editor? = null
+                    override fun openSnapshot(key: String): DiskCache.Snapshot? = null
+                    override fun remove(key: String): Boolean = false
+                }
             }
-            // 严防死守，继续禁用策略
+            // 策略也全面禁用
             .diskCachePolicy(CachePolicy.DISABLED)
             .logger(DebugLogger())
             .build()
+    }
+}
+
+/**
+ * 万能图片代理拦截器
+ */
+private class UniversalImageProxyInterceptor : Interceptor {
+    override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
+        val originalRequest = chain.request
+        val data = originalRequest.data
+
+        val newChain = if (data is String && (data.startsWith("http://") || data.startsWith("https://"))) {
+            val isAlreadyProxied = data.contains("/proxy-img/")
+            
+            if (!isAlreadyProxied) {
+                val newUri = "/proxy-img/$data"
+                val newRequest = originalRequest.newBuilder()
+                    .data(newUri)
+                    .diskCachePolicy(CachePolicy.DISABLED) 
+                    .build()
+                chain.withRequest(newRequest)
+            } else {
+                chain
+            }
+        } else {
+            chain
+        }
+
+        return newChain.proceed()
     }
 }
