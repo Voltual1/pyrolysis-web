@@ -6,7 +6,9 @@ import coil3.SingletonImageLoader
 import coil3.intercept.Interceptor
 import coil3.request.ImageResult
 import coil3.util.DebugLogger
+// 如果导入了网络和内存缓存相关的类
 import coil3.request.CachePolicy
+import coil3.memory.MemoryCache
 
 internal val platformContext: PlatformContext = PlatformContext.INSTANCE
 
