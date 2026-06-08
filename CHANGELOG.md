@@ -74,4 +74,6 @@ wasmJs {
 一定要用import coil3.compose.setSingletonImageLoaderFactory来初始化啊啊啊啊啊！
 正确修复wasmjs的coil加载图片    
 
+啊啊啊啊。就算是代理，coil本身没有那么聪明coil只认绝对url，不会识别相对url路径!!
+
 Platform.kt的实现参考了kotlinconf
