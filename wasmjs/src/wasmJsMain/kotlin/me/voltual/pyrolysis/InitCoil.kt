@@ -15,9 +15,7 @@ import coil3.intercept.Interceptor
 import coil3.request.ImageResult
 import coil3.util.DebugLogger
 import coil3.memory.MemoryCache
-import coil3.disk.DiskCache
 import coil3.request.CachePolicy
-import okio.Path
 
 internal val platformContext: PlatformContext = PlatformContext.INSTANCE
 
@@ -28,28 +26,18 @@ fun initCoil() {
                 // 挂载万能图片中转拦截器
                 add(UniversalImageProxyInterceptor())
             }
-            // 显式配置内存缓存
+            // 显式配置内存缓存（完全足够 Wasm 平台使用）
             .memoryCache {
                 MemoryCache.Builder()
                     .maxSizePercent(platformContext, 0.25)
                     .build()
             }
-            // 塞给它一个“完全不依赖文件系统”的空 DiskCache 实现！
-            .diskCache {
-                object : DiskCache {
-                    override val fileSystem get() = throw UnsupportedOperationException("WASM环境下不启用文件系统")
-                    override val directory: Path get() = throw UnsupportedOperationException("WASM环境下不启用路径")
-                    override val maxSize: Long get() = 0L
-                    override val size: Long get() = 0L
-                    
-                    override fun clear() {}
-                    override fun get(key: String): DiskCache.Snapshot? = null
-                    override fun openEditor(key: String): DiskCache.Editor? = null
-                    override fun openSnapshot(key: String): DiskCache.Snapshot? = null
-                    override fun remove(key: String): Boolean = false
-                }
-            }
-            // 策略也全面禁用
+            // 显式向 Builder 注入 null 作为磁盘缓存！
+            // 显式传入 null 会强行覆盖掉 Coil3 默认的多平台隐式 DiskCache 初始化行为，
+            // 从而彻底斩断 Coil 与底层 Okio FileSystem.SYSTEM 的任何联系！
+            .diskCache(null) 
+            
+            // 全局声明禁用磁盘策略
             .diskCachePolicy(CachePolicy.DISABLED)
             .logger(DebugLogger())
             .build()
@@ -69,9 +57,10 @@ private class UniversalImageProxyInterceptor : Interceptor {
             
             if (!isAlreadyProxied) {
                 val newUri = "/proxy-img/$data"
+                
                 val newRequest = originalRequest.newBuilder()
                     .data(newUri)
-                    .diskCachePolicy(CachePolicy.DISABLED) 
+                    .diskCachePolicy(CachePolicy.DISABLED) // 请求级别再次声明不写磁盘
                     .build()
                 chain.withRequest(newRequest)
             } else {
