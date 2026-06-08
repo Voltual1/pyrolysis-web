@@ -21,31 +21,29 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.ktor.http.Url
 import me.voltual.pyrolysis.data.UpdateInfo
-import me.voltual.pyrolysis.getPlatformId 
+import me.voltual.pyrolysis.getPlatformId
 
 @Composable
 fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
     val uriHandler = LocalUriHandler.current
-    val platformId = getPlatformId() // "web-wasm" 或 "android"
+    val platformId = getPlatformId()
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismiss
     ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            shape = MaterialTheme.shapes.medium,
+            shape = MaterialTheme.shapes.medium
         ) {
-            // 改回你钟爱的 Column，并附加 verticalScroll 确保一长串日志能通顶滚动
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
-                    .verticalScroll(rememberScrollState()), 
-                horizontalAlignment = Alignment.CenterHorizontally 
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 1. 标题
                 Text(
                     text = "发现新版本：${updateInfo.tag_name}",
                     textAlign = TextAlign.Center,
@@ -55,7 +53,6 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
-                // 2. 超长更新日志正文
                 Text(
                     text = updateInfo.body,
                     textAlign = TextAlign.Start,
@@ -65,10 +62,9 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
                 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 3. 差异化精准渲染（Android 吐 APK / Wasm 吐 ZIP）
                 if (platformId == "android") {
                     Text(
-                        text = " 提示：32位设备请下载v7a，64位下载v8a",
+                        text = "💡 提示：32位设备请下载v7a，64位下载v8a",
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodySmall,
@@ -110,14 +106,13 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
                                 containerColor = MaterialTheme.colorScheme.secondary
                             )
                         ) {
-                            Text(text = "下载构建产物包 ${asset.name}")
+                            Text(text = "下载部署包 ${asset.name}")
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
                 
-                // 4. 底部关闭动作按钮（会随着 Column 一起滑到最底部）
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.End)
@@ -126,5 +121,5 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
                 }
             }
         }
-    )
+    }
 }
