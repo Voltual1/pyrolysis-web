@@ -23,24 +23,25 @@ fun initCoil() {
     SingletonImageLoader.setSafe {
         ImageLoader.Builder(platformContext)
             .components {
-                // 挂载万能图片中转拦截器
                 add(UniversalImageProxyInterceptor())
             }
-            // 显式配置内存缓存（完全足够 Wasm 平台使用）
             .memoryCache {
                 MemoryCache.Builder()
                     .maxSizePercent(platformContext, 0.25)
                     .build()
             }
-            .diskCache(null) 
-            
-            // 全局声明禁用磁盘策略
+            // 模仿官方示例，直接传递一个明确返回 null 的闭包！
+            // 确保触发 .diskCache(factory: () -> DiskCache?) 重载，
+            // 从而彻底、干净地抹除掉 Coil 内部隐式自动生成的默认磁盘缓存工厂！
+            .diskCache { 
+                null 
+            }
+            // 双重保险
             .diskCachePolicy(CachePolicy.DISABLED)
             .logger(DebugLogger())
             .build()
     }
 }
-
 /**
  * 万能图片代理拦截器
  */

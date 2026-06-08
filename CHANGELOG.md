@@ -66,7 +66,8 @@ wasmJs {
     不然浏览器不认识sqlite.worker.js
     
     
-参考了https://slack-chats.kotlinlang.org/t/29888854/anyone-here-successfully-use-coil-image-library-with-wasmjs-
-修复wasmjs的coil加载图片    
+尝试参考了https://slack-chats.kotlinlang.org/t/29888854/anyone-here-successfully-use-coil-image-library-with-wasmjs-
+并参考https://github.com/coil-kt/coil/blob/main/samples/shared/src/wasmJsMain/kotlin/sample/common/imageLoader.wasmJs.kt
+正确修复wasmjs的coil加载图片    
 
 Platform.kt的实现参考了kotlinconf
