@@ -22,25 +22,23 @@ import coil3.request.CachePolicy
 
 internal val platformContext: PlatformContext = PlatformContext.INSTANCE
 
-fun initCoil() {
-    setSingletonImageLoaderFactory {
-        ImageLoader.Builder(platformContext)
-            .components {
-                add(UniversalImageProxyInterceptor())
-            }
-            .memoryCache {
-                MemoryCache.Builder()
-                    .maxSizePercent(platformContext, 0.25)
-                    .build()
-            }
-            // 除掉 Coil 内部隐式自动生成的默认磁盘缓存工厂！
-            .diskCache { 
-                newDiskCache()
-            }
-            .crossfade(true)
-            .logger(DebugLogger())
-            .build()
-    }
+fun createImageLoader(context: PlatformContext): ImageLoader {
+    return ImageLoader.Builder(context)
+        .components {
+            add(UniversalImageProxyInterceptor())
+        }
+        .memoryCache {
+            MemoryCache.Builder()
+                .maxSizePercent(context, 0.25)
+                .build()
+        }
+        .diskCache { 
+        // 除掉 Coil 内部隐式自动生成的默认磁盘缓存工厂！
+            newDiskCache()
+        }
+        .crossfade(true)
+        .logger(DebugLogger())
+        .build()
 }
 /**
  * 万能图片代理拦截器

@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.browser.document
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.preloadFont
+import coil3.compose.setSingletonImageLoaderFactory
 import me.voltual.pyrolysis.di.commonModule
 import me.voltual.pyrolysis.di.platformModule
 import me.voltual.pyrolysis.Res
@@ -41,6 +42,9 @@ fun main() {
     val composeRoot = document.getElementById("ComposeApp")!!
 
     ComposeViewport(composeRoot) {
+    setSingletonImageLoaderFactory { context ->
+            createImageLoader(context)
+        }
         @OptIn(ExperimentalResourceApi::class)
         val unifontState = preloadFont(Res.font.unifont)
         val unifont = unifontState.value
@@ -50,7 +54,6 @@ fun main() {
         BBQTheme {
             if (unifont != null) {
                 LaunchedEffect(unifont) {
-                    initCoil() // 执行 Coil 初始化
                     fontFamilyResolver.preload(FontFamily(listOf(unifont)))
                 }
 
