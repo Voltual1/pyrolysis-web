@@ -101,7 +101,6 @@ compose-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", versi
 libsu-core = { module = "com.github.topjohnwu.libsu:core", version.ref = "libsu" }
 
 # 图片与异步
-[libraries]
 
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-compose-wasm = { module = "io.coil-kt.coil3:coil-compose-wasm-js", version.ref = "coil" }
