@@ -29,6 +29,7 @@ kotlin {
             implementation(libs.compose.ui)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
+            implementation(libs.koin.compose)
             implementation(libs.koin.core)            
             // 修复：补齐 Compose 资源加载核心依赖，使 Wasm 壳工程能解析 FontResource
             implementation(libs.components.resources)
