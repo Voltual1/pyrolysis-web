@@ -102,7 +102,10 @@ kotlin {
         }
 
         wasmJsMain.dependencies {
-            implementation(libs.ktor.client.js)
+            implementation(libs.ktor.client.js.wasm)                    
+            // 这两个库会接管 Wasm 层的初始化钩子，彻底干掉那个无处安放的文件系统异常！
+            implementation(libs.coil.compose.wasm)
+            implementation(libs.coil.network.ktor.wasm)                
             implementation(libs.sqlite.web)
             implementation(libs.kotlinx.io)             
         }

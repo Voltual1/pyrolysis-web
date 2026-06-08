@@ -32,9 +32,6 @@ fun initCoil() {
                     .maxSizePercent(platformContext, 0.25)
                     .build()
             }
-            // 显式向 Builder 注入 null 作为磁盘缓存！
-            // 显式传入 null 会强行覆盖掉 Coil3 默认的多平台隐式 DiskCache 初始化行为，
-            // 从而彻底斩断 Coil 与底层 Okio FileSystem.SYSTEM 的任何联系！
             .diskCache(null) 
             
             // 全局声明禁用磁盘策略

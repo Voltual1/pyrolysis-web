@@ -64,3 +64,7 @@ wasmJs {
         useEsModules()
     }
     不然浏览器不认识sqlite.worker.js
+    
+    
+参考了https://slack-chats.kotlinlang.org/t/29888854/anyone-here-successfully-use-coil-image-library-with-wasmjs-
+修复wasmjs的coil加载图片    
