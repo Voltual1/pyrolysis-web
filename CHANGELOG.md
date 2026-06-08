@@ -68,3 +68,5 @@ wasmJs {
     
 参考了https://slack-chats.kotlinlang.org/t/29888854/anyone-here-successfully-use-coil-image-library-with-wasmjs-
 修复wasmjs的coil加载图片    
+
+Platform.kt的实现参考了kotlinconf

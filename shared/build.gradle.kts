@@ -77,7 +77,6 @@ kotlin {
                 implementation(libs.filekit.dialogs)
                 implementation(libs.filekit.dialogs.compose)
                 implementation(libs.coil.compose)
-                implementation(libs.coil.network.ktor)
                 
                 // DataStore library
                 implementation("androidx.datastore:datastore-core:1.3.0-alpha09")
