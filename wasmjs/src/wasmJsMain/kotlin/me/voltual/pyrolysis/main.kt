@@ -50,6 +50,7 @@ fun main() {
         BBQTheme {
             if (unifont != null) {
                 LaunchedEffect(unifont) {
+                    initCoil() // 执行 Coil 初始化
                     fontFamilyResolver.preload(FontFamily(listOf(unifont)))
                 }
 
