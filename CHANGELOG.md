@@ -70,6 +70,8 @@ wasmJs {
     
 尝试参考了https://slack-chats.kotlinlang.org/t/29888854/anyone-here-successfully-use-coil-image-library-with-wasmjs-
 并参考https://github.com/coil-kt/coil/blob/main/samples/shared/src/wasmJsMain/kotlin/sample/common/imageLoader.wasmJs.kt
+参考kotlinconf实现coil拦截器，不要像kotlinconf用import coil3.SingletonImageLoader
+一定要用import coil3.compose.setSingletonImageLoaderFactory来初始化啊啊啊啊啊！
 正确修复wasmjs的coil加载图片    
 
 Platform.kt的实现参考了kotlinconf

@@ -10,7 +10,9 @@ package me.voltual.pyrolysis
 
 import coil3.ImageLoader
 import coil3.PlatformContext
-import coil3.SingletonImageLoader
+//import coil3.SingletonImageLoader
+//一定要用Compose的setSingletonImageLoaderFactory啊啊啊啊啊！！！！
+import coil3.compose.setSingletonImageLoaderFactory
 import coil3.intercept.Interceptor
 import coil3.request.ImageResult
 import coil3.util.DebugLogger
@@ -21,7 +23,7 @@ import coil3.request.CachePolicy
 internal val platformContext: PlatformContext = PlatformContext.INSTANCE
 
 fun initCoil() {
-    SingletonImageLoader.setSafe {
+    setSingletonImageLoaderFactory {
         ImageLoader.Builder(platformContext)
             .components {
                 add(UniversalImageProxyInterceptor())
