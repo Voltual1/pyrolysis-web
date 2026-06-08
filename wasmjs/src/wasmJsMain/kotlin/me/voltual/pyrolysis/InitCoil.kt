@@ -30,12 +30,11 @@ fun initCoil() {
                     .maxSizePercent(platformContext, 0.25)
                     .build()
             }
-            // 模仿官方示例，直接传递一个明确返回 null 的闭包！
-            // 确保触发 .diskCache(factory: () -> DiskCache?) 重载，
-            // 从而彻底、干净地抹除掉 Coil 内部隐式自动生成的默认磁盘缓存工厂！
+            // 除掉 Coil 内部隐式自动生成的默认磁盘缓存工厂！
             .diskCache { 
-                null 
+                newDiskCache()
             }
+            //不能直接传null，要用一个方法包裹一下
             // 双重保险
             .diskCachePolicy(CachePolicy.DISABLED)
             .logger(DebugLogger())

@@ -19,7 +19,9 @@ allprojects {
         project.the<org.jetbrains.kotlin.gradle.targets.wasm.yarn.WasmYarnRootEnvSpec>().download = false
     }
 }
+（这倒不是什么网络问题，是因为插件自动下载就算网络好的也找不到下载失败）
 设置PREFER_PROJECT解决kotlinWasmBinaryenSetup找不到com.github.webassembly.binaryen的问题。
+（如果是RepositoriesMode.PREFER_SETTINGS，Gradle只能在项目配置的什么Maven中心仓库找结果到处找不到，还不如设置成PREFER_PROJECT让插件自己随便找）
 在gradle.properties中kotlin.js.yarn=false，让org.jetbrains.kotlin.gradle.targets.wasm.yarn.WasmYarnPlugin'不要自动下载Yarn啊（我根本没有用）
 agp升级到9.0:
 The 'org.jetbrains.kotlin.android' plugin in project ':android' is no longer required for Kotlin support since AGP 9.0.
