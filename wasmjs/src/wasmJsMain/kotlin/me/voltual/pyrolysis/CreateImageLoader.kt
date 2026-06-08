@@ -24,19 +24,14 @@ internal val platformContext: PlatformContext = PlatformContext.INSTANCE
 
 fun createImageLoader(context: PlatformContext): ImageLoader {
     return ImageLoader.Builder(context)
-/*        .components {
+        .components {
             add(UniversalImageProxyInterceptor())
-        }*/
-/*        .memoryCache {
-            MemoryCache.Builder()
-                .maxSizePercent(context, 0.25)
-                .build()
-        }*/
+        }
         .diskCache { 
         // 除掉 Coil 内部隐式自动生成的默认磁盘缓存工厂！
             newDiskCache()
         }
-//        .crossfade(true)
+        .crossfade(true)
         .build()
 }
 /**
