@@ -56,12 +56,7 @@ private class UniversalImageProxyInterceptor : Interceptor {
                 
                 val newRequest = originalRequest.newBuilder()
                     .data(newUri)
-                     // 这里也要除掉 Coil 内部隐式自动生成的默认磁盘缓存工厂！
-                    .diskCache { 
-                        newDiskCache()
-                    }
                     .crossfade(true)
-                    .diskCachePolicy(CachePolicy.DISABLED) // 请求级别再次声明不写磁盘
                     .build()
                 chain.withRequest(newRequest)
             } else {
