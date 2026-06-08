@@ -18,15 +18,16 @@ import coil3.request.ImageResult
 import coil3.util.DebugLogger
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
+import kotlinx.browser.window 
 import coil3.request.CachePolicy
 
 internal val platformContext: PlatformContext = PlatformContext.INSTANCE
 
 fun createImageLoader(context: PlatformContext): ImageLoader {
     return ImageLoader.Builder(context)
-/*        .components {
+        .components {
             add(UniversalImageProxyInterceptor())
-        }*/
+        }
         .diskCache { 
         // 除掉 Coil 内部隐式自动生成的默认磁盘缓存工厂！
             newDiskCache()
@@ -46,7 +47,11 @@ private class UniversalImageProxyInterceptor : Interceptor {
             val isAlreadyProxied = data.contains("/proxy-img/")
             
             if (!isAlreadyProxied) {
-                val newUri = "/proxy-img/$data"
+                // 1. 获取当前 Wasm 网页在浏览器里的真实 Origin (例如 https://your-worker.workers.dev)
+                val currentOrigin = window.location.origin.removeSuffix("/")
+                
+                // 2. 拼接成绝对 URL，向 Coil 证明：“老兄，这绝对是个网络请求！”
+                val newUri = "$currentOrigin/proxy-img/$data"
                 
                 val newRequest = originalRequest.newBuilder()
                     .data(newUri)
