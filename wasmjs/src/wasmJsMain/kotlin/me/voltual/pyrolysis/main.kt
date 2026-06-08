@@ -33,11 +33,10 @@ import org.koin.core.context.startKoin
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
+    initCoil()
     startKoin {
         modules(commonModule, platformModule)
-    }
-    
-    initCoil()
+    }    
 
     val composeRoot = document.getElementById("ComposeApp")!!
 
