@@ -15,7 +15,7 @@ import coil3.intercept.Interceptor
 import coil3.request.ImageResult
 import coil3.util.DebugLogger
 import coil3.memory.MemoryCache
-import coil3.request.CachePolicy
+import coil3.request.crossfade
 
 internal val platformContext: PlatformContext = PlatformContext.INSTANCE
 
@@ -34,9 +34,7 @@ fun initCoil() {
             .diskCache { 
                 newDiskCache()
             }
-            //不能直接传null，要用一个方法包裹一下
-            // 双重保险
-            .diskCachePolicy(CachePolicy.DISABLED)
+            .crossfade(true)
             .logger(DebugLogger())
             .build()
     }
