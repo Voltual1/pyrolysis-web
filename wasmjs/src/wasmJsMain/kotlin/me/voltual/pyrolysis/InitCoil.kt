@@ -6,6 +6,8 @@ import coil3.SingletonImageLoader
 import coil3.intercept.Interceptor
 import coil3.request.ImageResult
 import coil3.util.DebugLogger
+// 如果导入了网络和内存缓存相关的类
+import coil3.memory.MemoryCache
 
 internal val platformContext: PlatformContext = PlatformContext.INSTANCE
 
@@ -16,14 +18,19 @@ fun initCoil() {
                 // 挂载万能图片中转拦截器
                 add(UniversalImageProxyInterceptor())
             }
+            // 显式配置内存缓存（可选，调大一点可以提升流畅度）
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(platformContext, 0.25) // 占用可用内存的 25%
+                    .build()
+            }
             .logger(DebugLogger())
             .build()
     }
 }
 
 /**
- * 万能图片代理拦截器
- * 自动对所有的网络图片执行同源代理转换
+ * 万能图片代理拦截器（保持不变）
  */
 private class UniversalImageProxyInterceptor : Interceptor {
     override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
@@ -31,13 +38,15 @@ private class UniversalImageProxyInterceptor : Interceptor {
         val data = originalRequest.data
 
         val newChain = if (data is String && (data.startsWith("http://") || data.startsWith("https://"))) {
-            // 过滤：如果图片链接已经被套过壳（比如重复进入拦截器），则不再处理
             val isAlreadyProxied = data.contains("/proxy-img/")
             
             if (!isAlreadyProxied) {
-                // 原地转为相对路径，浏览器会将其视为百分之百安全的同源请求，直接绕过 require-corp 的审查！
                 val newUri = "/proxy-img/$data"
-                val newRequest = originalRequest.newBuilder().data(newUri).build()
+                val newRequest = originalRequest.newBuilder()
+                    .data(newUri)
+                    // 此显式禁用当前请求的磁盘行为
+                    .diskCachePolicy(CachePolicy.DISABLED) 
+                    .build()
                 chain.withRequest(newRequest)
             } else {
                 chain
