@@ -30,8 +30,8 @@ android {
         applicationId = "me.voltual.pyrolysis"
         minSdk = 24
         targetSdk = 37
-        versionCode = 671
-        versionName = "23.5"
+        versionCode = 672
+        versionName = "23.6"
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         // 此处删除了 resourceConfigurations

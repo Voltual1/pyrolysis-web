@@ -18,8 +18,8 @@ buildConfig {
     useKotlinOutput()
     packageName("me.voltual.pyrolysis.shared")
     
-    buildConfigField("VERSION_NAME", "23.5")
-    buildConfigField("VERSION_CODE", 671) 
+    buildConfigField("VERSION_NAME", "23.6")
+    buildConfigField("VERSION_CODE", 672) 
 }
 
 kotlin {

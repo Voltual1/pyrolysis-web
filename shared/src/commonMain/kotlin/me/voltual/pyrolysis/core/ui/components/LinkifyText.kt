@@ -22,12 +22,19 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import io.ktor.http.Url
+import me.voltual.pyrolysis.ApiUrlProvider
 import me.voltual.pyrolysis.ui.*
 
 /**
- * 内部帖子链接正则 (Kotlin Regex)
+ * 内部帖子链接正则 
+ * 使用 ApiUrlProvider.apiBaseUrl 动态构建正则表达式
  */
-private val INTERNAL_POST_LINK_REGEX = Regex("""http://apk\.xiaoqu\.online/post/(\d+)\.html""")
+private fun getInternalPostLinkRegex(): Regex {
+    val baseUrl = ApiUrlProvider.apiBaseUrl.trimEnd('/')
+    // 转义特殊字符，确保 URL 中的点等符号被正确匹配
+    val escapedBaseUrl = baseUrl.replace(".", "\\.").replace("/", "\\/")
+    return Regex("""$escapedBaseUrl/post/(\d+)\.html""")
+}
 
 /**
  * B站视频链接正则 (Kotlin Regex)
@@ -71,6 +78,9 @@ fun LinkifyText(
 
     // 初始化跨平台的 B站视频点击处理器
     val biliVideoHandler = rememberBiliVideoHandler(navigator, uriHandler)
+    
+    // 获取动态正则表达式
+    val internalPostRegex = remember { getInternalPostLinkRegex() }
 
     val textStyle = if (style.color == Color.Unspecified) {
         style.copy(color = MaterialTheme.colorScheme.onSurface)
@@ -78,12 +88,12 @@ fun LinkifyText(
         style
     }
         
-    val annotatedString = remember(text, linkColor) {
+    val annotatedString = remember(text, linkColor, internalPostRegex) {
         val processedText = text.replace("<br>", "\n")
         buildAnnotatedString {
             append(processedText)
 
-            val postMatches = INTERNAL_POST_LINK_REGEX.findAll(processedText).map { result ->
+            val postMatches = internalPostRegex.findAll(processedText).map { result ->
                 LinkMatch(
                     range = result.range,
                     text = result.groups[1]?.value ?: "",
