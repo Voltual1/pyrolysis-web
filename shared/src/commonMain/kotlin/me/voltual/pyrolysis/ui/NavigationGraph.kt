@@ -49,7 +49,7 @@ import me.voltual.pyrolysis.ui.search.SearchViewModel
 import me.voltual.pyrolysis.ui.settings.signin.SignInSettingsScreen
 import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsScreen
 import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsViewModel
-import me.voltual.pyrolysis.ui.settings.proxy.ProxySettingsScreen
+//import me.voltual.pyrolysis.ui.settings.proxy.ProxySettingsScreen
 import me.voltual.pyrolysis.core.ui.theme.ThemeCustomizeScreen
 import me.voltual.pyrolysis.ui.user.*
 import me.voltual.pyrolysis.ui.user.compose.UserListScreen
@@ -439,12 +439,12 @@ fun BBQNavDisplay(
                             )
                         }
 
-                        is ProxySettings -> {
+/*                        is ProxySettings -> {
                             ProxySettingsScreen(
                                 snackbarHostState = snackbarHostState,
                                 modifier = Modifier.fillMaxSize()
                             )
-                        }
+                        }*/
 
                         is Community -> {
                             CommunityScreen(snackbarHostState = snackbarHostState)

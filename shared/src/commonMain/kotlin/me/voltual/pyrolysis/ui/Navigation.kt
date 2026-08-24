@@ -30,8 +30,8 @@ data object StoreManager : AppDestination
 @Serializable
 data object UpdateSettings : AppDestination
 
-@Serializable
-data object ProxySettings : AppDestination
+//@Serializable
+//data object ProxySettings : AppDestination
 
 // --- 社区与帖子 ---
 @Serializable

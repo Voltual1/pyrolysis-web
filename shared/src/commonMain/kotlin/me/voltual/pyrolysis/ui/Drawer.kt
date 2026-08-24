@@ -93,7 +93,7 @@ fun NavigationDrawerItems(
             items.add(DrawerItem("prefsrepos", "仓库管理", IconSource.Vector(Phosphor.Graph), PrefsReposPage))
             items.add(DrawerItem("store_manager", "存储管理", IconSource.Vector(Appbackuprestore), StoreManager))
             items.add(DrawerItem("explore", "仓库探索", IconSource.Vector(Phosphor.Compass), Explore))
-            items.add(DrawerItem("proxy_settings", "网络代理", IconSource.Vector(Phosphor.GlobeSimple), ProxySettings))
+//            items.add(DrawerItem("proxy_settings", "网络代理", IconSource.Vector(Phosphor.GlobeSimple), ProxySettings))
         }
 
         items.addAll(

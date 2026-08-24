@@ -51,7 +51,7 @@ import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.data.UpdateInfo
 import me.voltual.pyrolysis.data.UpdateSettingsDataStore
 import me.voltual.pyrolysis.data.UserAgreementDataStore
-import me.voltual.pyrolysis.data.ProxySettingsDataStore
+//import me.voltual.pyrolysis.data.ProxySettingsDataStore
 import me.voltual.pyrolysis.core.database.LogEntry
 import me.voltual.pyrolysis.core.database.LogDao
 import me.voltual.pyrolysis.core.utils.UpdateCheckResult
@@ -90,7 +90,7 @@ val topLevelRoutes: Set<NavKey> = setOf(Home)
 @Composable
 fun PyrolysisApp(
     agreementDataStore: UserAgreementDataStore = koinInject(), 
-    proxySettingsDataStore: ProxySettingsDataStore = koinInject(),
+//    proxySettingsDataStore: ProxySettingsDataStore = koinInject(),
     modifier: Modifier = Modifier,
     platformEntryProvider: @Composable (NavKey, Navigator) -> (@Composable () -> Unit)? = { _, _ -> null }
 ) {
@@ -103,7 +103,7 @@ fun PyrolysisApp(
     val navigator = remember(focusManager, topAppBarController, navigationState) {
         Navigator(navigationState, focusManager, topAppBarController)
     }
-
+/*
     // 监听网络代理设置变化，动态将最新基址回写到内存提供者中
     LaunchedEffect(Unit) {
         launch {
@@ -122,7 +122,7 @@ fun PyrolysisApp(
             }.collect {}
         }
     }
-
+*/
     CompositionLocalProvider(
         LocalNavigator provides navigator,
         LocalNavigationState provides navigationState,

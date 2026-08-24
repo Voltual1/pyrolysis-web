@@ -72,7 +72,7 @@ val commonModule = module {
     single { StorageSettingsDataStore(get(STORAGE_SETTINGS_STORE_QUALIFIER)) }
     single { PostDraftDataStore(get(DRAFT_STORE_QUALIFIER)) } 
     single { UpdateSettingsDataStore(get(UPDATE_SETTINGS_STORE_QUALIFIER)) }
-    single { ProxySettingsDataStore(get(PROXY_SETTINGS_STORE_QUALIFIER)) }
+//    single { ProxySettingsDataStore(get(PROXY_SETTINGS_STORE_QUALIFIER)) }
     single { SignInSettingsDataStore(get(SIGN_IN_SETTINGS_STORE_QUALIFIER)) }
     single { PlayerDataStore(get(PLAYER_SETTINGS_STORE_QUALIFIER)) }
     single { DrawerMenuDataStore(get(DRAWER_MENU_STORE_QUALIFIER)) }
