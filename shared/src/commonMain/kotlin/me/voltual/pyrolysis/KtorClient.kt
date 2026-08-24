@@ -97,29 +97,30 @@ object KtorClient {
     )
 
     @Serializable
-    data class PostDetail(
-        val id: Long,
-        val title: String,
-        val content: String,
-        val userid: Long,
-        val create_time: String,
-        val update_time: String,
-        val username: String,
-        val nickname: String,
-        val usertx: String,
-        val hierarchy: String,
-        val section_name: String,
-        val sub_section_name: String,
-        val view: String,
-        val thumbs: String,
-        val comment: String,
-        val img_url: List<String>? = null,
-        val video_url: String? = null,
-        val ip_address: String,
-        val create_time_ago: String,
-        val is_thumbs: Int,
-        val is_collection: Int
-    )
+data class PostDetail(
+    val id: Long,
+    val title: String,
+    val content: String,
+    val userid: Long,
+    val create_time: String,
+    val update_time: String,
+    val username: String,
+    val nickname: String,
+    val usertx: String,
+    val hierarchy: String,
+    val section_name: String,
+    val sub_section_name: String,
+    val view: String,
+    val thumbs: String,
+    val comment: String,
+    val img_url: List<String>? = null,
+    val video_url: String? = null,
+    val ip_address: String,
+    val create_time_ago: String,
+    val is_thumbs: Int,
+    val is_collection: Int,
+    val posturl: String  // 新增字段
+)
 
     @Serializable
     data class CommentListResponse(

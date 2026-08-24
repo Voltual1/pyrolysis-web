@@ -369,34 +369,36 @@ fun PostDetailScreen(
         }
     }
 
-    if (showShareDialog) {
-        val shareText = "http://apk.xiaoqu.online/post/${postDetail?.id}.html"
-        AlertDialog(
-            onDismissRequest = { showShareDialog = false },
-            title = { Text("分享帖子") },
-            shape = AppShapes.medium,
-            text = { Text("复制链接: $shareText") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        clipboardManager.setText(AnnotatedString(shareText))
-                        coroutineScope.launch {
-                            internalSnackbarHostState.showSnackbar(
-                                message = "链接已复制",
-                                duration = SnackbarDuration.Short
-                            )
-                        }
-                        showShareDialog = false
+if (showShareDialog) {
+    val shareUrl = postDetail?.posturl?.takeIf { it.isNotEmpty() } 
+        ?: "https://api.smallfun.cn/post/${postDetail?.id}.html"  // 备用方案
+    
+    AlertDialog(
+        onDismissRequest = { showShareDialog = false },
+        title = { Text("分享帖子") },
+        shape = AppShapes.medium,
+        text = { Text("复制链接: $shareUrl") },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(shareUrl))
+                    coroutineScope.launch {
+                        internalSnackbarHostState.showSnackbar(
+                            message = "链接已复制",
+                            duration = SnackbarDuration.Short
+                        )
                     }
-                ) {
-                    Text("复制链接")
+                    showShareDialog = false
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showShareDialog = false }) { Text("取消") }
+            ) {
+                Text("复制链接")
             }
-        )
-    }
+        },
+        dismissButton = {
+            TextButton(onClick = { showShareDialog = false }) { Text("取消") }
+        }
+    )
+}
 
     if (showCommentDialog) {
         CommentDialog(
