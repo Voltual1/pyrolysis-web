@@ -42,7 +42,7 @@ internal val config = SavedStateConfiguration {
             subclass(ThemeCustomize::class, ThemeCustomize.serializer())
             subclass(StoreManager::class, StoreManager.serializer())
             subclass(UpdateSettings::class, UpdateSettings.serializer())
-            subclass(ProxySettings::class, ProxySettings.serializer())
+//            subclass(ProxySettings::class, ProxySettings.serializer())
             
             // --- 社区与帖子 ---
             subclass(Community::class, Community.serializer())

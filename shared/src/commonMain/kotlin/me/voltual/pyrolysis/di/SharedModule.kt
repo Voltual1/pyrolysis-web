@@ -17,7 +17,7 @@ import me.voltual.pyrolysis.ui.rank.RankingListViewModel
 import me.voltual.pyrolysis.ui.search.SearchViewModel
 import me.voltual.pyrolysis.ui.settings.signin.SignInSettingsViewModel
 import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsViewModel
-import me.voltual.pyrolysis.ui.settings.proxy.ProxySettingsViewModel
+//import me.voltual.pyrolysis.ui.settings.proxy.ProxySettingsViewModel
 import me.voltual.pyrolysis.ui.user.*
 import me.voltual.pyrolysis.core.ui.theme.ThemeColorDataStore
 import me.voltual.pyrolysis.ui.payment.PaymentViewModel
@@ -38,7 +38,7 @@ val PLAZA_STORE_QUALIFIER = named("plaza_store")
 val USER_FILTER_STORE_QUALIFIER = named("user_filter_store")
 val USER_AGREEMENT_STORE_QUALIFIER = named("user_agreement_store")
 val UPDATE_SETTINGS_STORE_QUALIFIER = named("update_settings_store")
-val PROXY_SETTINGS_STORE_QUALIFIER = named("proxy_settings_store")
+//val PROXY_SETTINGS_STORE_QUALIFIER = named("proxy_settings_store")
 val STORAGE_SETTINGS_STORE_QUALIFIER = named("storage_settings_store")
 val SIGN_IN_SETTINGS_STORE_QUALIFIER = named("sign_in_settings_store")
 val SEARCH_HISTORY_STORE_QUALIFIER = named("search_history_store")
@@ -116,7 +116,7 @@ val commonModule = module {
     viewModel { PlayerViewModel(get()) }
     viewModel { LogViewModel(get()) }
     viewModel { UpdateSettingsViewModel(get()) }
-    viewModel { ProxySettingsViewModel(get()) }
+//    viewModel { ProxySettingsViewModel(get()) }
 }
 
 expect val platformModule: Module

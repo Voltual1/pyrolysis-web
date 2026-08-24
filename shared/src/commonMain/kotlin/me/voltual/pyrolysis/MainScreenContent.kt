@@ -374,7 +374,7 @@ fun getTitleForDestination(route: NavKey?): String {
         is AppDetail -> "应用详情"
         is AppPage -> "应用页"
         UpdateSettings -> "更新设置"
-        ProxySettings -> "网络代理"
+//        ProxySettings -> "网络代理"
         MyComments -> "我的评论"
         MyReviews -> "我的评价"
         SignInSettings -> "签到设置"
