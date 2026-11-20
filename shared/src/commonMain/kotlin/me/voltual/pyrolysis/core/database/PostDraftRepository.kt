@@ -17,8 +17,7 @@ import org.koin.core.annotation.Single
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.builtins.ListSerializer
-import io.ktor.util.encodeBase64
-import io.ktor.util.decodeBase64Bytes
+import kotlin.io.encoding.Base64
 
 /**
  * 表示草稿中的图片。
@@ -63,7 +62,7 @@ class PostDraftRepository(
                 savedImages.map { saved ->
                     DraftImage.LoadedBytes(
                         name = saved.name,
-                        bytes = saved.base64Data.decodeBase64Bytes()
+                        bytes = Base64.decode(saved.base64Data)
                     )
                 }
             } catch (e: Exception) {
@@ -85,7 +84,7 @@ class PostDraftRepository(
         val savedImages = draft.imageUris.map { draftImage ->
             SavedDraftImage(
                 name = draftImage.name,
-                base64Data = draftImage.readBytes().encodeBase64()
+                base64Data = Base64.encode(draftImage.readBytes())
             )
         }
         val imagesJson = Json.encodeToString(
