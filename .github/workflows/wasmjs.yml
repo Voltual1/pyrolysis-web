@@ -1,13 +1,8 @@
 name: Wasmjs CI
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
-  release:
-    types: [published]
-
+  workflow_dispatch:
+  
 permissions:
   contents: write
 
@@ -36,18 +31,7 @@ jobs:
           node-version: '24.10.0'          
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        
-      - name: Gradle Cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            ${{ github.workspace }}/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradle.kts', '**/settings.gradle.kts') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+        uses: gradle/actions/setup-gradle@v4        
             
       - name: Decode Keystore
         env:
@@ -103,13 +87,3 @@ jobs:
             build-artifacts/pyrolysis-wasm.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Save Gradle cache
-        if: ${{ success() }}
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            ${{ github.workspace }}/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradle.kts', '**/settings.gradle.kts') }}
