@@ -15,11 +15,14 @@ import io.ktor.client.call.*
 import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.json.Json
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.AuthRepository
+import me.voltual.pyrolysis.ApiUrlProvider
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.data.unified.*
-import me.voltual.pyrolysis.utils.createUploadProvider // 导入我们的工厂函数
+import me.voltual.pyrolysis.utils.createUploadProvider
+import me.voltual.pyrolysis.utils.uploadMultipartFileNative
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 
@@ -33,6 +36,7 @@ class XiaoQuRepository(
 ) : IAppStoreRepository {
 
     private val fileSystem = SystemFileSystem
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     private suspend fun getToken(): String {
         return authRepository.credentials.first().token
@@ -282,7 +286,6 @@ class XiaoQuRepository(
         }
     }
 
-    // --- 遗留的基于 Path 的旧上传方法（若接口不要求可移除，此处保留以兼容旧定义） ---
     override suspend fun uploadImage(path: Path, type: String): Result<String> {
         return Result.failure(UnsupportedOperationException("Use PlatformFile or ByteArray overload"))
     }
@@ -291,27 +294,38 @@ class XiaoQuRepository(
         return Result.failure(UnsupportedOperationException("Use PlatformFile or ByteArray overload"))
     }
 
-    // --- 基于 PlatformFile 的新上传方法 ---
+    // --- 基于 PlatformFile 的流式上传方法 ---
     override suspend fun uploadImage(file: PlatformFile, type: String): Result<String> {
         return try {
-            val response = KtorClient.uploadHttpClient.submitFormWithBinaryData(
-                url = "api.php",
-                formData = formData {
-                    append("file", createUploadProvider(file), Headers.build {
-                        append(HttpHeaders.ContentType, "image/png")
-                        append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
-                    })
-                }
-            )
-            if (response.status.isSuccess()) {
-                val responseBody: KtorClient.UploadResponse = response.body()
+            val keyunUrl = "https://file.smallfun.cn/api.php"
+            val nativeText = uploadMultipartFileNative(keyunUrl, file, "file")
+            if (nativeText != null) {
+                val responseBody = json.decodeFromString<KtorClient.UploadResponse>(nativeText)
                 if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
                     Result.success(responseBody.downurl)
                 } else {
                     Result.failure(Exception(responseBody.msg))
                 }
             } else {
-                Result.failure(Exception("网络错误 ${response.status}"))
+                val response = KtorClient.uploadHttpClient.submitFormWithBinaryData(
+                    url = "api.php",
+                    formData = formData {
+                        append("file", createUploadProvider(file), Headers.build {
+                            append(HttpHeaders.ContentType, "image/png")
+                            append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
+                        })
+                    }
+                )
+                if (response.status.isSuccess()) {
+                    val responseBody: KtorClient.UploadResponse = response.body()
+                    if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
+                        Result.success(responseBody.downurl)
+                    } else {
+                        Result.failure(Exception(responseBody.msg))
+                    }
+                } else {
+                    Result.failure(Exception("网络错误 ${response.status}"))
+                }
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -321,7 +335,7 @@ class XiaoQuRepository(
     override suspend fun uploadApk(file: PlatformFile, serviceType: String): Result<String> {
         return try {
             when (serviceType) {
-                "KEYUN" -> uploadToKeyun(file)
+                "KEYUN", "FILE_SMALLFUN" -> uploadToKeyun(file)
                 "WANYUEYUN" -> uploadToWanyueyun(file)
                 else -> Result.failure(Exception("不支持的上传服务类型: $serviceType"))
             }
@@ -332,24 +346,35 @@ class XiaoQuRepository(
 
     private suspend fun uploadToKeyun(file: PlatformFile): Result<String> {
         return try {
-            val response = KtorClient.uploadHttpClient.submitFormWithBinaryData(
-                url = "api.php",
-                formData = formData {
-                    append("file", createUploadProvider(file), Headers.build {
-                        append(HttpHeaders.ContentType, "application/octet-stream")
-                        append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
-                    })
-                }
-            )
-            if (response.status.isSuccess()) {
-                val responseBody: KtorClient.UploadResponse = response.body()
+            val keyunUrl = "https://file.smallfun.cn/api.php"
+            val nativeText = uploadMultipartFileNative(keyunUrl, file, "file")
+            if (nativeText != null) {
+                val responseBody = json.decodeFromString<KtorClient.UploadResponse>(nativeText)
                 if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
                     Result.success(responseBody.downurl)
                 } else {
                     Result.failure(Exception(responseBody.msg))
                 }
             } else {
-                Result.failure(Exception("网络错误 ${response.status}"))
+                val response = KtorClient.uploadHttpClient.submitFormWithBinaryData(
+                    url = "api.php",
+                    formData = formData {
+                        append("file", createUploadProvider(file), Headers.build {
+                            append(HttpHeaders.ContentType, "application/octet-stream")
+                            append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
+                        })
+                    }
+                )
+                if (response.status.isSuccess()) {
+                    val responseBody: KtorClient.UploadResponse = response.body()
+                    if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
+                        Result.success(responseBody.downurl)
+                    } else {
+                        Result.failure(Exception(responseBody.msg))
+                    }
+                } else {
+                    Result.failure(Exception("网络错误 ${response.status}"))
+                }
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -358,32 +383,48 @@ class XiaoQuRepository(
 
     private suspend fun uploadToWanyueyun(file: PlatformFile): Result<String> {
         return try {
-            val response = KtorClient.wanyueyunUploadHttpClient.submitFormWithBinaryData(
-                url = "upload",
-                formData = formData {
-                    append("Api", "小趣API")
-                    append("file", createUploadProvider(file), Headers.build {
-                        append(HttpHeaders.ContentType, "application/vnd.android.package-archive")
-                        append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
-                    })
-                }
+            val base = ApiUrlProvider.apiBaseUrl.removeSuffix("/")
+            val wanyueyunUrl = "$base/upload"
+            val nativeText = uploadMultipartFileNative(
+                url = wanyueyunUrl,
+                file = file,
+                fileParamName = "file",
+                extraParams = mapOf("Api" to "小趣API")
             )
-            if (response.status.isSuccess()) {
-                val responseBody: KtorClient.WanyueyunUploadResponse = response.body()
+            if (nativeText != null) {
+                val responseBody = json.decodeFromString<KtorClient.WanyueyunUploadResponse>(nativeText)
                 if (responseBody.code == 200 && !responseBody.data.isNullOrBlank()) {
                     Result.success(responseBody.data)
                 } else {
                     Result.failure(Exception(responseBody.msg))
                 }
             } else {
-                Result.failure(Exception("网络错误 ${response.status}"))
+                val response = KtorClient.wanyueyunUploadHttpClient.submitFormWithBinaryData(
+                    url = "upload",
+                    formData = formData {
+                        append("Api", "小趣API")
+                        append("file", createUploadProvider(file), Headers.build {
+                            append(HttpHeaders.ContentType, "application/vnd.android.package-archive")
+                            append(HttpHeaders.ContentDisposition, "filename=\"${file.name}\"")
+                        })
+                    }
+                )
+                if (response.status.isSuccess()) {
+                    val responseBody: KtorClient.WanyueyunUploadResponse = response.body()
+                    if (responseBody.code == 200 && !responseBody.data.isNullOrBlank()) {
+                        Result.success(responseBody.data)
+                    } else {
+                        Result.failure(Exception(responseBody.msg))
+                    }
+                } else {
+                    Result.failure(Exception("网络错误 ${response.status}"))
+                }
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    // --- 基于 ByteArray 的备用/旧方法（保留用于直接内存上传或 Wasm 支持） ---
     override suspend fun uploadImage(bytes: ByteArray, filename: String, type: String): Result<String> {
         return try {
             val response = KtorClient.uploadHttpClient.submitFormWithBinaryData(
@@ -414,7 +455,7 @@ class XiaoQuRepository(
     override suspend fun uploadApk(bytes: ByteArray, filename: String, serviceType: String): Result<String> {
         return try {
             when (serviceType) {
-                "KEYUN" -> uploadToKeyun(bytes, filename)
+                "KEYUN", "FILE_SMALLFUN" -> uploadToKeyun(bytes, filename)
                 "WANYUEYUN" -> uploadToWanyueyun(bytes, filename)
                 else -> Result.failure(Exception("不支持的上传服务类型: $serviceType"))
             }
@@ -478,7 +519,6 @@ class XiaoQuRepository(
         }
     }
 
-    // --- 其他评论与评价相关的底层方法保持不变 ---
     override suspend fun deleteReview(reviewId: String): Result<Unit> = Result.failure(Exception("小趣空间暂不支持评价功能。"))
     override suspend fun getMyReviews(page: Int): Result<Pair<List<UnifiedComment>, Int>> = Result.failure(Exception("小趣空间暂不支持获取我的评价功能。"))
     override suspend fun deleteComment(appId: String, commentId: String): Result<Unit> = deleteComment(commentId)

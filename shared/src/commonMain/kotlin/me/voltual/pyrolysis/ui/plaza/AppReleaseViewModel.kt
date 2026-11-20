@@ -15,15 +15,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.readBytes
-import io.github.vinceglb.filekit.name // 必须显式导入扩展属性
+import io.github.vinceglb.filekit.size
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
 import me.voltual.pyrolysis.feature.store.repository.XiaoQuRepository
 import me.voltual.pyrolysis.data.unified.UnifiedAppReleaseParams
-import me.voltual.apkparser.ApkParser
 import me.voltual.apkparser.ApkMetadata
+import me.voltual.pyrolysis.utils.createStreamingApkParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -57,9 +56,6 @@ class AppReleaseViewModel(
     val versionCode = mutableStateOf(0L)
     val appSize = mutableStateOf("")
     val localIconFile = mutableStateOf<PlatformFile?>(null)
-    
-    // 重构：流式上传不再在 ViewModel 层长时间持有大文件的 ByteArray，避免 OOM
-    private var iconPlatformFile: PlatformFile? = null
 
     // --- 小趣空间特定状态 ---
     val isUpdateMode = mutableStateOf(false)
@@ -106,7 +102,6 @@ class AppReleaseViewModel(
     val isWearOs = mutableStateOf(0)
     val abi = mutableStateOf(0)
     val screenshotsFiles = mutableStateListOf<PlatformFile>()
-    private val screenshotBytes = mutableStateListOf<Pair<PlatformFile, ByteArray>>()
 
     val isApkUploading = mutableStateOf(false)
     val isIconUploading = mutableStateOf(false)
@@ -132,22 +127,20 @@ class AppReleaseViewModel(
     }
 
     /**
-     * 重构后的 APK 解析与上传逻辑
+     * 重构后的 APK 解析与上传逻辑：
+     * 彻底移除 file.readBytes()，使用流式解析只提取 Manifest/Arsc 元数据与图标，杜绝 OOM。
      */
     fun parseAndUploadApk(file: PlatformFile) {
         viewModelScope.launch(Dispatchers.Default) {
-            _processFeedback.value = Result.success("正在读取 APK 元数据...")
+            _processFeedback.value = Result.success("正在流式读取 APK 元数据...")
 
-            // 1. 读取字节用于解析 (元数据很小，这不会导致 OOM)
-            val fileBytes = try {
-                file.readBytes()
+            val parser = try {
+                createStreamingApkParser(file)
             } catch (e: Exception) {
-                _processFeedback.value = Result.failure(Exception("读取 APK 文件失败: ${e.message}"))
+                _processFeedback.value = Result.failure(Exception("打开 APK 流失败: ${e.message}"))
                 return@launch
             }
 
-            // 2. 解析元数据
-            val parser = ApkParser(fileBytes)
             val metadata: ApkMetadata = try { 
                 parser.parse() 
             } catch (e: Exception) {
@@ -155,25 +148,25 @@ class AppReleaseViewModel(
                 return@launch
             }
             
-            // 3. 提取图标字节用于预览与上传
             var iconBytesForPreview: ByteArray? = null
             metadata.iconPath?.let { internalPath ->
                 iconBytesForPreview = parser.getFileBytes(internalPath)
             }
 
-            // 4. 更新 UI 状态
+            val rawSize = file.size()
+            val mb = if (rawSize > 0) rawSize / 1024.0 / 1024.0 else 0.0
+            val formattedSize = ((mb * 100).roundToInt() / 100.0).toString()
+
             withContext(Dispatchers.Main) {
                 appName.value = metadata.label ?: "未知应用"
                 packageName.value = metadata.packageName ?: ""
                 versionName.value = metadata.versionName ?: "N/A"
                 versionCode.value = metadata.versionCode ?: 0L
-                val mb = fileBytes.size / 1024.0 / 1024.0
-                appSize.value = ((mb * 100).roundToInt() / 100.0).toString()
-                localIconFile.value = file // 用于显示占位符
+                appSize.value = formattedSize
+                localIconFile.value = file
                 appExplain.value = "适配性能描述 •\n包名：${metadata.packageName}\n版本：${metadata.versionName}"
             }
 
-            // 5. 执行上传逻辑，直接传递 PlatformFile 对象进行流式上传
             if (_selectedStore.value == AppStore.XIAOQU_SPACE) {
                 executeXiaoQuUpload(file, iconBytesForPreview)
             } else {
@@ -188,7 +181,6 @@ class AppReleaseViewModel(
         uploadJobs += viewModelScope.launch(Dispatchers.Default) {
             isApkUploading.value = true
             val serviceType = selectedApkUploadService.value.name
-            // 直接传递 PlatformFile 进行流式上传
             val apkResult = xiaoQuRepo.uploadApk(apkFile, serviceType)
             apkResult.onSuccess { url ->
                 apkDownloadUrl.value = url
@@ -203,7 +195,6 @@ class AppReleaseViewModel(
                 isIconUploading.value = true
                 val now = Clock.System.now().toEpochMilliseconds()
                 val iconFileName = "icon_${now}.png"
-                // 图标体积较小，直接使用有 ByteArray 的重载上传即可
                 val imageResult = xiaoQuRepo.uploadImage(bytes, iconFileName, "icon")
                 imageResult.onSuccess { url ->
                     iconUrl.value = url
@@ -230,7 +221,6 @@ class AppReleaseViewModel(
             val remainingSlots = MAX_INTRO_IMAGES_XIAOQU - currentCount
             val filesToUpload = files.take(remainingSlots)
 
-            // 补全重构：利用新的 PlatformFile 流式上传接口进行多图并发上传
             val uploadJobs = filesToUpload.map { file ->
                 launch {
                     val imageResult = xiaoQuRepo.uploadImage(file, "intro")

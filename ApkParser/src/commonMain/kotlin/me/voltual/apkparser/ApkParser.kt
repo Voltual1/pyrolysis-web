@@ -12,28 +12,35 @@ import dev.rushii.arsc.internal.ArscStringPool
 import dev.rushii.arsc.internal.ArscInternalApi
 
 @OptIn(ArscInternalApi::class)
-public class ApkParser(private val apkBytes: ByteArray) {
+public class ApkParser(private val sourceProvider: () -> Source) {
 
     /**
-     * 解析元数据。
+     * 兼容已有的 ByteArray 构造方式
+     */
+    public constructor(apkBytes: ByteArray) : this({ Buffer().apply { write(apkBytes) } })
+
+    /**
+     * 流式解析 APK 元数据。
+     * 只需解压读取 AndroidManifest.xml 与 resources.arsc，完毕后立即截断流，防止整包加载进内存。
      */
     public fun parse(): ApkMetadata {
         var manifestBytes: ByteArray? = null
         var arscBytes: ByteArray? = null
 
-        // 从内存中的 apkBytes 创建 Source
-        val apkSource = Buffer().apply { write(apkBytes) }
-        val zis = ZipInputStream(apkSource)
+        val zis = ZipInputStream(sourceProvider())
 
-        while (true) {
-            val entry = zis.nextEntry ?: break
-            when (entry.name) {
-                "AndroidManifest.xml" -> manifestBytes = zis.readBytes()
-                "resources.arsc" -> arscBytes = zis.readBytes()
+        try {
+            while (true) {
+                val entry = zis.nextEntry ?: break
+                when (entry.name) {
+                    "AndroidManifest.xml" -> manifestBytes = zis.readBytes()
+                    "resources.arsc" -> arscBytes = zis.readBytes()
+                }
+                if (manifestBytes != null && arscBytes != null) break
             }
-            if (manifestBytes != null && arscBytes != null) break
+        } finally {
+            zis.close()
         }
-        zis.close() // 关闭流
 
         if (manifestBytes == null) error("AndroidManifest.xml not found")
 
@@ -71,25 +78,23 @@ public class ApkParser(private val apkBytes: ByteArray) {
     }
 
     /**
-     * 从 APK 字节中提取指定路径的文件。
+     * 从 APK 中提取指定路径的文件（如应用图标）。
      * @param path 文件在 APK 压缩包内的路径。
      * @return 文件的字节数组，如果未找到则返回 null。
      */
     public fun getFileBytes(path: String): ByteArray? {
-        // 每次都从原始的 apkBytes 创建新的 Source
-        val source = Buffer().apply { write(apkBytes) }
-        val zis = ZipInputStream(source)
-        // 统一处理路径分隔符，ZIP 内部通常使用 '/'
+        val zis = ZipInputStream(sourceProvider())
         val targetPath = path.replace("\\", "/").removePrefix("/")
-        while (true) {
-            val entry = zis.nextEntry ?: break
-            if (entry.name.replace("\\", "/").removePrefix("/") == targetPath) {
-                val bytes = zis.readBytes()
-                zis.close()
-                return bytes
+        try {
+            while (true) {
+                val entry = zis.nextEntry ?: break
+                if (entry.name.replace("\\", "/").removePrefix("/") == targetPath) {
+                    return zis.readBytes()
+                }
             }
+        } finally {
+            zis.close()
         }
-        zis.close()
         return null
     }
 
