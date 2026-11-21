@@ -44,6 +44,7 @@ data class UnifiedComment(
 data class UpdateUserProfileParams(
     val nickname: String? = null,
     val qqNumber: String? = null,
+    val description: String? = null,
     val deviceName: String? = null
 )
 
