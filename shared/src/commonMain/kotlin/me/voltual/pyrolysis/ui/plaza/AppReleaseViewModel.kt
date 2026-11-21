@@ -44,10 +44,7 @@ class AppReleaseViewModel(
         clearProcessFeedback()
     }
 
-    private fun getCurrentRepo(): IAppStoreRepository = when (_selectedStore.value) {
-        AppStore.XIAOQU_SPACE -> xiaoQuRepo
-        else -> xiaoQuRepo
-    }
+    private fun getCurrentRepo(): IAppStoreRepository = xiaoQuRepo
 
     // --- 通用状态 ---
     val appName = mutableStateOf("")
@@ -57,11 +54,11 @@ class AppReleaseViewModel(
     val appSize = mutableStateOf("")
     val localIconFile = mutableStateOf<PlatformFile?>(null)
 
-    // --- 小趣空间特定状态 ---
+    // --- 小趣空间发布状态 ---
     val isUpdateMode = mutableStateOf(false)
     private var appId: Long = 0
     private var appVersionId: Long = 0
-    val selectedApkUploadService = mutableStateOf(ApkUploadService.FILE_SMALLFUN)
+    val selectedApkUploadService = mutableStateOf(ApkUploadService.LANZOU_CLOUD)
     val appIntroduce = mutableStateOf("资源介绍【密码:】 ")
     val appExplain = mutableStateOf("适配性能描述 •\n包名：\n版本：")
     val isPay = mutableStateOf(0)
@@ -83,26 +80,6 @@ class AppReleaseViewModel(
      .distinctBy { it.subCategoryId }
      .sortedBy { it.categoryName }
 
-    // --- 弦开放平台特定状态 ---
-    val appTypeOptions = listOf("手表应用", "手机应用", "大屏应用", "TV应用", "WearOS应用")
-    val appTypeId = mutableStateOf(2)
-    val versionTypeOptions = listOf("官方版", "正式版", "测试版", "公测版", "美化版", "破解版", "修改版", "免费版", "定制版", "手表版")
-    val appVersionTypeId = mutableStateOf(2)
-    val tagOptions = mutableStateListOf<String>()
-    val selectedTagIndex = mutableStateOf(0)
-    val appTags = mutableStateOf(0)
-    val sdkMin = mutableStateOf(21)
-    val sdkTarget = mutableStateOf(33)
-    val developer = mutableStateOf("")
-    val source = mutableStateOf("互联网")
-    val describe = mutableStateOf("介绍一下你的应用…")
-    val updateLog = mutableStateOf("本次更新的内容…")
-    val uploadMessage = mutableStateOf("给审核员的留言…")
-    val keyword = mutableStateOf("关键字")
-    val isWearOs = mutableStateOf(0)
-    val abi = mutableStateOf(0)
-    val screenshotsFiles = mutableStateListOf<PlatformFile>()
-
     val isApkUploading = mutableStateOf(false)
     val isIconUploading = mutableStateOf(false)
     val isIntroImagesUploading = mutableStateOf(false)
@@ -112,99 +89,125 @@ class AppReleaseViewModel(
 
     private val MAX_INTRO_IMAGES_XIAOQU = 3
 
-    fun addScreenshots(files: List<PlatformFile>) {
-        val currentCount = screenshotsFiles.size
-        val remainingSlots = MAX_INTRO_IMAGES_XIAOQU - currentCount
-        val filesToUpload = files.take(remainingSlots)
-        screenshotsFiles.addAll(filesToUpload)
-    }
-
-    fun removeScreenshot(file: PlatformFile) {
-        val index = screenshotsFiles.indexOf(file)
-        if (index != -1) {
-            screenshotsFiles.removeAt(index)
-        }
-    }
-
     /**
-     * 重构后的 APK 解析与上传逻辑：
-     * 彻底移除 file.readBytes()，使用流式解析只提取 Manifest/Arsc 元数据与图标，杜绝 OOM。
+     * 处理选择的 APK 文件：
+     * 1. 若选择「蓝云托管」：直接流式上传 APK 至蓝云，复用后端解析的元数据与 icon_url，避免本地重复解析和重复上传图标。
+     * 2. 若选择「外部直链」：本地流式解析 APK 元数据并提取图标上传至小趣图床，APK 链接由用户手动填写。
      */
     fun parseAndUploadApk(file: PlatformFile) {
         viewModelScope.launch(Dispatchers.Default) {
-            _processFeedback.value = Result.success("正在流式读取 APK 元数据...")
-
-            val parser = try {
-                createStreamingApkParser(file)
-            } catch (e: Exception) {
-                _processFeedback.value = Result.failure(Exception("打开 APK 流失败: ${e.message}"))
-                return@launch
-            }
-
-            val metadata: ApkMetadata = try { 
-                parser.parse() 
-            } catch (e: Exception) {
-                _processFeedback.value = Result.failure(Exception("APK 解析失败: ${e.message}"))
-                return@launch
-            }
-            
-            var iconBytesForPreview: ByteArray? = null
-            metadata.iconPath?.let { internalPath ->
-                iconBytesForPreview = parser.getFileBytes(internalPath)
-            }
-
-            val rawSize = file.size()
-            val mb = if (rawSize > 0) rawSize / 1024.0 / 1024.0 else 0.0
-            val formattedSize = ((mb * 100).roundToInt() / 100.0).toString()
-
-            withContext(Dispatchers.Main) {
-                appName.value = metadata.label ?: "未知应用"
-                packageName.value = metadata.packageName ?: ""
-                versionName.value = metadata.versionName ?: "N/A"
-                versionCode.value = metadata.versionCode ?: 0L
-                appSize.value = formattedSize
-                localIconFile.value = file
-                appExplain.value = "适配性能描述 •\n包名：${metadata.packageName}\n版本：${metadata.versionName}"
-            }
-
-            if (_selectedStore.value == AppStore.XIAOQU_SPACE) {
-                executeXiaoQuUpload(file, iconBytesForPreview)
-            } else {
-                _processFeedback.value = Result.success("APK解析完成，准备发布")
+            when (selectedApkUploadService.value) {
+                ApkUploadService.LANZOU_CLOUD -> uploadApkAndUseServerMetadata(file)
+                ApkUploadService.EXTERNAL_LINK -> parseApkLocallyAndUploadIcon(file)
             }
         }
     }
 
-    private suspend fun executeXiaoQuUpload(apkFile: PlatformFile, iconBytes: ByteArray?) {
-        val uploadJobs = mutableListOf<kotlinx.coroutines.Job>()
+    private suspend fun uploadApkAndUseServerMetadata(file: PlatformFile) {
+        isApkUploading.value = true
+        _processFeedback.value = Result.success("正在流式上传 APK 至蓝云并解析信息...")
 
-        uploadJobs += viewModelScope.launch(Dispatchers.Default) {
-            isApkUploading.value = true
-            val serviceType = selectedApkUploadService.value.name
-            val apkResult = xiaoQuRepo.uploadApk(apkFile, serviceType)
-            apkResult.onSuccess { url ->
-                apkDownloadUrl.value = url
-            }.onFailure { e ->
-                withContext(Dispatchers.Main) { _processFeedback.value = Result.failure(e) }
-            }
-            isApkUploading.value = false
-        }
+        val rawSize = file.size()
+        val mb = if (rawSize > 0) rawSize / 1024.0 / 1024.0 else 0.0
+        val formattedSize = ((mb * 100).roundToInt() / 100.0).toString()
 
-        iconBytes?.let { bytes ->
-            uploadJobs += viewModelScope.launch(Dispatchers.Default) {
-                isIconUploading.value = true
-                val now = Clock.System.now().toEpochMilliseconds()
-                val iconFileName = "icon_${now}.png"
-                val imageResult = xiaoQuRepo.uploadImage(bytes, iconFileName, "icon")
-                imageResult.onSuccess { url ->
-                    iconUrl.value = url
-                }.onFailure { e ->
-                    withContext(Dispatchers.Main) { _processFeedback.value = Result.failure(e) }
+        val result = xiaoQuRepo.uploadApkToLanzou(file)
+        result.onSuccess { uploadData ->
+            val serverApk = uploadData.apk
+            withContext(Dispatchers.Main) {
+                apkDownloadUrl.value = uploadData.share_url
+                appSize.value = formattedSize
+                localIconFile.value = file
+
+                if (uploadData.password.isNotBlank()) {
+                    val currentIntro = appIntroduce.value
+                    appIntroduce.value = if (currentIntro.contains("【密码:】")) {
+                        currentIntro.replace("【密码:】", "【密码:${uploadData.password}】")
+                    } else if (!currentIntro.contains(uploadData.password)) {
+                        "$currentIntro【密码:${uploadData.password}】"
+                    } else {
+                        currentIntro
+                    }
                 }
-                isIconUploading.value = false
+
+                if (serverApk != null) {
+                    appName.value = serverApk.app_name ?: "未知应用"
+                    packageName.value = serverApk.package_name ?: ""
+                    versionName.value = serverApk.version_name ?: "N/A"
+                    versionCode.value = serverApk.version_code?.toLongOrNull() ?: 0L
+                    if (!serverApk.icon_url.isNullOrBlank()) {
+                        iconUrl.value = serverApk.icon_url
+                    }
+                    appExplain.value = "适配性能描述 •\n包名：${serverApk.package_name.orEmpty()}\n版本：${serverApk.version_name.orEmpty()}"
+                }
+                _processFeedback.value = Result.success("蓝云上传并解析成功！")
+            }
+        }.onFailure { e ->
+            withContext(Dispatchers.Main) {
+                _processFeedback.value = Result.failure(e)
             }
         }
-        uploadJobs.joinAll()
+
+        isApkUploading.value = false
+    }
+
+    private suspend fun parseApkLocallyAndUploadIcon(file: PlatformFile) {
+        _processFeedback.value = Result.success("正在流式解析本地 APK 元数据...")
+
+        val parser = try {
+            createStreamingApkParser(file)
+        } catch (e: Exception) {
+            _processFeedback.value = Result.failure(Exception("打开 APK 流失败: ${e.message}"))
+            return
+        }
+
+        val metadata: ApkMetadata = try {
+            parser.parse()
+        } catch (e: Exception) {
+            _processFeedback.value = Result.failure(Exception("APK 解析失败: ${e.message}"))
+            return
+        }
+
+        var iconBytesForPreview: ByteArray? = null
+        metadata.iconPath?.let { internalPath ->
+            iconBytesForPreview = parser.getFileBytes(internalPath)
+        }
+
+        val rawSize = file.size()
+        val mb = if (rawSize > 0) rawSize / 1024.0 / 1024.0 else 0.0
+        val formattedSize = ((mb * 100).roundToInt() / 100.0).toString()
+
+        withContext(Dispatchers.Main) {
+            appName.value = metadata.label ?: "未知应用"
+            packageName.value = metadata.packageName ?: ""
+            versionName.value = metadata.versionName ?: "N/A"
+            versionCode.value = metadata.versionCode ?: 0L
+            appSize.value = formattedSize
+            localIconFile.value = file
+            appExplain.value = "适配性能描述 •\n包名：${metadata.packageName}\n版本：${metadata.versionName}"
+        }
+
+        if (iconBytesForPreview != null) {
+            isIconUploading.value = true
+            val now = Clock.System.now().toEpochMilliseconds()
+            val iconFileName = "icon_${now}.png"
+            val imageResult = xiaoQuRepo.uploadImage(iconBytesForPreview!!, iconFileName, "icon")
+            imageResult.onSuccess { url ->
+                withContext(Dispatchers.Main) {
+                    iconUrl.value = url
+                    _processFeedback.value = Result.success("本地解析与图标上传完成，请填写外部 APK 链接")
+                }
+            }.onFailure { e ->
+                withContext(Dispatchers.Main) {
+                    _processFeedback.value = Result.failure(e)
+                }
+            }
+            isIconUploading.value = false
+        } else {
+            withContext(Dispatchers.Main) {
+                _processFeedback.value = Result.success("本地解析完成，请填写外部 APK 链接")
+            }
+        }
     }
 
     fun uploadIntroductionImages(files: List<PlatformFile>) {
@@ -269,21 +272,7 @@ class AppReleaseViewModel(
                     payMoney = if (isPay.value == 1) payMoney.value else "",
                     isUpdate = isUpdateMode.value,
                     appId = appId,
-                    appVersionId = appVersionId,
-                    appTypeId = appTypeId.value,
-                    appVersionTypeId = appVersionTypeId.value,
-                    appTags = appTags.value.toString(),
-                    sdkMin = sdkMin.value,
-                    sdkTarget = sdkTarget.value,
-                    developer = developer.value,
-                    source = source.value,
-                    describe = describe.value,
-                    updateLog = updateLog.value,
-                    uploadMessage = uploadMessage.value,
-                    keyword = keyword.value,
-                    isWearOs = isWearOs.value,
-                    abi = abi.value,
-                    screenshots = emptyList()
+                    appVersionId = appVersionId
                 )
 
                 getCurrentRepo().releaseApp(params).onSuccess {
@@ -322,8 +311,4 @@ class AppReleaseViewModel(
         introductionImageUrls.clear()
         appDetail.app_introduction_image_array?.let { introductionImageUrls.addAll(it) }
     }
-
-    fun setAppTypeId(id: Int) { appTypeId.value = id }
-    fun setAppVersionTypeId(id: Int) { appVersionTypeId.value = id }
-    fun setAppTags(id: Int) { appTags.value = id }
 }

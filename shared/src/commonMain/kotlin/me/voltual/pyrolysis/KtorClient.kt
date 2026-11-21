@@ -34,7 +34,7 @@ class PyrolysisNetworkException(message: String, cause: Throwable? = null) : Exc
 
 object KtorClient {
     private const val UPLOAD_BASE_URL = "https://file.smallfun.cn/"
-    
+
     private const val MAX_RETRIES = 3
     private val RETRY_DELAY = 1000.milliseconds
     private val TIMEOUT_DURATION = 30.seconds
@@ -65,12 +65,11 @@ object KtorClient {
         }
     }
 
+    /**
+     * 小趣图片床客户端 (https://file.smallfun.cn/)，仅用于图片上传
+     */
     val uploadHttpClient = HttpClient() {
         defaultRequest { url(UPLOAD_BASE_URL) }
-        install(ContentNegotiation) { json(commonJson) }
-    }
-
-    val wanyueyunUploadHttpClient = HttpClient() {
         install(ContentNegotiation) { json(commonJson) }
     }
 
@@ -97,30 +96,30 @@ object KtorClient {
     )
 
     @Serializable
-data class PostDetail(
-    val id: Long,
-    val title: String,
-    val content: String,
-    val userid: Long,
-    val create_time: String,
-    val update_time: String,
-    val username: String,
-    val nickname: String,
-    val usertx: String,
-    val hierarchy: String,
-    val section_name: String,
-    val sub_section_name: String,
-    val view: String,
-    val thumbs: String,
-    val comment: String,
-    val img_url: List<String>? = null,
-    val video_url: String? = null,
-    val ip_address: String,
-    val create_time_ago: String,
-    val is_thumbs: Int,
-    val is_collection: Int,
-    val posturl: String  // 新增字段
-)
+    data class PostDetail(
+        val id: Long,
+        val title: String,
+        val content: String,
+        val userid: Long,
+        val create_time: String,
+        val update_time: String,
+        val username: String,
+        val nickname: String,
+        val usertx: String,
+        val hierarchy: String,
+        val section_name: String,
+        val sub_section_name: String,
+        val view: String,
+        val thumbs: String,
+        val comment: String,
+        val img_url: List<String>? = null,
+        val video_url: String? = null,
+        val ip_address: String,
+        val create_time_ago: String,
+        val is_thumbs: Int,
+        val is_collection: Int,
+        val posturl: String
+    )
 
     @Serializable
     data class CommentListResponse(
@@ -236,7 +235,7 @@ data class PostDetail(
         val create_time: String = "",
         val signlasttime: String = "",
         val series_days: Int = 0,
-        val sign_today: Boolean = false  
+        val sign_today: Boolean = false
     )
 
     @Serializable
@@ -517,7 +516,7 @@ data class PostDetail(
         val data: List<RankingUser>,
         val timestamp: Long
     )
-    
+
     @Serializable
     data class AppCategory(
         val categoryId: Int?,
@@ -526,24 +525,17 @@ data class PostDetail(
     )
 
     @Serializable
-    data class UploadResponse(
+    data class ImageUploadResponse(
         val code: Int,
         val msg: String,
         val exists: Int? = null,
         val downurl: String?,
         val viewurl: String?
     )
-    
-    @Serializable
-    data class WanyueyunUploadResponse(
-        val code: Int,
-        val msg: String,
-        val data: String?
-    )
-    
+
     fun AppDetail.toJson(): String = commonJson.encodeToString(AppDetail.serializer(), this)
-    fun String.toAppDetail(): AppDetail? = runCatching { 
-        commonJson.decodeFromString(AppDetail.serializer(), this) 
+    fun String.toAppDetail(): AppDetail? = runCatching {
+        commonJson.decodeFromString(AppDetail.serializer(), this)
     }.getOrNull()
 
     private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResponse): Result<T> {
@@ -595,7 +587,7 @@ data class PostDetail(
         suspend fun getMessageNotifications(appid: Int = 1, token: String, limit: Int, page: Int): Result<MessageNotificationResponse>
         suspend fun getBrowseHistory(appid: Int = 1, token: String, limit: Int = 10, page: Int): Result<BrowseHistoryResponse>
         suspend fun getLikesRecords(appid: Int = 1, token: String, limit: Int = 10, page: Int): Result<PostListResponse>
-        suspend fun searchPosts(appid: Int = 1, query: String, limit: Int = 10, page: Int, userId: Long? = null): Result<PostListResponse>
+        suspend fun searchPosts(appid: Int = 1, query: String, limit: Int, page: Int, userId: Long? = null): Result<PostListResponse>
         suspend fun getHotPostsList(appid: Int = 1, limit: Int, page: Int, sortOrder: String = "desc", sort: String = "score"): Result<PostListResponse>
         suspend fun getMyFollowingPosts(appid: Int = 1, token: String, limit: Int, page: Int): Result<PostListResponse>
         suspend fun likePost(appid: Int = 1, token: String, postId: Long): Result<BaseResponse>
@@ -942,7 +934,7 @@ data class PostDetail(
                 append("limit", limit.toString())
                 append("page", page.toString())
             })
-        
+
         override suspend fun getLatestRelease(): Result<UpdateInfo> = safeApiCall {
             httpClient.get(GITHUB_RELEASE_URL)
         }
@@ -971,7 +963,7 @@ data class PostDetail(
             response.body<BaseResponse>()
         }
     }
-    
+
     object JsonConverter {
         private val json = Json {
             ignoreUnknownKeys = true
@@ -996,6 +988,5 @@ data class PostDetail(
     fun close() {
         httpClient.close()
         uploadHttpClient.close()
-        wanyueyunUploadHttpClient.close()
     }
 }

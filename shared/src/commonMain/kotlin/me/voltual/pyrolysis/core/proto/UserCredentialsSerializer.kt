@@ -12,7 +12,13 @@ import okio.BufferedSource
 class UserCredentialsSerializer(
     private val cryptoManager: CryptoManager
 ) : OkioSerializer<UserCredentials> {
-    
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        isLenient = true
+    }
+
     override val defaultValue: UserCredentials
         get() = UserCredentials.getDefaultInstance()
 
@@ -24,14 +30,14 @@ class UserCredentialsSerializer(
         return try {
             val decryptedBytes = cryptoManager.decrypt(encryptedBytes)
             val jsonString = decryptedBytes.decodeToString()
-            Json.decodeFromString(UserCredentials.serializer(), jsonString)
+            json.decodeFromString(UserCredentials.serializer(), jsonString)
         } catch (e: Exception) {
             defaultValue
         }
     }
 
     override suspend fun writeTo(t: UserCredentials, sink: BufferedSink) {
-        val jsonString = Json.encodeToString(UserCredentials.serializer(), t)
+        val jsonString = json.encodeToString(UserCredentials.serializer(), t)
         val encryptedBytes = cryptoManager.encrypt(jsonString.encodeToByteArray())
         sink.write(encryptedBytes)
     }

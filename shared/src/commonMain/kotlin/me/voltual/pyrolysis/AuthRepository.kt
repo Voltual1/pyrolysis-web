@@ -18,9 +18,8 @@ class AuthRepository(
 
     // --- 1. 读取逻辑 ---
 
-    // 暴露为只读 Flow，UI 订阅它时就和订阅真正的 DataStore 一模一样
     val credentials: Flow<UserCredentials> = dataStore.data
-    
+
     val userId: Flow<Long> = credentials.map { it.userId }
 
     val deviceId: Flow<String> = credentials.map { it.deviceId.ifEmpty { generateDeviceId() } }
@@ -44,11 +43,53 @@ class AuthRepository(
         }
     }
 
+    suspend fun saveLanzouCredentials(
+        lanzouUsername: String,
+        lanzouPassword: String,
+        sessionCookie: String,
+        csrfToken: String,
+        folderName: String
+    ) {
+        dataStore.updateData { current ->
+            current.toBuilder()
+                .setLanzouUsername(lanzouUsername)
+                .setLanzouPassword(lanzouPassword)
+                .setLanzouSessionCookie(sessionCookie)
+                .setLanzouCsrfToken(csrfToken)
+                .setLanzouFolderName(folderName)
+                .build()
+        }
+    }
+
+    suspend fun updateLanzouSession(
+        sessionCookie: String,
+        csrfToken: String
+    ) {
+        dataStore.updateData { current ->
+            current.toBuilder()
+                .setLanzouSessionCookie(sessionCookie)
+                .setLanzouCsrfToken(csrfToken)
+                .build()
+        }
+    }
+
     // --- 3. 清理逻辑 ---
 
     suspend fun clearCredentials() {
         dataStore.updateData {
             UserCredentials.getDefaultInstance()
+        }
+    }
+
+    suspend fun clearLanzouCredentials() {
+        dataStore.updateData { current ->
+            current.toBuilder()
+                .setLanzouUsername("")
+                .setLanzouPassword("")
+                .setLanzouSessionCookie("")
+                .setLanzouCsrfToken("")
+                .setLanzouFolderName("")
+                .build()
         }
     }
 

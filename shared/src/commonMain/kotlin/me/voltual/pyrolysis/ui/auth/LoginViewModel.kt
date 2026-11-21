@@ -10,8 +10,9 @@ package me.voltual.pyrolysis.ui.auth
 
 import androidx.lifecycle.*
 import me.voltual.pyrolysis.AppStore
-import me.voltual.pyrolysis.AuthRepository // 使用新的 Repository
+import me.voltual.pyrolysis.AuthRepository
 import me.voltual.pyrolysis.KtorClient
+import me.voltual.pyrolysis.LanzouClient
 import kotlin.time.Clock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,15 +23,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class LoginViewModel(
-    private val authRepository: AuthRepository // 注入 Repository
-) : ViewModel() { // 变为普通 ViewModel
+    private val authRepository: AuthRepository
+) : ViewModel() {
 
-    // --- 商店选择状态 ---
+    // --- 平台选择状态 ---
     private val _selectedStore = MutableStateFlow(AppStore.XIAOQU_SPACE)
     val selectedStore: StateFlow<AppStore> = _selectedStore.asStateFlow()
 
     fun onStoreSelected(store: AppStore) {
         _selectedStore.value = store
+        _errorMessage.value = null
     }
 
     // --- 通用状态 ---
@@ -39,7 +41,7 @@ class LoginViewModel(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
-    
+
     private val _loginSuccess = MutableStateFlow(false)
     val loginSuccess: StateFlow<Boolean> = _loginSuccess.asStateFlow()
 
@@ -50,13 +52,13 @@ class LoginViewModel(
     private val _password = MutableStateFlow("")
     val password: StateFlow<String> = _password.asStateFlow()
 
-    // --- 注册状态 ---
+    // --- 注册状态（小趣空间） ---
     private val _email = MutableStateFlow("")
     val email: StateFlow<String> = _email.asStateFlow()
 
     private val _captcha = MutableStateFlow("")
     val captcha: StateFlow<String> = _captcha.asStateFlow()
-    
+
     private val _verificationCodeUrl = MutableStateFlow<String?>(null)
     val verificationCodeUrl: StateFlow<String?> = _verificationCodeUrl.asStateFlow()
 
@@ -70,7 +72,7 @@ class LoginViewModel(
 
     fun login() {
         if (_username.value.isBlank() || _password.value.isBlank()) {
-            _errorMessage.value = "用户名和密码不能为空"
+            _errorMessage.value = "账号和密码不能为空"
             return
         }
         viewModelScope.launch {
@@ -78,7 +80,8 @@ class LoginViewModel(
             _errorMessage.value = null
             try {
                 when (_selectedStore.value) {
-                    AppStore.XIAOQU_SPACE -> loginXiaoqu()           
+                    AppStore.XIAOQU_SPACE -> loginXiaoqu()
+                    AppStore.LANZOU_CLOUD -> loginLanzou()
                     else -> {
                         _errorMessage.value = "不支持登录"
                     }
@@ -91,13 +94,10 @@ class LoginViewModel(
         }
     }
 
-    // --- 平台特定登录逻辑 ---
-
     private suspend fun loginXiaoqu() {
         try {
-            // 直接从 Repository 获取设备 ID，不再需要 Context
             val deviceId = authRepository.deviceId.first()
-            
+
             val loginResult = withContext(Dispatchers.Default) {
                 KtorClient.ApiServiceImpl.login(
                     username = _username.value,
@@ -105,11 +105,11 @@ class LoginViewModel(
                     device = deviceId
                 )
             }
-            
+
             if (loginResult.isSuccess) {
                 val loginResponse = loginResult.getOrNull()
                 if (loginResponse?.code == 1) {
-                    loginResponse.data?.let { 
+                    loginResponse.data?.let {
                         saveCredentialsAndNotifySuccess(
                             usertoken = it.usertoken,
                             userId = it.id
@@ -126,9 +126,63 @@ class LoginViewModel(
         } catch (e: Exception) {
             _errorMessage.value = "网络错误: ${e.message}"
         }
-    }    
+    }
 
-    // --- 注册逻辑 ---
+    /**
+     * 蓝云存储登录流：
+     * 1. 调用 /api/auth/guest 建立或刷新会话，拿到 ly_session Cookie 与 csrf_token
+     * 2. 调用 /api/lanzou/bind 绑定蓝奏云账号密码，持久化全部凭证至 DataStore
+     */
+    private suspend fun loginLanzou() {
+        try {
+            val existingCredentials = authRepository.credentials.first()
+            val existingCookie = existingCredentials.lanzouSessionCookie.takeIf { it.isNotBlank() }
+
+            val guestResult = withContext(Dispatchers.Default) {
+                LanzouClient.ApiServiceImpl.createOrRefreshGuestSession(existingCookie)
+            }
+
+            val (guestData, sessionCookie) = guestResult.getOrElse { e ->
+                _errorMessage.value = "建立蓝云会话失败: ${e.message}"
+                return
+            }
+
+            val csrfToken = guestData.csrf_token
+            if (sessionCookie.isBlank() || csrfToken.isBlank()) {
+                _errorMessage.value = "未能获取到有效的蓝云会话令牌 (Cookie/CSRF)"
+                return
+            }
+
+            val bindResult = withContext(Dispatchers.Default) {
+                LanzouClient.ApiServiceImpl.bindLanzouAccount(
+                    sessionCookie = sessionCookie,
+                    csrfToken = csrfToken,
+                    lanzouUsername = _username.value.trim(),
+                    lanzouPassword = _password.value
+                )
+            }
+
+            bindResult.onSuccess { bindResp ->
+                val folderName = bindResp.lanzou?.folder_name
+                    ?: bindResp.user?.folder_name
+                    ?: "网盘存储"
+                authRepository.saveLanzouCredentials(
+                    lanzouUsername = _username.value.trim(),
+                    lanzouPassword = _password.value,
+                    sessionCookie = sessionCookie,
+                    csrfToken = csrfToken,
+                    folderName = folderName
+                )
+                _loginSuccess.value = true
+            }.onFailure { e ->
+                _errorMessage.value = e.message ?: "蓝奏云账号绑定失败"
+            }
+        } catch (e: Exception) {
+            _errorMessage.value = "蓝云登录网络错误: ${e.message}"
+        }
+    }
+
+    // --- 注册逻辑（仅小趣空间） ---
 
     fun register() {
         if (_selectedStore.value != AppStore.XIAOQU_SPACE) {
@@ -167,7 +221,6 @@ class LoginViewModel(
                     _errorMessage.value = registerResult.exceptionOrNull()?.message ?: "注册失败"
                     loadVerificationCode()
                 }
-                
             } catch (e: Exception) {
                 _errorMessage.value = "网络错误: ${e.message}"
             } finally {
@@ -187,9 +240,9 @@ class LoginViewModel(
                 )
             }
             if (loginResult.isSuccess) {
-                 val loginResponse = loginResult.getOrNull()
+                val loginResponse = loginResult.getOrNull()
                 if (loginResponse?.code == 1) {
-                    loginResponse.data?.let { 
+                    loginResponse.data?.let {
                         saveCredentialsAndNotifySuccess(
                             usertoken = it.usertoken,
                             userId = it.id
@@ -209,13 +262,11 @@ class LoginViewModel(
     }
 
     fun loadVerificationCode() {
-        // 使用 Clock.System.now().toEpochMilliseconds() 获取跨平台的毫秒时间戳
         val timestamp = Clock.System.now().toEpochMilliseconds()
         _verificationCodeUrl.value = "http://apk.xiaoqu.online/api/get_image_verification_code?appid=1&type=2&t=$timestamp"
     }
 
     private suspend fun saveCredentialsAndNotifySuccess(usertoken: String, userId: Long) {
-        // 使用 Repository 保存，不再需要 Context
         authRepository.saveCredentials(
             username = _username.value,
             password = _password.value,

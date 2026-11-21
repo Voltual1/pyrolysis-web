@@ -11,5 +11,6 @@ public expect suspend fun uploadMultipartFileNative(
     url: String,
     file: PlatformFile,
     fileParamName: String = "file",
-    extraParams: Map<String, String> = emptyMap()
+    extraParams: Map<String, String> = emptyMap(),
+    headers: Map<String, String> = emptyMap()
 ): String?

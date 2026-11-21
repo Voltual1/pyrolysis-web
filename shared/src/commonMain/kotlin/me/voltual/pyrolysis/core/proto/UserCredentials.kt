@@ -1,5 +1,11 @@
 //Copyright (C) 2025 Voltual
-// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版...
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//（或任意更新的版本）的条款重新分发和/或修改它。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 
 package me.voltual.pyrolysis.core.proto
 
@@ -12,40 +18,44 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 class UserCredentials internal constructor(
-    val username: String,
-    val password: String,
-    val token: String,
-    val userId: Long,
-    val deviceId: String,
-    val sineMarketToken: String,
-    val sineOpenMarketToken: String,
-    val lingMarketToken: String
+    val username: String = "",
+    val password: String = "",
+    val token: String = "",
+    val userId: Long = 0L,
+    val deviceId: String = "",
+    val lanzouUsername: String = "",
+    val lanzouPassword: String = "",
+    val lanzouSessionCookie: String = "",
+    val lanzouCsrfToken: String = "",
+    val lanzouFolderName: String = ""
 ) {
-    // 模拟 Protobuf 的 toBuilder()
     fun toBuilder(): Builder = Builder(this)
 
-    // 模拟 Protobuf 的 Builder 内部类
     class Builder {
         private var username = ""
         private var password = ""
         private var token = ""
         private var userId = 0L
         private var deviceId = ""
-        private var sineMarketToken = ""
-        private var sineOpenMarketToken = ""
-        private var lingMarketToken = ""
+        private var lanzouUsername = ""
+        private var lanzouPassword = ""
+        private var lanzouSessionCookie = ""
+        private var lanzouCsrfToken = ""
+        private var lanzouFolderName = ""
 
         constructor()
-        
+
         constructor(credentials: UserCredentials) {
             this.username = credentials.username
             this.password = credentials.password
             this.token = credentials.token
             this.userId = credentials.userId
             this.deviceId = credentials.deviceId
-            this.sineMarketToken = credentials.sineMarketToken
-            this.sineOpenMarketToken = credentials.sineOpenMarketToken
-            this.lingMarketToken = credentials.lingMarketToken
+            this.lanzouUsername = credentials.lanzouUsername
+            this.lanzouPassword = credentials.lanzouPassword
+            this.lanzouSessionCookie = credentials.lanzouSessionCookie
+            this.lanzouCsrfToken = credentials.lanzouCsrfToken
+            this.lanzouFolderName = credentials.lanzouFolderName
         }
 
         fun setUsername(value: String) = apply { this.username = value }
@@ -53,9 +63,11 @@ class UserCredentials internal constructor(
         fun setToken(value: String) = apply { this.token = value }
         fun setUserId(value: Long) = apply { this.userId = value }
         fun setDeviceId(value: String) = apply { this.deviceId = value }
-        fun setSineMarketToken(value: String) = apply { this.sineMarketToken = value }
-        fun setSineOpenMarketToken(value: String) = apply { this.sineOpenMarketToken = value }
-        fun setLingMarketToken(value: String) = apply { this.lingMarketToken = value }
+        fun setLanzouUsername(value: String) = apply { this.lanzouUsername = value }
+        fun setLanzouPassword(value: String) = apply { this.lanzouPassword = value }
+        fun setLanzouSessionCookie(value: String) = apply { this.lanzouSessionCookie = value }
+        fun setLanzouCsrfToken(value: String) = apply { this.lanzouCsrfToken = value }
+        fun setLanzouFolderName(value: String) = apply { this.lanzouFolderName = value }
 
         fun build(): UserCredentials = UserCredentials(
             username = username,
@@ -63,16 +75,17 @@ class UserCredentials internal constructor(
             token = token,
             userId = userId,
             deviceId = deviceId,
-            sineMarketToken = sineMarketToken,
-            sineOpenMarketToken = sineOpenMarketToken,
-            lingMarketToken = lingMarketToken
+            lanzouUsername = lanzouUsername,
+            lanzouPassword = lanzouPassword,
+            lanzouSessionCookie = lanzouSessionCookie,
+            lanzouCsrfToken = lanzouCsrfToken,
+            lanzouFolderName = lanzouFolderName
         )
     }
 
     companion object {
-        private val DEFAULT_INSTANCE = UserCredentials("", "", "", 0L, "", "", "", "")
-        
-        // 模拟 Protobuf 的 getDefaultInstance()
+        private val DEFAULT_INSTANCE = UserCredentials()
+		// 模拟 Protobuf 的 getDefaultInstance()
         fun getDefaultInstance(): UserCredentials = DEFAULT_INSTANCE
     }
 }

@@ -35,22 +35,15 @@ data class UnifiedComment(
     val appId: String? = null,
     val versionId: Long? = null,
     val rating: Int? = null,
-    val isCountedInRating: Boolean? = null 
+    val isCountedInRating: Boolean? = null
 )
 
 /**
  * 统一的更新用户资料参数
  */
 data class UpdateUserProfileParams(
-    // 小趣空间字段
     val nickname: String? = null,
     val qqNumber: String? = null,
-    
-    // 弦应用商店字段
-    val displayName: String? = null,
-    val description: String? = null,
-    
-    // 设备名称（本地存储）
     val deviceName: String? = null
 )
 
@@ -78,17 +71,8 @@ data class UnifiedAppDetail(
     val isFavorite: Boolean,
     val favoriteCount: Int,
     val reviewCount: Int,
-    val downloadUrl: String?, // 直接可用的下载URL
-    val raw: Any,
-    // 微思应用商店专用字段
-    val minsdkDisplay: String? = null,
-    val targetsdkDisplay: String? = null,
-    val cpuArchDisplay: String? = null,
-    val osCompatibilityDisplay: String? = null,
-    val displayCompatibilityDisplay: String? = null,
-    val watchCount: Int? = null,
-    val upnote: String? = null,
-    val versionTypeDisplay: String? = null
+    val downloadUrl: String?,
+    val raw: Any
 )
 
 /**
@@ -96,7 +80,7 @@ data class UnifiedAppDetail(
  */
 data class UnifiedFavoriteState(
     val isFavorite: Boolean,
-    val favoriteCount: Int = -1 // 默认值为 -1，表示不支持统计
+    val favoriteCount: Int = -1
 )
 
 /**
@@ -140,8 +124,6 @@ data class UnifiedUserDetail(
     val displayName: String,
     val avatarUrl: String?,
     val description: String? = null,
-    
-    // 小趣空间特有字段
     val hierarchy: String? = null,
     val followersCount: String? = null,
     val fansCount: String? = null,
@@ -152,46 +134,24 @@ data class UnifiedUserDetail(
     val commentCount: Int? = null,
     val seriesDays: Int? = null,
     val lastActivityTime: String? = null,
-    
-    // 弦应用商店特有字段
-    val userOfficial: String? = null,
-    val userBadge: String? = null,
-    val userStatus: Int? = null,
-    val userStatusReason: String? = null,
-    val banTime: Long? = null,
-    val joinTime: Long? = null,
-    val userPermission: Int? = null,
-    val bindQq: Long? = null,
-    val bindEmail: String? = null,
-    val bindBilibili: Int? = null,
-    val verifyEmail: Int? = null,
-    val lastLoginDevice: String? = null,
-    val lastOnlineTime: Long? = null,
-    val uploadCount: Int? = null,
-    val replyCount: Int? = null,
-    
     val store: AppStore,
     val raw: Any? = null
 )
 
 /**
  * 统一的发布应用参数
- * 使用 okio.Path 代替 java.io.File
  */
 data class UnifiedAppReleaseParams(
     val store: AppStore,
-    // 通用字段
     val appName: String,
     val packageName: String,
     val versionName: String,
     val versionCode: Long,
     val sizeInMb: Double,
-    val iconPath: Path?, // Okio Path
-    val iconUrl: String?, 
-    val apkPath: Path?,   // Okio Path
-    val apkUrl: String?,  
-    
-    // 小趣空间特有
+    val iconPath: Path?,
+    val iconUrl: String?,
+    val apkPath: Path?,
+    val apkUrl: String?,
     val introduce: String? = null,
     val explain: String? = null,
     val introImages: List<String>? = null,
@@ -201,34 +161,18 @@ data class UnifiedAppReleaseParams(
     val payMoney: String? = null,
     val isUpdate: Boolean = false,
     val appId: Long? = null,
-    val appVersionId: Long? = null,
-
-    // 弦开放平台特有
-    val appTypeId: Int? = null,
-    val appVersionTypeId: Int? = null,
-    val appTags: String? = null,
-    val sdkMin: Int? = null,
-    val sdkTarget: Int? = null,
-    val developer: String? = null,
-    val source: String? = null,
-    val describe: String? = null,
-    val updateLog: String? = null,
-    val uploadMessage: String? = null,
-    val keyword: String? = null,
-    val isWearOs: Int? = null,
-    val abi: Int? = null,
-    val screenshots: List<Path>? = null // Okio Path 列表
+    val appVersionId: Long? = null
 )
 
 /**
  * 小趣空间关注状态
  */
 sealed class FollowStatus(val value: Int) {
-    data object MutualFollow : FollowStatus(0)      // 已互关
-    data object FollowedYou : FollowStatus(1)       // 关注了你
-    data object YouFollowed : FollowStatus(2)       // 已关注
-    data object NotFollowed : FollowStatus(3)       // 未关注
-    
+    data object MutualFollow : FollowStatus(0)
+    data object FollowedYou : FollowStatus(1)
+    data object YouFollowed : FollowStatus(2)
+    data object NotFollowed : FollowStatus(3)
+
     companion object {
         fun fromValue(value: Int): FollowStatus = when (value) {
             0 -> MutualFollow

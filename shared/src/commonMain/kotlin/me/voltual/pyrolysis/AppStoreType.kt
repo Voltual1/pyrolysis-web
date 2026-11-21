@@ -11,5 +11,6 @@ package me.voltual.pyrolysis
 
 enum class AppStore(val displayName: String) {
     XIAOQU_SPACE("小趣空间"),
+    LANZOU_CLOUD("蓝云存储"),
     LOCAL("本地应用")
 }

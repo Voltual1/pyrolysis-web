@@ -59,7 +59,6 @@ fun AppReleaseScreen(
         }
     }
 
-    // APK 选择器
     val apkLauncher = rememberFilePickerLauncher(
         type = FileKitType.File(extensions = listOf("apk")),
         onResult = { file ->
@@ -67,17 +66,12 @@ fun AppReleaseScreen(
         }
     )
 
-    // 图片选择器
     val imageLauncher = rememberFilePickerLauncher(
         type = FileKitType.Image,
         mode = FileKitMode.Multiple(),
         onResult = { files ->
-            if (!files.isNullOrEmpty()) {
-                if (selectedStore == AppStore.XIAOQU_SPACE) {
-                    viewModel.uploadIntroductionImages(files)
-                } else {
-                    viewModel.addScreenshots(files)
-                }
+            if (!files.isNullOrEmpty() && selectedStore == AppStore.XIAOQU_SPACE) {
+                viewModel.uploadIntroductionImages(files)
             }
         }
     )
@@ -106,11 +100,23 @@ fun AppReleaseScreen(
                 )
             }
 
+            if (selectedStore == AppStore.XIAOQU_SPACE) {
+                item { ApkUploadServiceDropdown(viewModel) }
+            }
+
             item {
                 BBQButton(
                     onClick = { apkLauncher.launch() },
                     modifier = Modifier.fillMaxWidth(),
-                    text = { Text("1. 选择 APK (解析并准备上传)") }
+                    text = {
+                        Text(
+                            if (viewModel.selectedApkUploadService.value == ApkUploadService.LANZOU_CLOUD) {
+                                "1. 选择 APK (上传至蓝云并自动解析)"
+                            } else {
+                                "1. 选择 APK (本地流式解析信息)"
+                            }
+                        )
+                    }
                 )
             }
 
@@ -138,9 +144,18 @@ fun AppReleaseScreen(
             }
 
             if (selectedStore == AppStore.XIAOQU_SPACE) {
-                item { ApkUploadServiceDropdown(viewModel) }
                 item { FormTextField(label = "应用名称", state = viewModel.appName) }
-                item { FormTextField(label = "APK 下载链接 (自动填充)", state = viewModel.apkDownloadUrl, singleLine = true) }
+                item {
+                    FormTextField(
+                        label = if (viewModel.selectedApkUploadService.value == ApkUploadService.LANZOU_CLOUD) {
+                            "APK 蓝奏云分享链接 (上传自动填充)"
+                        } else {
+                            "APK 下载链接 (请手动填写外部直链)"
+                        },
+                        state = viewModel.apkDownloadUrl,
+                        singleLine = true
+                    )
+                }
                 item { FormTextField(label = "包名 (自动填充)", state = viewModel.packageName, enabled = !isUpdateMode) }
                 item { FormTextField(label = "版本名 (自动填充)", state = viewModel.versionName, enabled = false) }
                 item { FormTextField(label = "文件大小 (MB)", state = viewModel.appSize, enabled = false) }
@@ -180,7 +195,7 @@ fun AppReleaseScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 BBQButton(
-                    onClick = { viewModel.releaseApp { /* 发布成功回调 */ } },
+                    onClick = { viewModel.releaseApp { } },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isAnyTaskRunning,
                     text = { Text(if (isUpdateMode) "3. 确认更新" else "3. 确认发布") }
@@ -300,153 +315,13 @@ fun CategoryDropdown(viewModel: AppReleaseViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppTypeDropdown(viewModel: AppReleaseViewModel) {
-    var expanded by remember { mutableStateOf(false) }
-    val appTypeOptions = viewModel.appTypeOptions
-    val selectedAppTypeId = viewModel.appTypeId.value
-
-    Column {
-        Text("应用类型", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        BBQExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
-        ) {
-            val selectedAppName = appTypeOptions.getOrNull(selectedAppTypeId - 1) ?: "请选择"
-            OutlinedTextField(
-                value = selectedAppName,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("选择应用类型") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(
-                        type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
-                        enabled = true
-                    )
-            )
-            BBQExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                appTypeOptions.forEachIndexed { index, appType ->
-                    val id = index + 1
-                    DropdownMenuItem(
-                        text = { Text(appType) },
-                        onClick = {
-                            viewModel.appTypeId.value = id
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun VersionTypeDropdown(viewModel: AppReleaseViewModel) {
-    var expanded by remember { mutableStateOf(false) }
-    val versionTypeOptions = viewModel.versionTypeOptions
-    val selectedVersionTypeId = viewModel.appVersionTypeId.value
-
-    Column {
-        Text("版本类型", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        BBQExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
-        ) {
-            val selectedVersionName = versionTypeOptions.getOrNull(selectedVersionTypeId - 1) ?: "请选择"
-            OutlinedTextField(
-                value = selectedVersionName,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("选择版本类型") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(
-                        type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
-                        enabled = true
-                    )
-            )
-            BBQExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                versionTypeOptions.forEachIndexed { index, versionType ->
-                    val id = index + 1
-                    DropdownMenuItem(
-                        text = { Text(versionType) },
-                        onClick = {
-                            viewModel.appVersionTypeId.value = id
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TagDropdown(viewModel: AppReleaseViewModel) {
-    var expanded by remember { mutableStateOf(false) }
-    val tagOptions = viewModel.tagOptions
-    val selectedTagIndex = viewModel.appTags.value
-
-    Column {
-        Text("应用标签", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        BBQExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
-        ) {
-            val selectedTagName = tagOptions.getOrNull(selectedTagIndex) ?: "请选择"
-            OutlinedTextField(
-                value = selectedTagName,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("选择应用标签") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(
-                        type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
-                        enabled = true
-                    )
-            )
-            BBQExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                tagOptions.forEachIndexed { index, tag ->
-                    DropdownMenuItem(
-                        text = { Text(tag) },
-                        onClick = {
-                            viewModel.appTags.value = index
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 fun ApkUploadServiceDropdown(viewModel: AppReleaseViewModel) {
     var expanded by remember { mutableStateOf(false) }
-    val services = ApkUploadService.values()
+    val services = ApkUploadService.entries
     val selectedService by viewModel.selectedApkUploadService
 
     Column {
-        Text("APK 上传服务", style = MaterialTheme.typography.titleMedium)
+        Text("APK 托管与解析方式", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
         BBQExposedDropdownMenuBox(
             expanded = expanded,
@@ -456,7 +331,7 @@ fun ApkUploadServiceDropdown(viewModel: AppReleaseViewModel) {
                 value = selectedService.displayName,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("选择上传服务") },
+                label = { Text("选择托管方式") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
                     .fillMaxWidth()

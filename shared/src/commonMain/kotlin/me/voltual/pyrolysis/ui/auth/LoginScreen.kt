@@ -42,7 +42,6 @@ fun LoginScreen(
 ) {
     var isRegistering by remember { mutableStateOf(false) }
     val loginSuccess by viewModel.loginSuccess.collectAsState()
-    val navigator = LocalNavigator.current
 
     if (loginSuccess) {
         LaunchedEffect(Unit) {
@@ -89,20 +88,18 @@ fun LoginContent(
 
     Scaffold(snackbarHost = { BBQSnackbarHost(hostState = snackbarHostState) }) { padding ->
         Column(
-    modifier = Modifier
-        .padding(padding)
-        .fillMaxSize()
-        .verticalScroll(scrollState)  
-        .padding(24.dp),             
-    verticalArrangement = Arrangement.Center,
-    horizontalAlignment = Alignment.CenterHorizontally
-) {
-            // 商店选择下拉菜单
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             AppStoreDropdownMenu(
                 selectedStore = selectedStore,
                 onStoreChange = { viewModel.onStoreSelected(it) },
                 modifier = Modifier.fillMaxWidth(),
-                // 排除本地应用，包含 小趣空间、弦应用商店、弦-开放平台
                 appStores = remember { AppStore.entries.filter { it != AppStore.LOCAL } }
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -110,7 +107,11 @@ fun LoginContent(
             OutlinedTextField(
                 value = username,
                 onValueChange = { viewModel.onUsernameChange(it) },
-                label = { Text("用户名") },
+                label = {
+                    Text(
+                        if (selectedStore == AppStore.LANZOU_CLOUD) "蓝奏云账号" else "用户名"
+                    )
+                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -118,7 +119,11 @@ fun LoginContent(
             OutlinedTextField(
                 value = password,
                 onValueChange = { viewModel.onPasswordChange(it) },
-                label = { Text("密码") },
+                label = {
+                    Text(
+                        if (selectedStore == AppStore.LANZOU_CLOUD) "蓝奏云密码" else "密码"
+                    )
+                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -134,10 +139,9 @@ fun LoginContent(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading
             ) {
-                Text("登录")
+                Text(if (selectedStore == AppStore.LANZOU_CLOUD) "绑定并登录蓝云" else "登录")
             }
-            
-            // 仅在小趣空间模式下显示注册按钮
+
             if (selectedStore == AppStore.XIAOQU_SPACE) {
                 TextButton(onClick = onNavigateToRegister, modifier = Modifier.fillMaxWidth()) {
                     Text("注册新账号")
@@ -145,12 +149,12 @@ fun LoginContent(
             } else {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "暂不支持应用内注册",
+                    text = "绑定蓝奏云账号后，可直接上传并自动解析 APK",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             if (isLoading) {
                 Spacer(modifier = Modifier.height(16.dp))
                 CircularProgressIndicator()
@@ -189,14 +193,14 @@ fun RegisterContent(
 
     Scaffold(snackbarHost = { BBQSnackbarHost(hostState = snackbarHostState) }) { padding ->
         Column(
-    modifier = Modifier
-        .padding(padding)
-        .fillMaxSize()
-        .verticalScroll(scrollState)
-        .padding(24.dp),
-    verticalArrangement = Arrangement.Center,
-    horizontalAlignment = Alignment.CenterHorizontally
-) {
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             OutlinedTextField(
                 value = username,
                 onValueChange = { viewModel.onUsernameChange(it) },

@@ -8,24 +8,36 @@ import io.github.vinceglb.filekit.name
 import kotlinx.coroutines.await
 import kotlin.js.Promise
 
-@JsFun("""(url, file, filename, fileKey, extraKey, extraValue) => {
+@JsFun("""(url, file, filename, fileKey, extraJson, headersJson) => {
     return new Promise((resolve, reject) => {
         const formData = new FormData();
-        if (extraKey && extraValue) {
-            formData.append(extraKey, extraValue);
+        if (extraJson) {
+            const extras = JSON.parse(extraJson);
+            for (const [k, v] of Object.entries(extras)) {
+                formData.append(k, v);
+            }
         }
         formData.append(fileKey, file, filename);
+
+        const headers = {};
+        if (headersJson) {
+            const parsedHeaders = JSON.parse(headersJson);
+            for (const [k, v] of Object.entries(parsedHeaders)) {
+                headers[k] = v;
+            }
+        }
+
         fetch(url, {
             method: "POST",
+            headers: headers,
             body: formData
-        }).then(response => {
+        }).then(async response => {
+            const text = await response.text();
             if (!response.ok) {
-                reject(new Error("HTTP Error " + response.status));
+                reject(new Error("HTTP " + response.status + ": " + text));
             } else {
-                return response.text();
+                resolve(text);
             }
-        }).then(text => {
-            resolve(text);
         }).catch(err => {
             reject(err);
         });
@@ -36,15 +48,16 @@ private external fun jsNativeFetchUpload(
     file: JsAny,
     filename: String,
     fileKey: String,
-    extraKey: String?,
-    extraValue: String?
+    extraJson: String?,
+    headersJson: String?
 ): Promise<JsString>
 
 public actual suspend fun uploadMultipartFileNative(
     url: String,
     file: PlatformFile,
     fileParamName: String,
-    extraParams: Map<String, String>
+    extraParams: Map<String, String>,
+    headers: Map<String, String>
 ): String? {
     val browserFile: BrowserFile = when (val wf = file.webFile) {
         is WebFile.FileWrapper -> wf.file
@@ -52,17 +65,32 @@ public actual suspend fun uploadMultipartFileNative(
         else -> throw IllegalArgumentException("PlatformFile 不包含有效的浏览器文件对象")
     }
 
-    val extraKey = extraParams.keys.firstOrNull()
-    val extraValue = if (extraKey != null) extraParams[extraKey] else null
+    val extraJson = if (extraParams.isNotEmpty()) {
+        extraParams.entries.joinToString(prefix = "{", postfix = "}") { (k, v) ->
+            "\"${k.escapeJson()}\":\"${v.escapeJson()}\""
+        }
+    } else null
+
+    val headersJson = if (headers.isNotEmpty()) {
+        headers.entries.joinToString(prefix = "{", postfix = "}") { (k, v) ->
+            "\"${k.escapeJson()}\":\"${v.escapeJson()}\""
+        }
+    } else null
 
     val responseText = jsNativeFetchUpload(
         url = url,
         file = browserFile,
         filename = file.name,
         fileKey = fileParamName,
-        extraKey = extraKey,
-        extraValue = extraValue
+        extraJson = extraJson,
+        headersJson = headersJson
     ).await<JsString>()
 
     return responseText.toString()
 }
+
+private fun String.escapeJson(): String = this
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+    .replace("\n", "\\n")
+    .replace("\r", "\\r")

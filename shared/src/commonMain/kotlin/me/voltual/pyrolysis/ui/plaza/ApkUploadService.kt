@@ -8,6 +8,6 @@
 package me.voltual.pyrolysis.ui.plaza
 
 enum class ApkUploadService(val displayName: String) {
-    FILE_SMALLFUN("小趣外链"),
-    WANYUEYUN("挽悦云")
+    LANZOU_CLOUD("蓝云托管（上传并自动解析）"),
+    EXTERNAL_LINK("外部直链（本地解析+手动填链）")
 }
