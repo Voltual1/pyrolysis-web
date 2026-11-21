@@ -21,7 +21,6 @@ public actual suspend fun extractApkMetadata(file: PlatformFile): UnifiedApkMeta
     val filePath = when (val af = file.androidFile) {
         is AndroidFile.FileWrapper -> af.file.absolutePath
         is AndroidFile.UriWrapper -> {
-            // 若为 content:// Uri，复制到临时文件供 PackageParser 安全读取
             val tempFile = File.createTempFile("apk_parse_", ".apk", context.cacheDir)
             try {
                 context.contentResolver.openInputStream(af.uri)?.use { input ->
@@ -65,7 +64,6 @@ public actual suspend fun extractApkMetadata(file: PlatformFile): UnifiedApkMeta
         }
     }
 
-    // 提取应用图标字节
     var iconBytes: ByteArray? = null
     try {
         val iconDrawable: Drawable? = packageInfo.applicationInfo?.loadIcon(pm)
@@ -78,7 +76,6 @@ public actual suspend fun extractApkMetadata(file: PlatformFile): UnifiedApkMeta
     } catch (_: Exception) {
     }
 
-    // 清理临时文件（若为 Uri 复制生成的）
     if (file.androidFile is AndroidFile.UriWrapper) {
         try {
             File(filePath).delete()

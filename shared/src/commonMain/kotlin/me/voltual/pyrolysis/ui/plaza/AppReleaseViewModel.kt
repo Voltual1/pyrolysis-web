@@ -21,7 +21,7 @@ import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
 import me.voltual.pyrolysis.feature.store.repository.XiaoQuRepository
 import me.voltual.pyrolysis.data.unified.UnifiedAppReleaseParams
-import me.voltual.pyrolysis.utils.createStreamingApkParser
+import me.voltual.pyrolysis.utils.extractApkMetadata
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
