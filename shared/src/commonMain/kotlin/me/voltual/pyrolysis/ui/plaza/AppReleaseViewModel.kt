@@ -21,7 +21,6 @@ import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.feature.store.repository.IAppStoreRepository
 import me.voltual.pyrolysis.feature.store.repository.XiaoQuRepository
 import me.voltual.pyrolysis.data.unified.UnifiedAppReleaseParams
-import me.voltual.apkparser.ApkMetadata
 import me.voltual.pyrolysis.utils.createStreamingApkParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -152,63 +151,51 @@ class AppReleaseViewModel(
     }
 
     private suspend fun parseApkLocallyAndUploadIcon(file: PlatformFile) {
-        _processFeedback.value = Result.success("正在流式解析本地 APK 元数据...")
+    _processFeedback.value = Result.success("正在解析 APK 元数据...")
 
-        val parser = try {
-            createStreamingApkParser(file)
-        } catch (e: Exception) {
-            _processFeedback.value = Result.failure(Exception("打开 APK 流失败: ${e.message}"))
-            return
-        }
+    val parsed = try {
+        extractApkMetadata(file)
+    } catch (e: Exception) {
+        _processFeedback.value = Result.failure(Exception("APK 解析失败: ${e.message}"))
+        return
+    }
 
-        val metadata: ApkMetadata = try {
-            parser.parse()
-        } catch (e: Exception) {
-            _processFeedback.value = Result.failure(Exception("APK 解析失败: ${e.message}"))
-            return
-        }
+    val rawSize = file.size()
+    val mb = if (rawSize > 0) rawSize / 1024.0 / 1024.0 else 0.0
+    val formattedSize = ((mb * 100).roundToInt() / 100.0).toString()
 
-        var iconBytesForPreview: ByteArray? = null
-        metadata.iconPath?.let { internalPath ->
-            iconBytesForPreview = parser.getFileBytes(internalPath)
-        }
+    withContext(Dispatchers.Main) {
+        appName.value = parsed.label ?: "未知应用"
+        packageName.value = parsed.packageName ?: ""
+        versionName.value = parsed.versionName ?: "N/A"
+        versionCode.value = parsed.versionCode ?: 0L
+        appSize.value = formattedSize
+        localIconFile.value = file
+        appExplain.value = "适配性能描述 •\n包名：${parsed.packageName.orEmpty()}\n版本：${parsed.versionName.orEmpty()}"
+    }
 
-        val rawSize = file.size()
-        val mb = if (rawSize > 0) rawSize / 1024.0 / 1024.0 else 0.0
-        val formattedSize = ((mb * 100).roundToInt() / 100.0).toString()
-
-        withContext(Dispatchers.Main) {
-            appName.value = metadata.label ?: "未知应用"
-            packageName.value = metadata.packageName ?: ""
-            versionName.value = metadata.versionName ?: "N/A"
-            versionCode.value = metadata.versionCode ?: 0L
-            appSize.value = formattedSize
-            localIconFile.value = file
-            appExplain.value = "适配性能描述 •\n包名：${metadata.packageName}\n版本：${metadata.versionName}"
-        }
-
-        if (iconBytesForPreview != null) {
-            isIconUploading.value = true
-            val now = Clock.System.now().toEpochMilliseconds()
-            val iconFileName = "icon_${now}.png"
-            val imageResult = xiaoQuRepo.uploadImage(iconBytesForPreview!!, iconFileName, "icon")
-            imageResult.onSuccess { url ->
-                withContext(Dispatchers.Main) {
-                    iconUrl.value = url
-                    _processFeedback.value = Result.success("本地解析与图标上传完成，请填写外部 APK 链接")
-                }
-            }.onFailure { e ->
-                withContext(Dispatchers.Main) {
-                    _processFeedback.value = Result.failure(e)
-                }
-            }
-            isIconUploading.value = false
-        } else {
+    if (parsed.iconBytes != null) {
+        isIconUploading.value = true
+        val now = Clock.System.now().toEpochMilliseconds()
+        val iconFileName = "icon_${now}.png"
+        val imageResult = xiaoQuRepo.uploadImage(parsed.iconBytes, iconFileName, "icon")
+        imageResult.onSuccess { url ->
             withContext(Dispatchers.Main) {
-                _processFeedback.value = Result.success("本地解析完成，请填写外部 APK 链接")
+                iconUrl.value = url
+                _processFeedback.value = Result.success("本地解析与图标上传完成，请填写外部 APK 链接")
             }
+        }.onFailure { e ->
+            withContext(Dispatchers.Main) {
+                _processFeedback.value = Result.failure(e)
+            }
+        }
+        isIconUploading.value = false
+    } else {
+        withContext(Dispatchers.Main) {
+            _processFeedback.value = Result.success("本地解析完成，请填写外部 APK 链接")
         }
     }
+}
 
     fun uploadIntroductionImages(files: List<PlatformFile>) {
         if (_selectedStore.value != AppStore.XIAOQU_SPACE) return

@@ -5,8 +5,21 @@ import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.readBytes
 import me.voltual.apkparser.ApkParser
 
-public actual suspend fun createStreamingApkParser(file: PlatformFile): ApkParser {
-    // Web 平台：通过 readBytes 解析必要元数据
+public actual suspend fun extractApkMetadata(file: PlatformFile): UnifiedApkMetadata {
     val bytes = file.readBytes()
-    return ApkParser(bytes)
+    val parser = ApkParser(bytes)
+    val metadata = parser.parse()
+
+    var iconBytes: ByteArray? = null
+    metadata.iconPath?.let { path ->
+        iconBytes = parser.getFileBytes(path)
+    }
+
+    return UnifiedApkMetadata(
+        packageName = metadata.packageName,
+        label = metadata.label,
+        versionCode = metadata.versionCode,
+        versionName = metadata.versionName,
+        iconBytes = iconBytes
+    )
 }

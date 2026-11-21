@@ -60,8 +60,7 @@ kotlin {
                 implementation(libs.room3.runtime)
                 implementation(libs.sqlite)
                 implementation(libs.ktor.client.logging)
-                implementation(libs.kotlinx.io)
-                implementation(project(":ApkParser"))
+                implementation(libs.kotlinx.io)                
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.koin.compose.viewmodel)
                 implementation(libs.kotlinx.coroutines.core)
@@ -101,7 +100,8 @@ kotlin {
         }
 
         wasmJsMain.dependencies {
-            implementation(libs.ktor.client.js.wasm)                    
+            implementation(libs.ktor.client.js.wasm)    
+            implementation(project(":ApkParser"))                
             // 这两个库会接管 Wasm 层的初始化钩子，彻底干掉那个无处安放的文件系统异常！
             implementation(libs.coil.compose.wasm)
             implementation(libs.coil.network.ktor.wasm)                
