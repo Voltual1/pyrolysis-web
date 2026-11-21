@@ -122,7 +122,7 @@ data class UnifiedUserDetail(
     val id: Long,
     val username: String,
     val displayName: String,
-    val description: String? = null,
+    val bindQq: Long? = null,
     val avatarUrl: String?,
     val description: String? = null,
     val hierarchy: String? = null,
