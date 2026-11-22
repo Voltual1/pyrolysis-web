@@ -8,6 +8,9 @@ import io.github.vinceglb.filekit.name
 import kotlinx.coroutines.await
 import kotlin.js.Promise
 
+@JsFun("""(originPrivateFile) => originPrivateFile.handle.getFile()""")
+private external fun getOriginPrivateBrowserFile(originPrivateFile: JsAny): Promise<BrowserFile>
+
 @JsFun("""(url, file, filename, fileKey, extraJson, headersJson) => {
     return new Promise((resolve, reject) => {
         const formData = new FormData();
@@ -61,7 +64,7 @@ public actual suspend fun uploadMultipartFileNative(
 ): String? {
     val browserFile: BrowserFile = when (val wf = file.webFile) {
         is WebFile.FileWrapper -> wf.file
-        is WebFile.OriginPrivateFile -> wf.handle.getFile().await()
+        is WebFile.OriginPrivateFile -> getOriginPrivateBrowserFile(wf.unsafeCast()).await()
         else -> throw IllegalArgumentException("PlatformFile 不包含有效的浏览器文件对象")
     }
 
