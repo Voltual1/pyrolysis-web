@@ -304,7 +304,7 @@ class XiaoQuRepository(
             val imageUploadUrl = getImageUploadEndpoint()
             val nativeText = uploadMultipartFileNative(imageUploadUrl, file, "file")
             if (nativeText != null) {
-                val responseBody = json.decodeFromString<KtorClient.ImageUploadResponse>(nativeText)
+                val responseBody = json.decodeFromString<KtorClient.UploadResponse>(nativeText)
                 if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
                     Result.success(responseBody.downurl)
                 } else {
@@ -321,7 +321,7 @@ class XiaoQuRepository(
                     }
                 )
                 if (response.status.isSuccess()) {
-                    val responseBody: KtorClient.ImageUploadResponse = response.body()
+                    val responseBody: KtorClient.UploadResponse = response.body()
                     if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
                         Result.success(responseBody.downurl)
                     } else {
@@ -350,7 +350,7 @@ class XiaoQuRepository(
             )
 
             if (response.status.isSuccess()) {
-                val responseBody: KtorClient.ImageUploadResponse = response.body()
+                val responseBody: KtorClient.UploadResponse = response.body()
                 if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
                     Result.success(responseBody.downurl)
                 } else {
