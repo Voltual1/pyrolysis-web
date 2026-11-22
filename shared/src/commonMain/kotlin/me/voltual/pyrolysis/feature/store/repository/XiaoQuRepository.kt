@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import me.voltual.pyrolysis.AppStore
 import me.voltual.pyrolysis.AuthRepository
+import me.voltual.pyrolysis.ApiUrlProvider
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.LanzouClient
 import me.voltual.pyrolysis.data.unified.*
@@ -27,8 +28,8 @@ import kotlinx.io.files.Path
 
 /**
  * 小趣空间数据仓库实现。
- * 图片上传使用 https://file.smallfun.cn/api.php
- * APK 流式托管使用蓝云 (http://py.smallfun.cn/api/upload)
+ * 图片上传使用 ApiUrlProvider.smallfunFileBaseUrl + api.php
+ * APK 流式托管使用蓝云
  */
 class XiaoQuRepository(
     private val apiClient: KtorClient.ApiService,
@@ -293,13 +294,17 @@ class XiaoQuRepository(
         return Result.failure(UnsupportedOperationException("Use PlatformFile overload"))
     }
 
-    // --- 图片上传（https://file.smallfun.cn/api.php，仅用于图片） ---
+    private fun getImageUploadEndpoint(): String {
+        val base = ApiUrlProvider.smallfunFileBaseUrl.removeSuffix("/")
+        return "$base/api.php"
+    }
+
     override suspend fun uploadImage(file: PlatformFile, type: String): Result<String> {
         return try {
-            val imageUploadUrl = "https://file.smallfun.cn/api.php"
+            val imageUploadUrl = getImageUploadEndpoint()
             val nativeText = uploadMultipartFileNative(imageUploadUrl, file, "file")
             if (nativeText != null) {
-                val responseBody = json.decodeFromString<KtorClient.UploadResponse>(nativeText)
+                val responseBody = json.decodeFromString<KtorClient.ImageUploadResponse>(nativeText)
                 if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
                     Result.success(responseBody.downurl)
                 } else {
@@ -307,7 +312,7 @@ class XiaoQuRepository(
                 }
             } else {
                 val response = KtorClient.uploadHttpClient.submitFormWithBinaryData(
-                    url = "api.php",
+                    url = imageUploadUrl,
                     formData = formData {
                         append("file", createUploadProvider(file), Headers.build {
                             append(HttpHeaders.ContentType, "image/png")
@@ -316,7 +321,7 @@ class XiaoQuRepository(
                     }
                 )
                 if (response.status.isSuccess()) {
-                    val responseBody: KtorClient.UploadResponse = response.body()
+                    val responseBody: KtorClient.ImageUploadResponse = response.body()
                     if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
                         Result.success(responseBody.downurl)
                     } else {
@@ -333,8 +338,9 @@ class XiaoQuRepository(
 
     override suspend fun uploadImage(bytes: ByteArray, filename: String, type: String): Result<String> {
         return try {
+            val imageUploadUrl = getImageUploadEndpoint()
             val response = KtorClient.uploadHttpClient.submitFormWithBinaryData(
-                url = "api.php",
+                url = imageUploadUrl,
                 formData = formData {
                     append("file", bytes, Headers.build {
                         append(HttpHeaders.ContentType, "image/png")
@@ -344,7 +350,7 @@ class XiaoQuRepository(
             )
 
             if (response.status.isSuccess()) {
-                val responseBody: KtorClient.UploadResponse = response.body()
+                val responseBody: KtorClient.ImageUploadResponse = response.body()
                 if (responseBody.code == 0 && !responseBody.downurl.isNullOrBlank()) {
                     Result.success(responseBody.downurl)
                 } else {
@@ -358,9 +364,6 @@ class XiaoQuRepository(
         }
     }
 
-    /**
-     * 通过蓝云上传 APK，返回完整的蓝云响应数据（包含 share_url、password 以及服务端解析好的 apk 元数据与 icon_url）
-     */
     suspend fun uploadApkToLanzou(file: PlatformFile): Result<LanzouClient.LanzouUploadData> {
         return try {
             val creds = authRepository.credentials.first()

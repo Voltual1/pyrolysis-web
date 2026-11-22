@@ -33,8 +33,6 @@ import kotlin.time.Duration.Companion.seconds
 class LanzouNetworkException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 object LanzouClient {
-    const val BASE_URL = "http://py.smallfun.cn"
-
     private val commonJson = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -56,8 +54,6 @@ object LanzouClient {
             level = LogLevel.HEADERS
         }
     }
-
-    // ===== 蓝云模型类定义 =====
 
     @Serializable
     data class HealthResponse(
@@ -148,8 +144,6 @@ object LanzouClient {
         val data: LanzouUploadData? = null
     )
 
-    // ===== API 服务接口与实现 =====
-
     interface ApiService {
         suspend fun createOrRefreshGuestSession(existingCookie: String? = null): Result<Pair<GuestAuthResponse, String>>
         suspend fun bindLanzouAccount(
@@ -166,10 +160,15 @@ object LanzouClient {
     }
 
     object ApiServiceImpl : ApiService {
+        private fun getEndpoint(path: String): String {
+            val base = ApiUrlProvider.lanzouBaseUrl.removeSuffix("/")
+            val cleanPath = path.removePrefix("/")
+            return "$base/$cleanPath"
+        }
 
         override suspend fun createOrRefreshGuestSession(existingCookie: String?): Result<Pair<GuestAuthResponse, String>> {
             return try {
-                val response = httpClient.post("$BASE_URL/api/auth/guest") {
+                val response = httpClient.post(getEndpoint("api/auth/guest")) {
                     contentType(ContentType.Application.Json)
                     if (!existingCookie.isNullOrBlank()) {
                         header(HttpHeaders.Cookie, existingCookie)
@@ -183,7 +182,6 @@ object LanzouClient {
                     return Result.failure(LanzouNetworkException(parsed.message ?: "建立蓝云会话失败 (${response.status})"))
                 }
 
-                // 提取响应头 Set-Cookie 中的 ly_session
                 val setCookieHeaders = response.headers.getAll(HttpHeaders.SetCookie).orEmpty()
                 val extractedSession = setCookieHeaders
                     .mapNotNull { raw ->
@@ -207,7 +205,7 @@ object LanzouClient {
             lanzouPassword: String
         ): Result<BindResponse> {
             return try {
-                val response = httpClient.post("$BASE_URL/api/lanzou/bind") {
+                val response = httpClient.post(getEndpoint("api/lanzou/bind")) {
                     contentType(ContentType.Application.Json)
                     if (sessionCookie.isNotBlank()) {
                         header(HttpHeaders.Cookie, sessionCookie)
@@ -236,13 +234,12 @@ object LanzouClient {
             file: PlatformFile
         ): Result<LanzouUploadResponse> {
             return try {
-                val uploadUrl = "$BASE_URL/api/upload"
+                val uploadUrl = getEndpoint("api/upload")
                 val requestHeaders = buildMap {
                     if (sessionCookie.isNotBlank()) put(HttpHeaders.Cookie, sessionCookie)
                     if (csrfToken.isNotBlank()) put("X-CSRF-Token", csrfToken)
                 }
 
-                // 优先走 WasmJS 原生 FormData 零内存推流；Android 端返回 null 后走 OkHttp 流式管道
                 val nativeText = uploadMultipartFileNative(
                     url = uploadUrl,
                     file = file,
