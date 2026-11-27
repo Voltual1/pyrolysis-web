@@ -10,6 +10,7 @@ package me.voltual.pyrolysis.core.database
 
 import android.util.Log
 import androidx.room3.Database
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.room3.RoomDatabase
 import androidx.room3.TypeConverters
 import androidx.room3.withWriteTransaction
@@ -155,7 +156,7 @@ val databaseModule = module {
             FdroidDatabase::class.java,
             "main_fdroid_database.db"
         )
-        .setDriver(androidx.sqlite.driver.bundled.BundledSQLiteDriver()) 
+        .setDriver(AndroidSQLiteDriver()) 
         .addCallback(FdroidDatabase.dbCreateCallback) // 挂载改回 onCreate 后的回调
         .fallbackToDestructiveMigration(true)
         .build()
