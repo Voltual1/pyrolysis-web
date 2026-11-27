@@ -87,8 +87,8 @@ fun NavigationDrawerItems(
             DrawerItem("update_settings", "更新设置", IconSource.Vector(Asusupdate), UpdateSettings)
         )
 
-        // 仅在 Android 平台下将仓库相关、存储管理、网络代理加入侧边栏
-        if (platformId == "android") {
+        // 仅在 Android F-Droid 版下将仓库相关、存储管理、网络代理加入侧边栏
+        if (platformId == "android-fdroid") {
             items.add(DrawerItem("repos_search", "仓库搜索", IconSource.Vector(Phosphor.MagnifyingGlass), SearchPage))
             items.add(DrawerItem("prefsrepos", "仓库管理", IconSource.Vector(Phosphor.Graph), PrefsReposPage))
             items.add(DrawerItem("store_manager", "存储管理", IconSource.Vector(Appbackuprestore), StoreManager))

@@ -46,6 +46,7 @@ class BBQApplication : Application(), KoinStartup {
     private var activityRef: WeakReference<AppCompatActivity> = WeakReference(null)
 
     override fun onCreate() {
+        initAndroidPlatform("android-fdroid")
         super.onCreate()
         instance = this
 
@@ -77,6 +78,7 @@ class BBQApplication : Application(), KoinStartup {
     
 	@Suppress("DSL_MARKER_APPLIED_TO_WRONG_TARGET")
     override fun onKoinStartup() = koinConfiguration {
+        initAndroidPlatform("android-fdroid")
         androidContext(this@BBQApplication)
         modules(
                 androidAppModule,  

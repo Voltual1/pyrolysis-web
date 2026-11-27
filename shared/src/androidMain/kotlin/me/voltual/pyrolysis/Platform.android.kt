@@ -1,5 +1,9 @@
 package me.voltual.pyrolysis
 
-actual fun getPlatformId(): String = "android"
+private var androidPlatformId: String = "android"
 
+fun initAndroidPlatform(platformId: String) {
+    androidPlatformId = platformId
+}
 
+actual fun getPlatformId(): String = androidPlatformId
