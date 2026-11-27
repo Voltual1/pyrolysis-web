@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    
     <string name="app_license">GNU General Public License v3.0</string>
     <string name="app_name">Pyrolysis</string>    
+    <string name="crash_report_copied">崩溃报告已复制到剪贴板</string>
     
 </resources>
