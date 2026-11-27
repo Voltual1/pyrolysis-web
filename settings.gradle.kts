@@ -21,6 +21,7 @@ dependencyResolutionManagement {
 rootProject.name = "Pyrolysis"
 include(":shared")
 include(":android")
+include(":android-f-droid")
 include(":ApkParser")
 include(":arsc")
 include(":SomeAXML")

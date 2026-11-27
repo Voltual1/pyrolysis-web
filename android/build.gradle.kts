@@ -2,13 +2,10 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    id("kotlin-parcelize")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.androidx.room3)    
-//    alias(libs.plugins.protobuf)
-    alias(libs.plugins.shizuku.refine)
 }
 
 android {
@@ -111,13 +108,9 @@ dependencies {
     // 基础
     coreLibraryDesugaring(libs.android.desugar)
     implementation(libs.google.material)
-    implementation(libs.okhttp)
-    implementation(libs.fragment)
-    implementation(libs.biometric)
-    implementation(libs.simple.storage)
-    
+    implementation(libs.okhttp)    
                     implementation(libs.room3.runtime)
-                implementation(libs.sqlite.bundled)
+//                implementation(libs.sqlite.bundled)
     
     // Compose
     implementation(platform(libs.compose.bom))
@@ -130,7 +123,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.compose.navigation3)
     implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0")
-    implementation(libs.zxing.core)
     implementation(libs.compose.navigation3.ui)
     implementation(libs.compose.adaptive)
     implementation(libs.compose.adaptive.layout)
@@ -149,24 +141,13 @@ dependencies {
     // 播放器与 UI
     implementation(libs.ijkplayer)
     implementation(project(":DanmakuFlameMaster"))
-    implementation(project(":ApkParser"))
+
     implementation(project(":shared"))
     implementation(libs.markdown)
 
     // 存储
     implementation(libs.datastore.preferences)
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
-    implementation(libs.datastore.core)
-    
-    //Shizuku
-    implementation(libs.shizuku.api)
-    implementation(libs.shizuku.provider)
-    implementation(libs.shizuku.refine)
-    compileOnly(libs.shizuku.hidden)
-    
-    //Libsu
-    implementation(libs.libsu.core)
+    implementation(libs.datastore.core)       
 
     // Koin 注入
     implementation(libs.koin.android.compose)
@@ -182,37 +163,10 @@ dependencies {
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.json)
-    implementation(libs.work.runtime)
     implementation(libs.ktor.io)
     implementation(libs.ktor.client.logging)
     implementation(libs.kotlinx.serialization.json)
-
-
-    // --- Neo Store 移植依赖 ---
-    implementation(libs.kotlinx.datetime)
-    implementation(libs.kotlinx.collections.immutable)
-    implementation(libs.compose.html.converter)
-}
-
-/*protobuf {
-    protoc {
-        artifact = libs.protoc.artifact.get().toString()
-    }
-    generateProtoTasks {
-        all().forEach { task ->
-            task.builtins {
-                create("java")
-                create("kotlin")
-            }
-        }
-    }
-}*/
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        freeCompilerArgs.add("-XXLanguage:+ExplicitBackingFields")
-    }
+   
 }
 
 room3 {
