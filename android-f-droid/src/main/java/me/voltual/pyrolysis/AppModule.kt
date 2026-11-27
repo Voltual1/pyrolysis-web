@@ -4,7 +4,7 @@
 package me.voltual.pyrolysis
 
 import androidx.room3.Room
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import me.voltual.pyrolysis.core.database.FdroidDatabase
 import me.voltual.pyrolysis.core.database.dao.*
 import me.voltual.pyrolysis.feature.store.repository.*
@@ -31,7 +31,7 @@ val androidAppModule = module {
             FdroidDatabase::class.java,
             "fdroid_database"
         )
-        .setDriver(BundledSQLiteDriver())
+        .setDriver(AndroidSQLiteDriver())
         .build()
     }
 
