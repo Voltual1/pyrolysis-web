@@ -101,7 +101,7 @@ kotlin {
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.ijkplayer)
                 implementation(libs.koin.android.compose)
-                implementation(libs.sqlite.bundled)
+//                implementation(libs.sqlite.bundled)
                 implementation(project(":DanmakuFlameMaster"))
                 implementation(libs.compose.adaptive)
                 implementation(libs.androidx.lifecycle.viewmodel.compose)

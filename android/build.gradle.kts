@@ -127,10 +127,6 @@ dependencies {
     implementation(libs.compose.navigation3)
     implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0")
     implementation(libs.compose.navigation3.ui)
-    implementation(libs.compose.adaptive)
-    implementation(libs.compose.adaptive.layout)
-    implementation(libs.compose.adaptive.navigation)
-
     // 图片与异步
     implementation(libs.coil.compose)
     implementation(libs.coil.network.ktor)
@@ -156,7 +152,6 @@ dependencies {
     implementation(libs.koin.android.compose)
     implementation(libs.koin.core)
     implementation(libs.koin.annotations)
-    implementation(libs.koin.workmanager)
     implementation(libs.koin.startup)
     ksp(libs.koin.ksp.compiler)
     ksp(libs.room3.compiler)

@@ -1,7 +1,7 @@
 package me.voltual.pyrolysis.di
 
 import androidx.room3.Room
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import me.voltual.pyrolysis.core.database.AppDatabase
@@ -20,7 +20,7 @@ actual val platformModule: Module = module {
             AppDatabase::class.java,
             "pyrolysis_database"
         )
-        .setDriver(BundledSQLiteDriver())
+        .setDriver(AndroidSQLiteDriver())
         .addMigrations(*AppDatabase.ALL_MIGRATIONS)
         .build()
     }
