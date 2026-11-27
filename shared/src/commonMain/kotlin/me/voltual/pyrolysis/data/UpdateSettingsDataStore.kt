@@ -12,24 +12,50 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
+
+enum class UpdateNotificationMode(val displayName: String) {
+    CURRENT_CHANNEL_ONLY("仅显示包含当前渠道更新的通知"),
+    ALWAYS("显示更新通知"),
+    NEVER("不显示更新通知");
+
+    companion object {
+        fun fromName(name: String?): UpdateNotificationMode? {
+            return entries.find { it.name == name }
+        }
+    }
+}
 
 @Single
 class UpdateSettingsDataStore(private val dataStore: DataStore<Preferences>) {
     
     companion object {
         private val AUTO_CHECK_UPDATES = booleanPreferencesKey("auto_check_updates")
+        private val UPDATE_NOTIFICATION_MODE = stringPreferencesKey("update_notification_mode")
     }
 
-    val autoCheckUpdates: Flow<Boolean> = dataStore.data.map { preferences ->
-        preferences[AUTO_CHECK_UPDATES] ?: true
+    val notificationMode: Flow<UpdateNotificationMode> = dataStore.data.map { preferences ->
+        val savedMode = UpdateNotificationMode.fromName(preferences[UPDATE_NOTIFICATION_MODE])
+        if (savedMode != null) {
+            savedMode
+        } else {
+            // 向后兼容旧版布尔开关：若曾手动关闭则映射为 NEVER，否则默认 CURRENT_CHANNEL_ONLY
+            val legacyAutoCheck = preferences[AUTO_CHECK_UPDATES]
+            if (legacyAutoCheck == false) {
+                UpdateNotificationMode.NEVER
+            } else {
+                UpdateNotificationMode.CURRENT_CHANNEL_ONLY
+            }
+        }
     }
 
-    suspend fun setAutoCheckUpdates(value: Boolean) {
-        dataStore.edit { 
-            it[AUTO_CHECK_UPDATES] = value
+    suspend fun setNotificationMode(mode: UpdateNotificationMode) {
+        dataStore.edit {
+            it[UPDATE_NOTIFICATION_MODE] = mode.name
+            it[AUTO_CHECK_UPDATES] = mode != UpdateNotificationMode.NEVER
         }
     }
 }

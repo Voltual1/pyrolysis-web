@@ -8,6 +8,9 @@ plugins {
     alias(libs.plugins.androidx.room3)    
 }
 
+val appVersionName: String = providers.gradleProperty("APP_VERSION_NAME").get()
+val appVersionCode: Int = providers.gradleProperty("APP_VERSION_CODE").get().toInt()
+
 android {
     val keystorePropertiesFile = rootProject.file("keystore.properties")
     val keystoreProperties = Properties()
@@ -18,17 +21,17 @@ android {
     namespace = "me.voltual.pyrolysis"
     compileSdk = 37
 
-    // AGP 9.0 新的基础包名设置方式
+    // AGP 9.0 新的基础包名设置方式：带版本号与渠道标识 -> Pyrolysis23.7-android-arm64-v8a-release.apk
     base {
-        archivesName.set("Pyrolysis")
+        archivesName.set("Pyrolysis${appVersionName}-android")
     }
 
     defaultConfig {
         applicationId = "me.voltual.pyrolysis"
         minSdk = 24
         targetSdk = 37
-        versionCode = 673
-        versionName = "23.7"
+        versionCode = appVersionCode
+        versionName = appVersionName
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         // 此处删除了 resourceConfigurations
@@ -109,8 +112,8 @@ dependencies {
     coreLibraryDesugaring(libs.android.desugar)
     implementation(libs.google.material)
     implementation(libs.okhttp)    
-                    implementation(libs.room3.runtime)
-//                implementation(libs.sqlite.bundled)
+    implementation(libs.room3.runtime)
+//    implementation(libs.sqlite.bundled)
     
     // Compose
     implementation(platform(libs.compose.bom))
@@ -166,7 +169,6 @@ dependencies {
     implementation(libs.ktor.io)
     implementation(libs.ktor.client.logging)
     implementation(libs.kotlinx.serialization.json)
-   
 }
 
 room3 {

@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
@@ -21,13 +22,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.ktor.http.Url
 import me.voltual.pyrolysis.PlatformType
+import me.voltual.pyrolysis.core.utils.UpdateChecker
 import me.voltual.pyrolysis.data.UpdateInfo
 import me.voltual.pyrolysis.getPlatformType
 
 @Composable
 fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
     val uriHandler = LocalUriHandler.current
-    val platformType = getPlatformType()
+    val platformType = remember { getPlatformType() }
+    val channelAssets = remember(updateInfo, platformType) {
+        UpdateChecker.filterAssetsForPlatform(updateInfo.assets, platformType)
+    }
 
     Dialog(
         onDismissRequest = onDismiss
@@ -64,51 +69,71 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if (platformType.isAndroid) {
-                    Text(
-                        text = "💡 提示：32位设备请下载v7a，64位下载v8a",
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    updateInfo.assets.filter { it.name.endsWith(".apk") }.forEach { asset ->
-                        Button(
-                            onClick = {
-                                runCatching {
-                                    uriHandler.openUri(Url(asset.browser_download_url).toString())
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                        ) {
-                            Text(text = "下载 ${asset.name}")
+                    if (channelAssets.isNotEmpty()) {
+                        Text(
+                            text = "💡 提示：32位设备请下载v7a，64位下载v8a",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        channelAssets.forEach { asset ->
+                            Button(
+                                onClick = {
+                                    runCatching {
+                                        uriHandler.openUri(Url(asset.browser_download_url).toString())
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                            ) {
+                                Text(text = "下载 ${asset.name}")
+                            }
                         }
+                    } else {
+                        Text(
+                            text = "当前渠道（${platformType.id}）暂未发布此版本的安装包",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 } else if (platformType == PlatformType.WEB_WASM) {
-                    Text(
-                        text = " 监测到当前为 Web 环境。若您是私有部署，请下载下方构建产物覆盖部署或者联系站长更新",
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    updateInfo.assets.filter { it.name.endsWith("-wasm.zip") }.forEach { asset ->
-                        Button(
-                            onClick = {
-                                runCatching {
-                                    uriHandler.openUri(Url(asset.browser_download_url).toString())
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondary
-                            )
-                        ) {
-                            Text(text = "下载部署包 ${asset.name}")
+                    if (channelAssets.isNotEmpty()) {
+                        Text(
+                            text = " 监测到当前为 Web 环境。若您是私有部署，请下载下方构建产物覆盖部署或者联系站长更新",
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        channelAssets.forEach { asset ->
+                            Button(
+                                onClick = {
+                                    runCatching {
+                                        uriHandler.openUri(Url(asset.browser_download_url).toString())
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondary
+                                )
+                            ) {
+                                Text(text = "下载部署包 ${asset.name}")
+                            }
                         }
+                    } else {
+                        Text(
+                            text = "当前 Web 渠道暂未发布此版本的构建产物",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 

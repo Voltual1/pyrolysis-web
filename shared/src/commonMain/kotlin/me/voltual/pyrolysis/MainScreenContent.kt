@@ -49,6 +49,7 @@ import org.koin.compose.koinInject
 // 项目核心基础库、数据层与网络 (Core & Data)
 import me.voltual.pyrolysis.KtorClient
 import me.voltual.pyrolysis.data.UpdateInfo
+import me.voltual.pyrolysis.data.UpdateNotificationMode
 import me.voltual.pyrolysis.data.UpdateSettingsDataStore
 import me.voltual.pyrolysis.data.UserAgreementDataStore
 //import me.voltual.pyrolysis.data.ProxySettingsDataStore
@@ -395,17 +396,21 @@ fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
     var showDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        val autoCheckUpdates = updateSettingsDataStore.autoCheckUpdates.first()
-        if (autoCheckUpdates) {
-            UpdateChecker.checkForUpdates() { result ->
+        val mode = updateSettingsDataStore.notificationMode.first()
+        if (mode != UpdateNotificationMode.NEVER) {
+            val requireChannelAsset = mode == UpdateNotificationMode.CURRENT_CHANNEL_ONLY
+            UpdateChecker.checkForUpdates(requireChannelAsset = requireChannelAsset) { result ->
                 when (result) {
                     is UpdateCheckResult.Success -> {
                         updateInfo = result.updateInfo
                         showDialog = true
                     }
                     is UpdateCheckResult.NoUpdate -> {
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("当前已是最新版本")
+                        // 自动静默检查模式下，如果没有当前渠道更新或已是最新，仅在需要时提示
+                        if (!requireChannelAsset) {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(result.message)
+                            }
                         }
                     }
                     is UpdateCheckResult.Error -> {

@@ -10,38 +10,32 @@ package me.voltual.pyrolysis.ui.settings.update
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
+import me.voltual.pyrolysis.data.UpdateNotificationMode
 import me.voltual.pyrolysis.data.UpdateSettingsDataStore
-import me.voltual.pyrolysis.KtorClient
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import me.voltual.pyrolysis.shared.BuildConfig
 import me.voltual.pyrolysis.data.UpdateInfo
-import kotlinx.serialization.json.Json
-import io.ktor.client.call.body
 import me.voltual.pyrolysis.core.ui.components.UpdateDialog
-import kotlinx.serialization.decodeFromString
+import me.voltual.pyrolysis.core.utils.UpdateCheckResult
 import me.voltual.pyrolysis.core.utils.UpdateChecker
-import org.koin.compose.viewmodel.koinViewModel
-
 
 class UpdateSettingsViewModel(
-    private val updateSettingsDataStore: UpdateSettingsDataStore // 注入
+    private val updateSettingsDataStore: UpdateSettingsDataStore
 ) : ViewModel() {
 
-    val autoCheckUpdates: Flow<Boolean> = updateSettingsDataStore.autoCheckUpdates
+    val notificationMode: Flow<UpdateNotificationMode> = updateSettingsDataStore.notificationMode
 
-    suspend fun setAutoCheckUpdates(value: Boolean) {
-        updateSettingsDataStore.setAutoCheckUpdates(value)
+    suspend fun setNotificationMode(mode: UpdateNotificationMode) {
+        updateSettingsDataStore.setNotificationMode(mode)
     }
 
-    fun checkForUpdates( onUpdateResult: (me.voltual.pyrolysis.core.utils.UpdateCheckResult) -> Unit) {
-        UpdateChecker.checkForUpdates(onUpdateResult)
+    fun checkForUpdates(
+        requireChannelAsset: Boolean = false,
+        onUpdateResult: (UpdateCheckResult) -> Unit
+    ) {
+        UpdateChecker.checkForUpdates(
+            requireChannelAsset = requireChannelAsset,
+            onUpdateResult = onUpdateResult
+        )
     }
     
     @Composable

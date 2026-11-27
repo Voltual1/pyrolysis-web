@@ -14,21 +14,26 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import me.voltual.pyrolysis.core.ui.theme.SwitchWithText 
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.data.UpdateInfo
 import me.voltual.pyrolysis.core.ui.components.UpdateDialog
+import me.voltual.pyrolysis.core.ui.theme.AppShapes
+import me.voltual.pyrolysis.core.ui.theme.BBQExposedDropdownMenu
+import me.voltual.pyrolysis.core.ui.theme.BBQExposedDropdownMenuBox
 import me.voltual.pyrolysis.core.utils.UpdateCheckResult
-import me.voltual.pyrolysis.core.utils.UpdateChecker
+import me.voltual.pyrolysis.data.UpdateInfo
+import me.voltual.pyrolysis.data.UpdateNotificationMode
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UpdateSettingsScreen(
     viewModel: UpdateSettingsViewModel,
     snackbarHostState: SnackbarHostState
 ) {
     val scope = rememberCoroutineScope()
-    val autoCheckUpdates by viewModel.autoCheckUpdates.collectAsState(initial = false)
+    val notificationMode by viewModel.notificationMode.collectAsState(
+        initial = UpdateNotificationMode.CURRENT_CHANNEL_ONLY
+    )
+    var expanded by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var showDialog by remember { mutableStateOf(false) }
 
@@ -37,21 +42,57 @@ fun UpdateSettingsScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        SwitchWithText(
-            text = "自动检查更新",
-            checked = autoCheckUpdates,
-            onCheckedChange = { checked ->
-                scope.launch {
-                    viewModel.setAutoCheckUpdates(checked)
+        BBQExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true),
+                readOnly = true,
+                value = notificationMode.displayName,
+                onValueChange = {},
+                label = { Text("自动检查更新策略") },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                shape = AppShapes.medium
+            )
+
+            BBQExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                UpdateNotificationMode.entries.forEach { mode ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = mode.displayName,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            scope.launch {
+                                viewModel.setNotificationMode(mode)
+                            }
+                        }
+                    )
                 }
             }
-        )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {
-                viewModel.checkForUpdates() { result ->
+                viewModel.checkForUpdates(requireChannelAsset = false) { result ->
                     when (result) {
                         is UpdateCheckResult.Success -> {
                             updateInfo = result.updateInfo

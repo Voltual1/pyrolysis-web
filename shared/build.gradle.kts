@@ -14,12 +14,21 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+val appVersionName: String = providers.gradleProperty("APP_VERSION_NAME").get()
+val appVersionCode: Int = providers.gradleProperty("APP_VERSION_CODE").get().toInt()
+val shellVersionAndroid: String = providers.gradleProperty("SHELL_VERSION_ANDROID").get()
+val shellVersionFdroid: String = providers.gradleProperty("SHELL_VERSION_FDROID").get()
+val shellVersionWasm: String = providers.gradleProperty("SHELL_VERSION_WASM").get()
+
 buildConfig {
     useKotlinOutput()
     packageName("me.voltual.pyrolysis.shared")
     
-    buildConfigField("VERSION_NAME", "23.7")
-    buildConfigField("VERSION_CODE", 673) 
+    buildConfigField("VERSION_NAME", appVersionName)
+    buildConfigField("VERSION_CODE", appVersionCode)
+    buildConfigField("SHELL_VERSION_ANDROID", shellVersionAndroid)
+    buildConfigField("SHELL_VERSION_FDROID", shellVersionFdroid)
+    buildConfigField("SHELL_VERSION_WASM", shellVersionWasm)
 }
 
 kotlin {

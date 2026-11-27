@@ -5,7 +5,7 @@
 // 有关更多细节，请参阅 GNU Affero 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU Affero 通用公共许可证的副本
-// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>。
 package me.voltual.pyrolysis.ui.home
 
 import androidx.compose.foundation.Image
@@ -27,9 +27,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.ktor.http.Url
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.shared.BuildConfig 
+import me.voltual.pyrolysis.getPlatformType
 import me.voltual.pyrolysis.core.ui.components.MarkDownText
-import me.voltual.pyrolysis.core.ui.icons.drawable.* import kotlinx.datetime.TimeZone
+import me.voltual.pyrolysis.core.ui.icons.drawable.*
+import kotlinx.datetime.TimeZone
 import kotlin.time.Clock
 import kotlinx.datetime.toLocalDateTime
 
@@ -45,10 +46,7 @@ fun AboutScreen(
 ) {
     val app_name = "Pyrolysis"
     val uriHandler = LocalUriHandler.current 
-    
-    // 直接使用 BuildKonfig 的变量
-    val versionName = BuildConfig.VERSION_NAME
-    val versionCode = BuildConfig.VERSION_CODE
+    val platformType = remember { getPlatformType() }
     val scope = rememberCoroutineScope() 
     
     @OptIn(kotlin.time.ExperimentalTime::class)
@@ -81,7 +79,7 @@ fun AboutScreen(
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "版本 $versionName (Build $versionCode)",
+            text = "版本 ${platformType.formattedVersion}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             modifier = Modifier.padding(top = 4.dp)
