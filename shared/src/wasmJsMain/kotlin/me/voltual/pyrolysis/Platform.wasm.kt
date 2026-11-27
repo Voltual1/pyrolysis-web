@@ -1,3 +1,3 @@
 package me.voltual.pyrolysis
 
-actual fun getPlatformId(): String = "web-wasm"
+internal actual fun getPlatformType(): PlatformType = PlatformType.WEB_WASM

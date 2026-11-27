@@ -33,8 +33,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import me.voltual.pyrolysis.AuthRepository 
+import me.voltual.pyrolysis.PlatformType
 import me.voltual.pyrolysis.data.DrawerMenuDataStore
-import me.voltual.pyrolysis.getPlatformId
+import me.voltual.pyrolysis.getPlatformType
 import org.koin.compose.koinInject 
 
 sealed class IconSource {
@@ -73,9 +74,9 @@ fun NavigationDrawerItems(
     scope: CoroutineScope
 ) {
     val authRepository: AuthRepository = koinInject()
-    val platformId = remember { getPlatformId() }
+    val platformType = remember { getPlatformType() }
 
-    val allDrawerItems = remember(platformId) {
+    val allDrawerItems = remember(platformType) {
         val items = mutableListOf(
             DrawerItem("home", "首页", IconSource.Vector(IcMenuHome), Home),
             DrawerItem("resources", "资源广场", IconSource.Vector(IcMenuApps), ResourcePlaza(isMyResource = false)),
@@ -88,7 +89,7 @@ fun NavigationDrawerItems(
         )
 
         // 仅在 Android F-Droid 版下将仓库相关、存储管理、网络代理加入侧边栏
-        if (platformId == "android-fdroid") {
+        if (platformType == PlatformType.ANDROID_FDROID) {
             items.add(DrawerItem("repos_search", "仓库搜索", IconSource.Vector(Phosphor.MagnifyingGlass), SearchPage))
             items.add(DrawerItem("prefsrepos", "仓库管理", IconSource.Vector(Phosphor.Graph), PrefsReposPage))
             items.add(DrawerItem("store_manager", "存储管理", IconSource.Vector(Appbackuprestore), StoreManager))

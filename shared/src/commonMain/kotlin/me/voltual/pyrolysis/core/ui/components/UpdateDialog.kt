@@ -20,13 +20,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.ktor.http.Url
+import me.voltual.pyrolysis.PlatformType
 import me.voltual.pyrolysis.data.UpdateInfo
-import me.voltual.pyrolysis.getPlatformId
+import me.voltual.pyrolysis.getPlatformType
 
 @Composable
 fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
     val uriHandler = LocalUriHandler.current
-    val platformId = getPlatformId()
+    val platformType = getPlatformType()
 
     Dialog(
         onDismissRequest = onDismiss
@@ -62,7 +63,7 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
                 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (platformId == "android") {
+                if (platformType.isAndroid) {
                     Text(
                         text = "💡 提示：32位设备请下载v7a，64位下载v8a",
                         textAlign = TextAlign.Center,
@@ -84,7 +85,7 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
                             Text(text = "下载 ${asset.name}")
                         }
                     }
-                } else if (platformId == "web-wasm") {
+                } else if (platformType == PlatformType.WEB_WASM) {
                     Text(
                         text = " 监测到当前为 Web 环境。若您是私有部署，请下载下方构建产物覆盖部署或者联系站长更新",
                         textAlign = TextAlign.Start,

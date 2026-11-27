@@ -1,9 +1,10 @@
 package me.voltual.pyrolysis
 
-private var androidPlatformId: String = "android"
+private var currentAndroidPlatform: PlatformType = PlatformType.ANDROID
 
-fun initAndroidPlatform(platformId: String) {
-    androidPlatformId = platformId
+fun initAndroidPlatform(platform: PlatformType) {
+    require(platform.isAndroid) { "Expected an Android platform type, got: $platform" }
+    currentAndroidPlatform = platform
 }
 
-actual fun getPlatformId(): String = androidPlatformId
+internal actual fun getPlatformType(): PlatformType = currentAndroidPlatform
