@@ -39,6 +39,17 @@ jobs:
         run: |
           echo $ENCODED_STRING | base64 -d > android/tag_keystore.p12
 
+      - name: Get version info
+        id: version
+        shell: bash
+        run: |
+          APP_VER=$(grep -E '^APP_VERSION_NAME=' gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
+          SHELL_VER=$(grep -E '^SHELL_VERSION_WASM=' gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
+          echo "APP_VERSION=${APP_VER}" >> $GITHUB_OUTPUT
+          echo "SHELL_VERSION=${SHELL_VER}" >> $GITHUB_OUTPUT
+          echo "BUILD_VERSION=auto-build-$(date +%Y%m%d_%H%M%S)-${GITHUB_SHA:0:8}" >> $GITHUB_OUTPUT
+          echo "TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_OUTPUT
+
       - name: Build WasmJS Distribution
         run: ./gradlew :wasmjs:wasmJsBrowserDistribution
         env:
@@ -50,25 +61,19 @@ jobs:
       - name: Package WasmJS Outputs
         run: |
           mkdir -p "$GITHUB_WORKSPACE/build-artifacts"
+          ZIP_NAME="Pyrolysis${{ steps.version.outputs.APP_VERSION }}-wasm.zip"
           if [ -d "wasmjs/build/dist/wasmJs/productionExecutable" ]; then
             cd wasmjs/build/dist/wasmJs/productionExecutable
-            zip -r "$GITHUB_WORKSPACE/build-artifacts/pyrolysis-wasm.zip" .
+            zip -r "$GITHUB_WORKSPACE/build-artifacts/${ZIP_NAME}" .
             cd -
           elif [ -d "wasmjs/build/dist/wasmJs/developmentExecutable" ]; then
             cd wasmjs/build/dist/wasmJs/developmentExecutable
-            zip -r "$GITHUB_WORKSPACE/build-artifacts/pyrolysis-wasm.zip" .
+            zip -r "$GITHUB_WORKSPACE/build-artifacts/${ZIP_NAME}" .
             cd -
           else
             echo "Error: WasmJS distribution directory not found!"
             exit 1
           fi
-
-      - name: Get version info
-        id: version
-        shell: bash
-        run: |
-          echo "BUILD_VERSION=auto-build-$(date +%Y%m%d_%H%M%S)-${GITHUB_SHA:0:8}" >> $GITHUB_OUTPUT
-          echo "TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_OUTPUT
 
       - name: Create Draft Release
         if: always()
@@ -78,12 +83,13 @@ jobs:
           name: "Auto Build ${{ steps.version.outputs.BUILD_VERSION }}"
           body: |
             ### 构建信息
+            - 应用版本: `${{ steps.version.outputs.APP_VERSION }} (web-wasm ${{ steps.version.outputs.SHELL_VERSION }})`
             - 提交: `${{ github.sha }}`
             - 构建时间: `${{ steps.version.outputs.TIMESTAMP }}`
             
             **注意**: 这是一个自动生成的 WasmJS 生产/开发环境分发包。
           draft: true
           files: |
-            build-artifacts/pyrolysis-wasm.zip
+            build-artifacts/Pyrolysis${{ steps.version.outputs.APP_VERSION }}-wasm.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
