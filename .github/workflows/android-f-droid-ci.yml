@@ -1,7 +1,12 @@
 name: Android-F-Droid CI
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -40,7 +45,7 @@ jobs:
           echo $ENCODED_STRING | base64 -d > android-f-droid/tag_keystore.p12
 
       - name: Build with Gradle
-        run: ./gradlew :android-f-droid:assembleDebug
+        run: ./gradlew :android-f-droid:assembleRelease
         env:
           KEYSTORE_PATH: tag_keystore.p12  # 注意路径要对应 build.gradle.kts
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
