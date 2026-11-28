@@ -44,24 +44,28 @@ jobs:
       - name: Collect Platform Artifacts
         shell: bash
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/build-artifacts"
+          set -euo pipefail
+          
+          mkdir -p build-artifacts
           APP_VER="${{ steps.app_ver.outputs.APP_VERSION }}"
           PLAT="linux-arm64"
-
-          JAR_FILE=$(find desktop/build/compose/jars -maxdepth 1 -type f -name "*.jar" | head -n 1)
-          [ -n "$JAR_FILE" ] && cp "$JAR_FILE" "\( GITHUB_WORKSPACE/build-artifacts/Pyrolysis \){APP_VER}-desktop-uberjar.jar"
-
-          DEB_FILE=$(find desktop/build/compose/binaries -type f -name "*.deb" | head -n 1)
-          [ -n "$DEB_FILE" ] && cp "$DEB_FILE" "\( GITHUB_WORKSPACE/build-artifacts/Pyrolysis \){APP_VER}-desktop-${PLAT}.deb"
-
-          APPIMAGE_FILE=$(find desktop/build/compose/binaries -type f -name "*.AppImage" | head -n 1)
-          [ -n "$APPIMAGE_FILE" ] && cp "$APPIMAGE_FILE" "\( GITHUB_WORKSPACE/build-artifacts/Pyrolysis \){APP_VER}-desktop-${PLAT}.AppImage"
-
-          echo "=== Artifacts ==="
-          ls -lh "$GITHUB_WORKSPACE/build-artifacts"
           
-          if [ -z "$(ls -A "$GITHUB_WORKSPACE/build-artifacts")" ]; then
-            echo "Error: No desktop artifacts were generated for ${PLAT}!"
+          echo "APP_VER=$APP_VER"
+          
+          JAR_FILE=$(find desktop/build/compose/jars -maxdepth 1 -type f -name "*.jar" | head -n 1 || true)
+          [ -n "$JAR_FILE" ] && cp "\( JAR_FILE" "build-artifacts/Pyrolysis \){APP_VER}-desktop-uberjar.jar" && echo "Copied JAR: $JAR_FILE"
+          
+          DEB_FILE=$(find desktop/build/compose/binaries -type f -name "*.deb" | head -n 1 || true)
+          [ -n "$DEB_FILE" ] && cp "\( DEB_FILE" "build-artifacts/Pyrolysis \){APP_VER}-desktop-${PLAT}.deb" && echo "Copied DEB: $DEB_FILE"
+          
+          APPIMAGE_FILE=$(find desktop/build/compose/binaries -type f -name "*.AppImage" | head -n 1 || true)
+          [ -n "$APPIMAGE_FILE" ] && cp "\( APPIMAGE_FILE" "build-artifacts/Pyrolysis \){APP_VER}-desktop-${PLAT}.AppImage" && echo "Copied AppImage: $APPIMAGE_FILE"
+          
+          echo "=== Artifacts ==="
+          ls -lh build-artifacts/
+          
+          if [ -z "$(ls -A build-artifacts)" ]; then
+            echo "Error: No desktop artifacts were generated!"
             exit 1
           fi
 
