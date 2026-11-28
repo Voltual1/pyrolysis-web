@@ -41,6 +41,17 @@ object UpdateChecker {
                 val lowerName = asset.name.lowercase()
                 lowerName.endsWith(".apk") && lowerName.contains("fdroid")
             }
+            PlatformType.JVM -> assets.filter { asset ->
+                val lowerName = asset.name.lowercase()
+                lowerName.endsWith(".dmg") ||
+                    lowerName.endsWith(".msi") ||
+                    lowerName.endsWith(".exe") ||
+                    lowerName.endsWith(".deb") ||
+                    lowerName.endsWith(".rpm") ||
+                    lowerName.endsWith(".appimage") ||
+                    lowerName.contains("desktop") ||
+                    lowerName.contains("jvm")
+            }
             PlatformType.WEB_WASM -> assets.filter { asset ->
                 asset.name.lowercase().endsWith("-wasm.zip")
             }
