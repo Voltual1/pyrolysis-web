@@ -7,6 +7,14 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val rawAppVersion: String = providers.gradleProperty("APP_VERSION_NAME").getOrElse("23.8")
+val normalizedDesktopVersion: String = rawAppVersion.split(".").let { parts ->
+    val major = parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 255) ?: 1
+    val minor = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 255) ?: 0
+    val build = parts.getOrNull(2)?.toIntOrNull()?.coerceIn(0, 65535) ?: 0
+    "$major.$minor.$build"
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
@@ -32,7 +40,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage)
             packageName = "Pyrolysis"
-            packageVersion = providers.gradleProperty("APP_VERSION_NAME").getOrElse("23.8")
+            packageVersion = normalizedDesktopVersion
         }
     }
 }
