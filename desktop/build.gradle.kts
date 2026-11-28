@@ -46,6 +46,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage)
             packageName = "Pyrolysis"
+            includeAllModules = true
             packageVersion = normalizedDesktopVersion
             description = "Pyrolysis Desktop Client"
             vendor = "Voltual"
