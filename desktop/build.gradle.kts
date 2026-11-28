@@ -46,7 +46,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage)
             packageName = "Pyrolysis"
-            includeAllModules = true
+            modules("jdk.unsupported")
             packageVersion = normalizedDesktopVersion
             description = "Pyrolysis Desktop Client"
             vendor = "Voltual"
