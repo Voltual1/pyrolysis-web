@@ -4,7 +4,8 @@ import me.voltual.pyrolysis.shared.BuildConfig
 
 enum class PlatformType(val id: String) {
     ANDROID("android"),
-    ANDROID_FDROID("android-fdroid"),
+    ANDROID_FDROID("android-fdroid"),    
+    JVM("desktop"),
     WEB_WASM("web-wasm");
 
     val isAndroid: Boolean

@@ -101,7 +101,6 @@ compose-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", versi
 libsu-core = { module = "com.github.topjohnwu.libsu:core", version.ref = "libsu" }
 
 # 图片与异步
-
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-compose-wasm = { module = "io.coil-kt.coil3:coil-compose-wasm-js", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
@@ -109,6 +108,7 @@ coil-network-ktor-wasm = { module = "io.coil-kt.coil3:coil-network-ktor3-wasm-js
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
 
 # FileKit
 filekit-core = { module = "io.github.vinceglb:filekit-core", version.ref = "filekit" }

@@ -46,6 +46,12 @@ kotlin {
         }
     }
 
+    jvm {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
+    }
+
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
@@ -108,6 +114,16 @@ kotlin {
             }
         }
 
+        val jvmMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.okhttp)
+                implementation(libs.sqlite.bundled)
+                implementation(project(":ApkParser"))
+                implementation(libs.coil.network.ktor)
+                implementation(libs.kotlinx.coroutines.swing)
+            }
+        }
+
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js.wasm)    
             implementation(project(":ApkParser"))                
@@ -132,6 +148,7 @@ room3 {
 
 dependencies {
     add("kspAndroid", libs.room3.compiler)
+    add("kspJvm", libs.room3.compiler)
     add("kspWasmJs", libs.room3.compiler)
 }
 
