@@ -5,12 +5,11 @@ on:
     paths:
       - 'fire.svg'
       - '.github/workflows/generate-icons.yml'
-  workflow_dispatch:          # 支持手动触发
+  workflow_dispatch:
 
 jobs:
   generate-icons:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,11 +18,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Install ImageMagick
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
 
       - name: Install dependencies
         run: |
@@ -34,19 +28,18 @@ jobs:
         run: |
           mkdir -p icons
           
-          # 使用 rsvg-convert 先把 SVG 转成高质量 PNG（更稳定）
-          rsvg-convert -w 1024 -h 1024 --background-color none \
-            fire.svg -o icons/icon_1024.png
+          rsvg-convert -w 1024 -h 1024 --background-color none fire.svg -o icons/icon_1024.png
           
-          # 生成其他尺寸
-          for size in 16 32 48 64 128 256 512; do
-            convert icons/icon_1024.png -resize \( {size}x \){size} icons/icon_${size}.png
-          done
+          convert icons/icon_1024.png -resize 16x16   icons/icon_16.png
+          convert icons/icon_1024.png -resize 32x32   icons/icon_32.png
+          convert icons/icon_1024.png -resize 48x48   icons/icon_48.png
+          convert icons/icon_1024.png -resize 64x64   icons/icon_64.png
+          convert icons/icon_1024.png -resize 128x128 icons/icon_128.png
+          convert icons/icon_1024.png -resize 256x256 icons/icon_256.png
+          convert icons/icon_1024.png -resize 512x512 icons/icon_512.png
           
-          # 用 png2icons 生成 .ico 和 .icns
           npx --yes png2icons icons/icon_1024.png icons/icon -allp -bc
           
-          # Linux 主图标
           cp icons/icon_512.png icons/icon.png
           
           echo "✅ Generated files:"
