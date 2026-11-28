@@ -47,6 +47,26 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage)
             packageName = "Pyrolysis"
             packageVersion = normalizedDesktopVersion
+            description = "Pyrolysis Desktop Client"
+            vendor = "Voltual"
+
+            macOS {
+                bundleID = "me.voltual.pyrolysis"
+                iconFile.set(project.file("icons/icon.icns"))
+            }
+
+            windows {
+                iconFile.set(project.file("icons/icon.ico"))
+                upgradeUuid = "8f7e4b2a-3c91-4d6e-9a52-1b8c7d4e6f01"
+                menuGroup = "Pyrolysis"
+                shortcut = true
+            }
+
+            linux {
+                iconFile.set(project.file("icons/icon.png"))
+                menuGroup = "Utility"
+                shortcut = true
+            }
         }
     }
 }
