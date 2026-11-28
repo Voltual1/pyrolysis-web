@@ -22,7 +22,9 @@ val shellVersionWasm: String = providers.gradleProperty("SHELL_VERSION_WASM").ge
 val shellVersionJvm: String = providers.gradleProperty("SHELL_VERSION_JVM").get()
 
 buildConfig {
-    useKotlinOutput()
+    useKotlinOutput {
+        internalVisibility = false
+    }
     packageName("me.voltual.pyrolysis.shared")
     
     buildConfigField("VERSION_NAME", appVersionName)
@@ -69,6 +71,7 @@ kotlin {
                 implementation(libs.compose.foundation)              
                 implementation(libs.jetbrains.lifecycle.viewmodelNavigation3)
                 implementation(libs.jetbrains.material3.adaptiveNavigation3)
+                api(libs.jetbrains.navigation3.ui)
                 implementation(libs.compose.material3)
                 implementation(libs.ktor.client.core)
                 implementation(libs.markdown)

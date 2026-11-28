@@ -114,9 +114,7 @@ fun main() {
             icon = rememberVectorPainter(Fire),
             state = rememberWindowState(width = 1100.dp, height = 760.dp)
         ) {
-            PyrolysisApp(
-                platformEntryProvider = { _, _ -> null }
-            )
+            PyrolysisApp()
         }
     }
 }

@@ -29,6 +29,7 @@ kotlin {
         implementation(project(":shared"))
         implementation(compose.desktop.currentOs)
         implementation(libs.components.resources)
+        implementation(libs.jetbrains.navigation3.ui)
         implementation(libs.kotlinx.coroutines.swing)
         implementation(libs.koin.core)
         implementation(libs.koin.compose)
