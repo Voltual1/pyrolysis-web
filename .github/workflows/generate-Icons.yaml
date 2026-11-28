@@ -1,0 +1,77 @@
+name: Generate Icons with electron-builder
+
+on:
+  push:
+    paths:
+      - 'fire.svg'
+      - '.github/workflows/generate-icons.yml'
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Prepare dummy Electron project
+        run: |
+          mkdir -p dummy-electron/build
+          cp fire.svg dummy-electron/build/icon.svg
+          
+          # 最小 package.json
+          cat > dummy-electron/package.json << 'EOF'
+          {
+            "name": "icon-generator",
+            "version": "1.0.0",
+            "main": "main.js",
+            "build": {
+              "appId": "com.example.icongen",
+              "directories": {
+                "output": "dist",
+                "buildResources": "build"
+              },
+              "mac": { "target": "dir" },
+              "win": { "target": "dir" },
+              "linux": { "target": "dir" }
+            }
+          }
+          EOF
+          
+          # 空的 main.js
+          echo "console.log('dummy')" > dummy-electron/main.js
+
+      - name: Install electron-builder
+        working-directory: dummy-electron
+        run: npm install electron-builder --no-save
+
+      - name: Generate icons (trigger conversion)
+        working-directory: dummy-electron
+        run: |
+          npx electron-builder --dir --mac --win --linux || true
+          # 即使打包失败，图标转换通常已经完成
+
+      - name: Collect generated icons
+        run: |
+          mkdir -p icons
+          # electron-builder 会把转换后的图标放在这些位置
+          find dummy-electron -name "*.icns" -o -name "*.ico" -o -name "icon.png" | head -20
+          
+          # 尝试收集
+          cp dummy-electron/build/icon.svg icons/ 2>/dev/null || true
+          find dummy-electron -name "icon.icns" -exec cp {} icons/ \; 2>/dev/null || true
+          find dummy-electron -name "icon.ico" -exec cp {} icons/ \; 2>/dev/null || true
+          find dummy-electron -path "*/icons/*.png" -exec cp {} icons/ \; 2>/dev/null || true
+          
+          ls -la icons/ || echo "No icons found yet"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-icons-electron-builder
+          path: icons/
+          retention-days: 14
