@@ -19,6 +19,7 @@ val appVersionCode: Int = providers.gradleProperty("APP_VERSION_CODE").get().toI
 val shellVersionAndroid: String = providers.gradleProperty("SHELL_VERSION_ANDROID").get()
 val shellVersionFdroid: String = providers.gradleProperty("SHELL_VERSION_FDROID").get()
 val shellVersionWasm: String = providers.gradleProperty("SHELL_VERSION_WASM").get()
+val shellVersionJvm: String = providers.gradleProperty("SHELL_VERSION_JVM").get()
 
 buildConfig {
     useKotlinOutput()
@@ -29,6 +30,7 @@ buildConfig {
     buildConfigField("SHELL_VERSION_ANDROID", shellVersionAndroid)
     buildConfigField("SHELL_VERSION_FDROID", shellVersionFdroid)
     buildConfigField("SHELL_VERSION_WASM", shellVersionWasm)
+    buildConfigField("SHELL_VERSION_JVM", shellVersionJvm)
 }
 
 kotlin {

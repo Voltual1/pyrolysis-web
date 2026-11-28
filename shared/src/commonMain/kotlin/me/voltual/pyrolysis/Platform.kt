@@ -15,6 +15,7 @@ enum class PlatformType(val id: String) {
         get() = when (this) {
             ANDROID -> BuildConfig.SHELL_VERSION_ANDROID
             ANDROID_FDROID -> BuildConfig.SHELL_VERSION_FDROID
+            JVM -> BuildConfig.SHELL_VERSION_JVM
             WEB_WASM -> BuildConfig.SHELL_VERSION_WASM
         }
 

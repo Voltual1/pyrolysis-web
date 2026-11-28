@@ -18,7 +18,10 @@ kotlin {
         implementation(libs.components.resources)
         implementation(libs.kotlinx.coroutines.swing)
         implementation(libs.koin.core)
+        implementation(libs.koin.compose)
         implementation(libs.filekit.core)
+        implementation(libs.coil.compose)
+        implementation(libs.coil.network.ktor)
     }
 }
 
@@ -29,7 +32,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage)
             packageName = "Pyrolysis"
-            packageVersion = providers.gradleProperty("APP_VERSION_NAME").getOrElse("1.0.0")
+            packageVersion = providers.gradleProperty("APP_VERSION_NAME").getOrElse("23.8")
         }
     }
 }
