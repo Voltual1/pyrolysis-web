@@ -1,13 +1,14 @@
 name: Desktop CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
   release:
     types: [published]
-  
+
 permissions:
   contents: write
 
@@ -26,27 +27,79 @@ jobs:
         with:
           java-version: "25"
           distribution: "temurin"
-          
+
       - name: Check Architecture
         run: uname -m
-          
-      - name: Set up Node.js (Pre-installed for KMP)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24.10.0'          
+
+      - name: Install Linux packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot binutils libfuse2
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4                         
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Get version info
         id: version
         shell: bash
         run: |
           APP_VER=$(grep -E '^APP_VERSION_NAME=' gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
-          SHELL_VER=$(grep -E '^SHELL_VERSION_WASM=' gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
+          SHELL_VER=$(grep -E '^SHELL_VERSION_JVM=' gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
           echo "APP_VERSION=${APP_VER}" >> $GITHUB_OUTPUT
           echo "SHELL_VERSION=${SHELL_VER}" >> $GITHUB_OUTPUT
           echo "BUILD_VERSION=auto-build-$(date +%Y%m%d_%H%M%S)-${GITHUB_SHA:0:8}" >> $GITHUB_OUTPUT
           echo "TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_OUTPUT
 
-      - name: Build Desktop
-        run: ./gradlew :desktop:assemble
+      - name: Build Desktop UberJar & Native Packages
+        run: |
+          ./gradlew :desktop:packageUberJarForCurrentOS :desktop:packageDeb :desktop:packageAppImage
+
+      - name: Package Desktop Outputs
+        shell: bash
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/build-artifacts"
+          APP_VER="${{ steps.version.outputs.APP_VERSION }}"
+          ARCH=$(uname -m)
+
+          # 1. 收集跨平台独立运行 Fat Jar
+          JAR_FILE=$(find desktop/build/compose/jars -maxdepth 1 -type f -name "*.jar" | head -n 1)
+          if [ -n "$JAR_FILE" ]; then
+            cp "$JAR_FILE" "$GITHUB_WORKSPACE/build-artifacts/Pyrolysis${APP_VER}-desktop-${ARCH}.jar"
+          fi
+
+          # 2. 收集 Linux Deb 安装包
+          DEB_FILE=$(find desktop/build/compose/binaries -type f -name "*.deb" | head -n 1)
+          if [ -n "$DEB_FILE" ]; then
+            cp "$DEB_FILE" "$GITHUB_WORKSPACE/build-artifacts/Pyrolysis${APP_VER}-desktop-linux-${ARCH}.deb"
+          fi
+
+          # 3. 收集 Linux AppImage 便携包
+          APPIMAGE_FILE=$(find desktop/build/compose/binaries -type f -name "*.AppImage" | head -n 1)
+          if [ -n "$APPIMAGE_FILE" ]; then
+            cp "$APPIMAGE_FILE" "$GITHUB_WORKSPACE/build-artifacts/Pyrolysis${APP_VER}-desktop-linux-${ARCH}.AppImage"
+          fi
+
+          ls -lh "$GITHUB_WORKSPACE/build-artifacts"
+          if [ -z "$(ls -A "$GITHUB_WORKSPACE/build-artifacts")" ]; then
+            echo "Error: No desktop artifacts were generated!"
+            exit 1
+          fi
+
+      - name: Create Draft Release
+        if: success() && github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.BUILD_VERSION }}
+          name: "Auto Build ${{ steps.version.outputs.BUILD_VERSION }}"
+          body: |
+            ### 构建信息
+            - 应用版本: `${{ steps.version.outputs.APP_VERSION }} (desktop ${{ steps.version.outputs.SHELL_VERSION }})`
+            - 提交: `${{ github.sha }}`
+            - 构建时间: `${{ steps.version.outputs.TIMESTAMP }}`
+
+            **注意**: 这是一个自动生成的 Desktop (JVM / Linux) 分发包。
+          draft: true
+          files: |
+            build-artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
